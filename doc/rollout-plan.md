@@ -6,24 +6,24 @@ Global rule: You may progress only when all tasks are completed, all tests pass,
 
 Deliverables: a working cross‑platform app that can run unattended with a preset to “keep agent going”, with tests and ≥90% coverage.
 
-- [ ] Workspace bootstrapped: Tauri 2 app with Rust backend + React/TypeScript UI.
-- [ ] Toolchain pinned: Rust stable ≥1.75; TypeScript 5.9; Bun ≥1.3 for UI dev/build/test (preferred). If Bun is incompatible with a required dependency, fall back to Node.js 20 LTS.
-- [ ] Scaffold the app using Tauri v2’s Bun initializer: `bun create tauri-app` and select React + TypeScript template.
-- [ ] Core contracts: Rust traits `Trigger`, `Condition`, `Action`, `ActionSequence`, `ScreenCapture`, `Automation`, `Monitor`.
-- [ ] Shared model: `Region`, `Event` (incl. `WatchdogTripped`, `MonitorStateChanged`), `Profile` JSON schema.
-- [ ] MVP implementations:
-	- [ ] `IntervalTrigger`
-	- [ ] `RegionCondition` (no‑visual‑change with stableMs, downscale, hash)
-	- [ ] Actions: `MoveCursor`, `Click`, `Type("continue")`, `Key(Enter)` and `ActionSequence`
-	- [ ] `Monitor` loop with cooldowns and guardrails (`maxActivationsPerHour`, `maxRuntimeMs`)
-	- [ ] Fake `ScreenCapture`/`Automation` for tests; OS implementations behind traits for runtime
-- [ ] Tauri bridge: commands `profiles_load/save`, `monitor_start/stop`, optional `region_pick`; event streaming to UI.
-- [ ] UI MVP: Profile editor, Monitor Start/Stop, live Event log, unattended mode controls (preset selector, guardrail inputs), Panic Stop button.
-- [ ] Coverage-focused tests:
-	- [ ] Rust unit/integration tests for Monitor, Condition, Trigger, ActionSequence (with fakes)
-	- [ ] UI component/contract tests (mock commands)
+- [x] Workspace bootstrapped: Tauri 2 app with Rust backend + React/TypeScript UI.
+- [x] Toolchain pinned: Rust stable ≥1.75; TypeScript 5.9; Bun ≥1.3 for UI dev/build/test (preferred). If Bun is incompatible with a required dependency, fall back to Node.js 20 LTS.
+- [x] Scaffold the app using Tauri v2’s Bun initializer: `bun create tauri-app` and select React + TypeScript template.
+- [x] Core contracts: Rust traits `Trigger`, `Condition`, `Action`, `ActionSequence`, `ScreenCapture`, `Automation`, `Monitor`.
+- [x] Shared model: `Region`, `Event` (incl. `WatchdogTripped`, `MonitorStateChanged`), `Profile` JSON schema.
+- [x] MVP implementations:
+	- [x] `IntervalTrigger`
+	- [x] `RegionCondition` (no‑visual‑change with stableMs, downscale, hash)
+	- [x] Actions: `MoveCursor`, `Click`, `Type("continue")`, `Key(Enter)` and `ActionSequence`
+	- [x] `Monitor` loop with cooldowns and guardrails (`maxActivationsPerHour`, `maxRuntimeMs`)
+	- [x] Fake `ScreenCapture`/`Automation` for tests; OS implementations behind traits for runtime
+- [x] Tauri bridge: commands `profiles_load/save`, `monitor_start/stop`, optional `region_pick`; event streaming to UI.
+- [x] UI MVP: Profile editor, Monitor Start/Stop, live Event log, unattended mode controls (preset selector, guardrail inputs), Panic Stop button.
+- [x] Coverage-focused tests:
+	- [x] Rust unit/integration tests for Monitor, Condition, Trigger, ActionSequence (with fakes)
+	- [x] UI component/contract tests (mock commands)
 	- [ ] One E2E happy path that runs the preset and asserts Events
-- [ ] CI: build, tests, coverage (tarpaulin/grcov + vitest) → Codecov; gate: overall coverage ≥90%.
+- [x] CI: build, tests, coverage (tarpaulin/grcov + vitest) → Codecov; gate: overall coverage ≥90%.
 - [ ] Packaging: produce installers/bundles for at least one OS to release MVP quickly.
 
 Gate: all tasks done, tests green, coverage ≥90%, at least one OS bundle produced.

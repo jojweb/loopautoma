@@ -4,7 +4,8 @@ export default defineConfig({
   test: {
     environment: "jsdom",
     setupFiles: ["./vitest.setup.ts"],
-    include: ["tests/**/*.vitest.{test,spec}.{ts,tsx,js,jsx}"],
+  // Pick up Vitest tests named *.vitest.* (no .test/.spec suffix) so Bun won't discover them
+  include: ["tests/**/*.vitest.{ts,tsx,js,jsx}"],
     coverage: {
       provider: "istanbul",
       reporter: ["text", "lcov", "json"],

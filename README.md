@@ -1,14 +1,15 @@
-# Loop Automa
+# Loopautoma
 
 [![CI](https://github.com/chrisgleissner/loopautoma/actions/workflows/ci.yml/badge.svg)](https://github.com/chrisgleissner/loopautoma/actions/workflows/ci.yml)
-[![codecov](https://codecov.io/gh/chrisgleissner/loopautoma/branch/main/graph/badge.svg)](https://app.codecov.io/gh/chrisgleissner/loopautoma)
+[![codecov](https://codecov.io/gh/chrisgleissner/loopautoma/graph/badge.svg?token=IdaePvWHB4)](https://codecov.io/gh/chrisgleissner/loopautoma)
 [![License: GPL v2](https://img.shields.io/github/license/chrisgleissner/loopautoma)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS%20%7C%20Windows-forestgreen)](doc/architecture.md)
 
 
-Desktop automation that watches screen regions and takes actions when conditions are met. Pre‑alpha: fast changes expected.
+Desktop automation that watches screen regions and takes actions when conditions are met. 
 
-## doc
+
+## Docs
 
 - [Architecture](doc/architecture.md)
 - [Rollout plan](doc/rollout-plan.md)
@@ -39,4 +40,3 @@ bun test
 cd src-tauri && cargo test
 ```
 
-Coverage target ≥90% (Rust + UI combined) per phase.
