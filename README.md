@@ -2,7 +2,7 @@
 
 # Loopautoma
 
-[![CI](https://github.com/chrisgleissner/loopautoma/actions/workflows/ci.yml/badge.svg)](https://github.com/chrisgleissner/loopautoma/actions/workflows/ci.yml)
+[![CI](https://github.com/chrisgleissner/loopautoma/actions/workflows/ci.yaml/badge.svg)](https://github.com/chrisgleissner/loopautoma/actions/workflows/ci.yaml)
 [![codecov](https://codecov.io/gh/chrisgleissner/loopautoma/graph/badge.svg?token=IdaePvWHB4)](https://codecov.io/gh/chrisgleissner/loopautoma)
 [![License: GPL v2](https://img.shields.io/github/license/chrisgleissner/loopautoma)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS%20%7C%20Windows-forestgreen)](doc/architecture.md)
