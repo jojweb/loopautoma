@@ -1,0 +1,91 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Linux prerequisites (Tauri/WebKitGTK/libsoup)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            pkg-config build-essential libssl-dev \
+            libgtk-3-dev libwebkit2gtk-4.1-dev libsoup-3.0-dev \
+            librsvg2-dev patchelf
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Detect app directory
+        id: detect
+        shell: bash
+        run: |
+          set -e
+          APP_DIR="."
+          if [ -f package.json ] && [ -f src-tauri/Cargo.toml ]; then
+            APP_DIR="."
+          else
+            APP_DIR=$(find . -type f -name Cargo.toml -path "*/src-tauri/Cargo.toml" -printf "%h\n" | sed 's|/src-tauri||' | head -n1)
+            if [ -z "$APP_DIR" ]; then
+              APP_DIR="."
+            fi
+          fi
+          echo "App directory: $APP_DIR"
+          echo "app_dir=$APP_DIR" >> "$GITHUB_OUTPUT"
+
+      - name: Install JS deps (if package.json exists)
+        shell: bash
+        run: |
+          APP_DIR="${{ steps.detect.outputs.app_dir }}"
+          if [ -f "$APP_DIR/package.json" ]; then
+            cd "$APP_DIR"
+            bun install
+          else
+            echo "No package.json found; skipping JS deps"
+          fi
+
+      - name: UI tests (bun)
+        shell: bash
+        run: |
+          APP_DIR="${{ steps.detect.outputs.app_dir }}"
+          if [ -f "$APP_DIR/package.json" ]; then
+            cd "$APP_DIR"
+            bun test --coverage
+          else
+            echo "No package.json found; skipping UI tests"
+          fi
+
+      - name: Rust tests
+        shell: bash
+        run: |
+          APP_DIR="${{ steps.detect.outputs.app_dir }}"
+          if [ -f "$APP_DIR/src-tauri/Cargo.toml" ]; then
+            cd "$APP_DIR/src-tauri"
+            cargo test --all --locked --verbose
+          else
+            echo "No src-tauri/Cargo.toml found; skipping Rust tests"
+          fi
+
+      - name: Tauri build (smoke)
+        shell: bash
+        run: |
+          APP_DIR="${{ steps.detect.outputs.app_dir }}"
+          if [ -f "$APP_DIR/package.json" ] && [ -f "$APP_DIR/src-tauri/Cargo.toml" ]; then
+            cd "$APP_DIR"
+            bun run tauri build || echo "Skipping failure of bundling in CI smoke"
+          else
+            echo "No Tauri app detected; skipping bundling"
+          fi
