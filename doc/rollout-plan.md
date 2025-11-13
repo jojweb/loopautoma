@@ -22,7 +22,7 @@ Deliverables: a working cross‑platform app that can run unattended with a pres
 - [x] Coverage-focused tests:
 	- [x] Rust unit/integration tests for Monitor, Condition, Trigger, ActionSequence (with fakes)
 	- [x] UI component/contract tests (mock commands)
-	- [ ] One E2E happy path that runs the preset and asserts Events
+	- [x] One E2E happy path that runs the preset and asserts Events
 - [x] CI: build, tests, coverage (tarpaulin/grcov + vitest) → Codecov; gate: overall coverage ≥90%.
 - [ ] Packaging: produce installers/bundles for at least one OS to release MVP quickly.
 

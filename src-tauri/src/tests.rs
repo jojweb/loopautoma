@@ -184,4 +184,53 @@ mod tests {
     m.tick(t0 + Duration::from_millis(2), &[r], &cap, &auto, &mut evs);
     assert!(evs.iter().any(|e| match e { crate::domain::Event::WatchdogTripped{reason} if reason == "max_activations_per_hour" => true, _ => false }));
     }
+
+    #[test]
+    fn e2e_happy_path_emits_expected_sequence() {
+        // This test simulates the full happy path using the same profile-driven builder
+        // and fake backends, asserting that the expected event ordering occurs once.
+        let profile = Profile {
+            id: "p-e2e".into(),
+            name: "E2E Happy".into(),
+            regions: vec![Region { id: "r1".into(), rect: Rect { x: 0, y: 0, width: 10, height: 10 }, name: None }],
+            trigger: TriggerConfig { r#type: "IntervalTrigger".into(), interval_ms: 1 },
+            condition: ConditionConfig { r#type: "RegionCondition".into(), stable_ms: 1, downscale: 1 },
+            actions: vec![
+                ActionConfig::Type { text: "continue".into() },
+                ActionConfig::Key { key: "Enter".into() },
+            ],
+            guardrails: Some(GuardrailsConfig { max_runtime_ms: Some(10_000), max_activations_per_hour: Some(5), cooldown_ms: 0 }),
+        };
+
+        let (mut mon, regions) = build_monitor_from_profile(&profile);
+
+        // Use deterministic fakes: constant hash (no visual change) and no-op automation
+        struct Cap; impl ScreenCapture for Cap { fn hash_region(&self, _r: &Region, _d: u32) -> u64 { 42 } }
+        struct Auto; impl Automation for Auto {
+            fn move_cursor(&self, _x: u32, _y: u32) -> Result<(), String> { Ok(()) }
+            fn click(&self, _b: MouseButton) -> Result<(), String> { Ok(()) }
+            fn type_text(&self, _t: &str) -> Result<(), String> { Ok(()) }
+            fn key(&self, _k: &str) -> Result<(), String> { Ok(()) }
+        }
+        let cap = Cap; let auto = Auto;
+
+        let mut events = vec![];
+        mon.start(&mut events);
+        let t0 = Instant::now();
+        // Run a few ticks to allow condition to stabilize and one activation to occur
+        mon.tick(t0, &regions, &cap, &auto, &mut events);
+        mon.tick(t0 + Duration::from_millis(1), &regions, &cap, &auto, &mut events);
+
+        // Extract first occurrence indices for the expected sequence
+        let idx_running = events.iter().position(|e| matches!(e, crate::domain::Event::MonitorStateChanged { state } if *state == crate::domain::MonitorState::Running)).expect("running event");
+        let idx_trigger = events.iter().position(|e| matches!(e, crate::domain::Event::TriggerFired)).expect("trigger");
+        let idx_condition_true = events.iter().position(|e| matches!(e, crate::domain::Event::ConditionEvaluated { result } if *result)).expect("condition true");
+        let idx_action_start = events.iter().position(|e| matches!(e, crate::domain::Event::ActionStarted { .. })).expect("action started");
+        let idx_action_done = events.iter().position(|e| matches!(e, crate::domain::Event::ActionCompleted { success, .. } if *success)).expect("action completed");
+
+        assert!(idx_running < idx_trigger, "Monitor should start before first trigger");
+        assert!(idx_trigger <= idx_condition_true, "Trigger precedes condition evaluation true");
+        assert!(idx_condition_true <= idx_action_start, "Condition true precedes first action start");
+        assert!(idx_action_start <= idx_action_done, "Action start precedes completed");
+    }
 }
