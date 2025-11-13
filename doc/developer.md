@@ -27,8 +27,8 @@ This file records environment setup steps already performed locally and offers m
 ## Notes
 
 - On Linux, Tauri requires system dependencies (e.g., WebKitGTK, libsoup3, build tools). If missing, the scaffolder/CLI will list required packages. See Tauri prerequisites: https://v2.tauri.app/start/prerequisites/
-- Our docs prefer Bun for UI dev/build/test. If a blocking compatibility issue occurs, fall back to Node.js 20 LTS.
-- Keep the project idiomatic and minimal; follow the contracts in `docs/architecture.md` and acceptance gates in `docs/rollout-plan.md`.
+- Our doc prefer Bun for UI dev/build/test. If a blocking compatibility issue occurs, fall back to Node.js 20 LTS.
+- Keep the project idiomatic and minimal; follow the contracts in `doc/architecture.md` and acceptance gates in `doc/rollout-plan.md`.
 
 ### Linux prerequisites (Ubuntu/Debian)
 

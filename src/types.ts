@@ -1,4 +1,4 @@
-// Shared model types mirroring Rust models (docs/architecture.md)
+// Shared model types mirroring Rust models (doc/architecture.md)
 export type Rect = { x: number; y: number; width: number; height: number };
 export type Region = { id: string; rect: Rect; name?: string };
 

@@ -1,6 +1,6 @@
 # Loop Automa — Lean Rollout Plan (Fast MVP)
 
-Global rule: You may progress only when all tasks are completed, all tests pass, and overall coverage (Rust + UI combined) is ≥90% for the scope of that phase. MVP goal: unattended operation to keep an AI agent (e.g., VS Code Copilot) progressing indefinitely once started, with guardrails and a panic stop. Required reading before coding: `docs/architecture.md` for contracts and `docs/rollout-plan.md` for acceptance gates. Use idiomatic approaches and avoid overengineering—prefer the defaults from Tauri/React/Rust unless the architecture requires an abstraction.
+Global rule: You may progress only when all tasks are completed, all tests pass, and overall coverage (Rust + UI combined) is ≥90% for the scope of that phase. MVP goal: unattended operation to keep an AI agent (e.g., VS Code Copilot) progressing indefinitely once started, with guardrails and a panic stop. Required reading before coding: `doc/architecture.md` for contracts and `doc/rollout-plan.md` for acceptance gates. Use idiomatic approaches and avoid overengineering—prefer the defaults from Tauri/React/Rust unless the architecture requires an abstraction.
 
 ## Phase A — Ship the MVP
 
@@ -47,4 +47,4 @@ Gate: all tasks done, tests green, coverage ≥90% (domain/runtime), smoke on al
 - [ ] Optional keep‑awake Action (cursor jiggle/sleep inhibition) behind traits.
 - [ ] Extension registry and sample plug‑ins (`DelayTrigger`, `NoopAction`).
 - [ ] OCR/LLM Conditions + Actions (not MVP).
-- [ ] Telemetry opt‑in and privacy docs polish.
+- [ ] Telemetry opt‑in and privacy doc polish.

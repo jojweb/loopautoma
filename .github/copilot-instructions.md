@@ -4,9 +4,9 @@ This repository is designed for automated implementation by an LLM agent. Follow
 
 ## Required reading
 
-- docs/architecture.md — Target architecture and exact contracts
-- docs/rollout-plan.md — Lean rollout plan and acceptance gates
-- docs/developer.md — Local setup notes, Linux prerequisites, and troubleshooting
+- doc/architecture.md — Target architecture and exact contracts
+- doc/rollout-plan.md — Lean rollout plan and acceptance gates
+- doc/developer.md — Local setup notes, Linux prerequisites, and troubleshooting
 
 You must read both before writing code. If in doubt, re-open and re-read.
 
@@ -28,7 +28,7 @@ You must read both before writing code. If in doubt, re-open and re-read.
 
 Keep it idiomatic:
 
-- Prefer idiomatic Tauri, Rust, and React patterns. Do not overengineer. Only introduce abstractions explicitly required by docs/architecture.md.
+- Prefer idiomatic Tauri, Rust, and React patterns. Do not overengineer. Only introduce abstractions explicitly required by doc/architecture.md.
 
 ## Build, run, and test commands
 
@@ -47,7 +47,7 @@ source "$HOME/.cargo/env"
 cargo --version
 ```
 
-Linux prerequisites (Ubuntu/Debian): install WebKitGTK 4.1, libsoup3, GTK3, etc. (see docs/developer.md). Example:
+Linux prerequisites (Ubuntu/Debian): install WebKitGTK 4.1, libsoup3, GTK3, etc. (see doc/developer.md). Example:
 
 ```bash
 sudo apt update
@@ -58,7 +58,7 @@ sudo apt install -y pkg-config build-essential libssl-dev libgtk-3-dev libwebkit
 
 - A GitHub Actions workflow is provided in `.github/workflows/ci.yml`.
 - On push/PR: installs Linux deps, sets up Bun and Rust, then runs UI tests (if `package.json` exists) and Rust tests (if `src-tauri/` exists).
-- Coverage reporting/gating: required at ≥90% per docs; wire up Codecov as soon as tests exist. For now, CI runs tests and can emit coverage if configured.
+- Coverage reporting/gating: required at ≥90% per doc; wire up Codecov as soon as tests exist. For now, CI runs tests and can emit coverage if configured.
 
 ## Monitor semantics
 
@@ -69,8 +69,8 @@ sudo apt install -y pkg-config build-essential libssl-dev libgtk-3-dev libwebkit
 
 ## Contracts & schema
 
-- Use the Profile schema in docs/architecture.md verbatim for JSON profiles.
-- Tauri commands and event channel names/types must match docs/architecture.md.
+- Use the Profile schema in doc/architecture.md verbatim for JSON profiles.
+- Tauri commands and event channel names/types must match doc/architecture.md.
 
 ## Implementation hints
 
