@@ -66,20 +66,18 @@ jobs:
         run: |
           if [ -d src-tauri ]; then (cd src-tauri && cargo test --all --locked); else echo "No src-tauri/; skipping"; fi
 
-      - name: Rust coverage (tarpaulin)
+      - name: Rust coverage (llvm-cov)
         run: |
           if [ -f src-tauri/Cargo.toml ]; then (
             cd src-tauri && \
-            cargo tarpaulin --avoid-clean --out Xml --timeout 120 --engine llvm \
-              || cargo tarpaulin --avoid-clean --out Xml --timeout 120 \
-              || cargo tarpaulin --out Xml --timeout 120
+            cargo llvm-cov --workspace --locked --lcov --output-path lcov.info
           ); fi
 
       - name: Upload coverage to Codecov (Rust)
         if: ${{ always() }}
         uses: codecov/codecov-action@v4
         with:
-          files: src-tauri/tarpaulin-report.xml
+          files: src-tauri/lcov.info
           flags: rust
           fail_ci_if_error: false
 

@@ -13,6 +13,8 @@ use xcap::Monitor;
 #[cfg(feature = "os-linux-input")]
 use std::collections::HashMap;
 #[cfg(feature = "os-linux-input")]
+use std::io::ErrorKind;
+#[cfg(feature = "os-linux-input")]
 use std::sync::{atomic::{AtomicBool, Ordering}, Arc, Mutex};
 #[cfg(feature = "os-linux-input")]
 use std::thread::{self, JoinHandle};
@@ -21,11 +23,13 @@ use x11rb::{
     connection::Connection,
     errors::ConnectionError,
     protocol::{
-        xinput::{self, ConnectionExt as XInputExt, Device, Event as XInputEvent, EventMask, XIEventMask},
-        xproto::{self, ConnectionExt as XProtoExt},
+        Event as X11Event,
+    xinput::{ConnectionExt as XInputExt, Device, EventMask, XIEventMask},
+    xproto,
         xtest::ConnectionExt as XTestExt,
     },
     xcb_ffi::XCBConnection,
+    CURRENT_TIME,
 };
 #[cfg(feature = "os-linux-input")]
 use xkbcommon::xkb::{self, Context, KeyDirection, Keycode, Keymap, Keysym, ModMask, State};
@@ -147,7 +151,7 @@ impl LinuxAutomation {
         let yi = self.keyboard.clamp_coord(y);
         self.with_conn(|conn| {
             conn
-                .xtest_fake_input(xproto::MOTION_NOTIFY_EVENT, 0, xproto::CURRENT_TIME, self.root, xi, yi, 0)
+                .xtest_fake_input(xproto::MOTION_NOTIFY_EVENT, 0, CURRENT_TIME, self.root, xi, yi, 0)
                 .map_err(|e| e.to_string())?;
             conn.flush().map_err(|e| e.to_string())
         })
@@ -164,7 +168,7 @@ impl LinuxAutomation {
                 .xtest_fake_input(
                     if press { xproto::BUTTON_PRESS_EVENT } else { xproto::BUTTON_RELEASE_EVENT },
                     detail,
-                    xproto::CURRENT_TIME,
+                    CURRENT_TIME,
                     self.root,
                     0,
                     0,
@@ -181,7 +185,7 @@ impl LinuxAutomation {
                 .xtest_fake_input(
                     if press { xproto::KEY_PRESS_EVENT } else { xproto::KEY_RELEASE_EVENT },
                     keycode,
-                    xproto::CURRENT_TIME,
+                    CURRENT_TIME,
                     self.root,
                     0,
                     0,
@@ -219,11 +223,11 @@ impl LinuxAutomation {
 
     fn key_from_str(&self, key: &str) -> Option<Keysym> {
         match key.to_lowercase().as_str() {
-            "enter" => Some(xkb::keysyms::KEY_Return),
-            "escape" => Some(xkb::keysyms::KEY_Escape),
-            "tab" => Some(xkb::keysyms::KEY_Tab),
-            "space" => Some(xkb::keysyms::KEY_space),
-            "backspace" => Some(xkb::keysyms::KEY_BackSpace),
+            "enter" => Some(xkb::keysyms::KEY_Return.into()),
+            "escape" => Some(xkb::keysyms::KEY_Escape.into()),
+            "tab" => Some(xkb::keysyms::KEY_Tab.into()),
+            "space" => Some(xkb::keysyms::KEY_space.into()),
+            "backspace" => Some(xkb::keysyms::KEY_BackSpace.into()),
             other if other.len() == 1 => {
                 let ch = other.chars().next().unwrap();
                 Some(xkb::utf32_to_keysym(ch as u32))
@@ -390,15 +394,15 @@ struct KeyboardLookup {
 #[cfg(feature = "os-linux-input")]
 impl KeyboardLookup {
     fn from_connection(conn: &XCBConnection) -> Result<Self, BackendError> {
-        let context = Context::new(xkb::CONTEXT_NO_FLAGS);
-        let device_id = xkb::x11::get_core_keyboard_device_id(conn);
-        let keymap = xkb::x11::keymap_new_from_device(&context, conn, xkb::KEYMAP_COMPILE_NO_FLAGS);
+    let context = Context::new(xkb::CONTEXT_NO_FLAGS);
+    let device_id = xkb::x11::get_core_keyboard_device_id(conn);
+    let keymap = xkb::x11::keymap_new_from_device(&context, conn, device_id, xkb::KEYMAP_COMPILE_NO_FLAGS);
         let mut entries = HashMap::new();
         let mut masks = [0u32; 16];
         let min = keymap.min_keycode().raw();
         let max = keymap.max_keycode().raw();
         for raw_code in min..=max {
-            let keycode = xkb::Keycode::new(raw_code);
+            let keycode = Keycode::new(raw_code);
             let layouts = keymap.num_layouts_for_key(keycode);
             for layout in 0..layouts {
                 let levels = keymap.num_levels_for_key(keycode, layout);
@@ -484,7 +488,7 @@ fn run_input_loop(callback: InputEventCallback, running: Arc<AtomicBool>) -> Res
         match conn.poll_for_event() {
             Ok(Some(event)) => handle_xinput_event(&conn, screen.root, &mut xkb, &callback, event),
             Ok(None) => thread::sleep(Duration::from_millis(5)),
-            Err(ConnectionError::ClosedConnection) => break,
+            Err(ConnectionError::IoError(ref io)) if io.kind() == ErrorKind::BrokenPipe => break,
             Err(err) => return Err(BackendError::new("x11_event_error", err.to_string())),
         }
     }
@@ -497,60 +501,31 @@ fn handle_xinput_event(
     root: xproto::Window,
     xkb: &mut XkbStateBundle,
     callback: &InputEventCallback,
-    event: x11rb::protocol::Event,
+    event: X11Event,
 ) {
-    if let x11rb::protocol::Event::XinputExtension(ev) = event {
-        match ev {
-            XInputEvent::RawKeyPress(data) => {
-                if let Some(kb_event) = build_keyboard_event(&mut xkb.state, data, KeyState::Down) {
-                    callback(InputEvent::Keyboard(kb_event));
-                }
+    match event {
+        X11Event::XinputRawKeyPress(data) => {
+            if let Some(kb_event) = build_keyboard_event(&mut xkb.state, data.detail, data.time, KeyState::Down) {
+                callback(InputEvent::Keyboard(kb_event));
             }
-            XInputEvent::RawKeyRelease(data) => {
-                if let Some(kb_event) = build_keyboard_event(&mut xkb.state, data, KeyState::Up) {
-                    callback(InputEvent::Keyboard(kb_event));
-                }
+        }
+        X11Event::XinputRawKeyRelease(data) => {
+            if let Some(kb_event) = build_keyboard_event(&mut xkb.state, data.detail, data.time, KeyState::Up) {
+                callback(InputEvent::Keyboard(kb_event));
             }
-            XInputEvent::RawButtonPress(data) => {
-                if let Some((dx, dy)) = scroll_delta_from_button(data.detail) {
-                    callback(InputEvent::Scroll(ScrollEvent {
-                        delta_x: dx,
-                        delta_y: dy,
-                        modifiers: modifiers_from_state(&xkb.state),
-                        timestamp_ms: data.time as u64,
-                    }));
-                } else if let Some(button) = mouse_button_from_detail(data.detail) {
-                    if let Some((x, y)) = pointer_position(conn, root) {
-                        callback(InputEvent::Mouse(MouseEvent {
-                            event_type: MouseEventType::ButtonDown(button),
-                            x,
-                            y,
-                            modifiers: modifiers_from_state(&xkb.state),
-                            timestamp_ms: data.time as u64,
-                        }));
-                    }
-                }
-            }
-            XInputEvent::RawButtonRelease(data) => {
-                if scroll_delta_from_button(data.detail).is_some() {
-                    return;
-                }
-                if let Some(button) = mouse_button_from_detail(data.detail) {
-                    if let Some((x, y)) = pointer_position(conn, root) {
-                        callback(InputEvent::Mouse(MouseEvent {
-                            event_type: MouseEventType::ButtonUp(button),
-                            x,
-                            y,
-                            modifiers: modifiers_from_state(&xkb.state),
-                            timestamp_ms: data.time as u64,
-                        }));
-                    }
-                }
-            }
-            XInputEvent::RawMotion(data) => {
+        }
+        X11Event::XinputRawButtonPress(data) => {
+            if let Some((dx, dy)) = scroll_delta_from_button(data.detail) {
+                callback(InputEvent::Scroll(ScrollEvent {
+                    delta_x: dx,
+                    delta_y: dy,
+                    modifiers: modifiers_from_state(&xkb.state),
+                    timestamp_ms: data.time as u64,
+                }));
+            } else if let Some(button) = mouse_button_from_detail(data.detail) {
                 if let Some((x, y)) = pointer_position(conn, root) {
                     callback(InputEvent::Mouse(MouseEvent {
-                        event_type: MouseEventType::Move,
+                        event_type: MouseEventType::ButtonDown(button),
                         x,
                         y,
                         modifiers: modifiers_from_state(&xkb.state),
@@ -558,33 +533,61 @@ fn handle_xinput_event(
                     }));
                 }
             }
-            _ => {}
         }
+        X11Event::XinputRawButtonRelease(data) => {
+            if scroll_delta_from_button(data.detail).is_some() {
+                return;
+            }
+            if let Some(button) = mouse_button_from_detail(data.detail) {
+                if let Some((x, y)) = pointer_position(conn, root) {
+                    callback(InputEvent::Mouse(MouseEvent {
+                        event_type: MouseEventType::ButtonUp(button),
+                        x,
+                        y,
+                        modifiers: modifiers_from_state(&xkb.state),
+                        timestamp_ms: data.time as u64,
+                    }));
+                }
+            }
+        }
+        X11Event::XinputRawMotion(data) => {
+            if let Some((x, y)) = pointer_position(conn, root) {
+                callback(InputEvent::Mouse(MouseEvent {
+                    event_type: MouseEventType::Move,
+                    x,
+                    y,
+                    modifiers: modifiers_from_state(&xkb.state),
+                    timestamp_ms: data.time as u64,
+                }));
+            }
+        }
+        _ => {}
     }
 }
 
 #[cfg(feature = "os-linux-input")]
 fn build_keyboard_event(
     state: &mut State,
-    data: xinput::RawKeyPressEvent,
+    detail: u32,
+    time: u32,
     key_state: KeyState,
 ) -> Option<KeyboardEvent> {
-    let keycode = xkb::Keycode::new(data.detail);
+    let keycode = Keycode::new(detail);
     let direction = if key_state == KeyState::Down { KeyDirection::Down } else { KeyDirection::Up };
     state.update_key(keycode, direction);
     let keysym = state.key_get_one_sym(keycode);
     let mut key = xkb::keysym_get_name(keysym);
     if key.is_empty() {
-        key = format!("Keycode{}", data.detail);
+        key = format!("Keycode{}", detail);
     }
     let text_val = state.key_get_utf8(keycode);
     Some(KeyboardEvent {
         state: key_state,
         key,
-        code: data.detail,
+        code: detail,
         text: if text_val.is_empty() { None } else { Some(text_val) },
         modifiers: modifiers_from_state(state),
-        timestamp_ms: data.time as u64,
+        timestamp_ms: time as u64,
     })
 }
 
@@ -639,7 +642,7 @@ fn select_xinput(conn: &XCBConnection, root: xproto::Window) -> Result<(), Backe
         ],
     };
     conn
-        .xi_select_events(root, &[mask])
+        .xinput_xi_select_events(root, &[mask])
         .map_err(|e| BackendError::new("xi_select_failed", e.to_string()))?;
     conn.flush().map_err(|e| BackendError::new("x11_flush_failed", e.to_string()))
 }

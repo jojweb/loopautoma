@@ -5,6 +5,7 @@ import { ProfileSelector } from "./components/ProfileSelector";
 import { EventLog } from "./components/EventLog";
 import { ProfileEditor } from "./components/ProfileEditor";
 import { RecordingBar, toActions } from "./components/RecordingBar";
+import { ScreenPreview } from "./components/ScreenPreview";
 import { GraphComposer } from "./components/GraphComposer";
 import { useEventStream, useProfiles, useRunState } from "./store";
 import { defaultPresetProfile, Profile } from "./types";
@@ -223,6 +224,29 @@ function App() {
               await updateProfile({
                 ...selectedProfile,
                 actions: [...selectedProfile.actions, ...newActions],
+              });
+            }}
+          />
+        </div>
+
+        <div>
+          <h3 style={{ margin: 0 }} title="Preview the desktop stream and capture Regions">Screen preview & Regions</h3>
+          <ScreenPreview
+            regions={selectedProfile?.regions}
+            disabled={!selectedProfile}
+            onRegionAdd={async (draft) => {
+              if (!selectedProfile) return;
+              const nextId = draft.id && draft.id.trim().length > 0
+                ? draft.id.trim()
+                : `region-${Date.now().toString(36)}`;
+              const region = {
+                id: nextId,
+                rect: draft.rect,
+                name: draft.name?.trim() || undefined,
+              };
+              await updateProfile({
+                ...selectedProfile,
+                regions: [...selectedProfile.regions, region],
               });
             }}
           />

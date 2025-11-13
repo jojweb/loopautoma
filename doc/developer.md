@@ -99,11 +99,11 @@ Linux now uses the `xcap` crate by default for screen capture and hashing. It re
 sudo apt install -y libpipewire-0.3-dev libspa-0.2-dev clang llvm-dev libc6-dev
 ```
 
-`cargo build` (or `bun run dev`) already enables the `os-linux-capture-xcap` feature via the default feature set. If you disable defaults for custom builds, remember to re-enable the capture feature explicitly:
+`cargo build` (or `bun run dev`) already enables both the `os-linux-capture-xcap` and `os-linux-input` features via the default feature set. If you disable defaults for custom builds, remember to re-enable the capture + input features explicitly:
 
 ```bash
 # from src-tauri/
-cargo build --no-default-features --features os-linux-capture-xcap
+cargo build --no-default-features --features os-linux-capture-xcap,os-linux-input
 
 # run tauri dev with capture + input backends
 TAURI_TRIPLE="" bun run tauri dev -- --no-default-features --features os-linux-capture-xcap,os-linux-input
@@ -226,7 +226,7 @@ Conventions to keep runners separate:
 Coverage:
 
 - UI coverage (istanbul) is computed by Vitest.
-- Rust coverage runs in CI (tarpaulin). Local Rust coverage is optional and not required for day-to-day dev.
+- Rust coverage runs in CI via `cargo llvm-cov`. Local Rust coverage is optional and not required for day-to-day dev.
 
 ## Backend selection (fakes vs. OS adapters)
 
@@ -265,6 +265,7 @@ Modules:
 - `src-tauri/src/os/windows.rs` → `WinCapture`, `WinAutomation` (stubs)
 
 At runtime, selection occurs in `src-tauri/src/lib.rs::select_backends()` using feature gates, with `LOOPAUTOMA_BACKEND=fake` as an override.
+
 
 ## E2E and soak
 

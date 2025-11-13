@@ -52,8 +52,8 @@ ARG BUN_INSTALL_URL=https://bun.sh/install
 RUN curl -fsSL "$BUN_INSTALL_URL" | bash && \
   echo 'export PATH="$BUN_INSTALL/bin:$PATH"' >> /etc/profile.d/bun.sh
 
-# Optional: Coverage tool for Rust
-RUN cargo install cargo-tarpaulin || true
+# Optional: Coverage tool for Rust (line coverage)
+RUN cargo install cargo-llvm-cov || true
 
 RUN mkdir -p /workspace
 WORKDIR /workspace

@@ -10,7 +10,7 @@ MVP target platform (scope): Ubuntu 24.04 on X11. The architecture preserves cle
 - UI runtime/build: Bun ≥1.3 (preferred). If blocked by compatibility, fall back to Node.js 20 LTS.
 - Tauri 2 (stable; latest tag series ~2.9.x)
 - TypeScript 5.x (latest stable is 5.9)
-- Testing: Rust (cargo test + tarpaulin), UI (Vitest + React Testing Library) or `bun test`, E2E (Playwright)
+- Testing: Rust (cargo test + `cargo llvm-cov`), UI (Vitest + React Testing Library) or `bun test`, E2E (Playwright)
 
 Project bootstrap (idiomatic):
 
@@ -201,6 +201,26 @@ Windows 11 (post‑MVP):
 
 All backends are hidden behind ScreenCapture, Automation, and InputCapture traits; selected via cfg(target_os) and feature flags.
 
+
+## Authoring helpers: screen stream + input recorder
+
+Ubuntu/X11 authoring flows rely on two optional helpers that expose extra context to the UI while keeping runtime logic OS-agnostic:
+
+- **Screen stream** — low-FPS (1–15 fps) snapshots of the active display delivered via the `loopautoma://screen_frame` event channel. Started/stopped through the `start_screen_stream` / `stop_screen_stream` commands. Frames contain both raw RGBA bytes and the originating `DisplayInfo`, which the React UI uses to render the desktop inside the Screen Preview canvas and to map user drags back to absolute screen coordinates.
+- **Input recorder** — global keyboard/mouse hooks exposed through `start_input_recording` / `stop_input_recording`, emitting `loopautoma://input_event`. These events populate the Recording Bar timeline and let authors transform real input into `ActionSequence` steps.
+
+Why we stream the screen:
+
+1. **Region authoring** — The React preview mirrors the desktop so authors can drag-select rectangles without guessing coordinates. The helper converts canvas-space drags into `Rect` objects that slot directly into a profile.
+2. **Profile validation** — With live pixels visible, it’s easy to confirm that regions still target the right UI element after layout changes before deploying to unattended mode.
+3. **Future overlay** — The same feed will back the transparent region picker overlay (planned in Phase 1) so we can highlight regions while capturing input via XI2.
+
+Implementation notes:
+
+- The stream is intentionally throttled; it is **not** meant for continuous monitoring or playback. Only enable it while actively authoring to avoid unnecessary capture load.
+- If `LOOPAUTOMA_BACKEND=fake` is set, the commands still succeed but emit synthetic frames/events so UI flows remain testable.
+- When you close the authoring UI or switch profiles, always call `stop_screen_stream` / `stop_input_recording` to release XI2/XTest resources; the React components do this automatically via `useEffect` cleanup.
+
 ## Performance strategy (MVP)
 
 - Downscale Regions (e.g., to ~160 px width) before hashing (xxhash/xxh3) to cut CPU/memory.
@@ -215,7 +235,7 @@ All backends are hidden behind ScreenCapture, Automation, and InputCapture trait
 - Core/domain: pure unit tests with fake ScreenCapture and Automation; deterministic hash fixtures.
 - Runtime: integration tests for Monitor loop using virtual time and fake backends; property tests for stability detection.
 - UI: component tests + contract tests against mocked commands; E2E with Tauri driver or Playwright (headless) to start/stop Monitor and assert Events.
-- CI: cargo test + tarpaulin for Rust coverage, Vitest for UI; combine and upload to Codecov. Gate: overall coverage ≥90% before merging.
+- CI: cargo test + `cargo llvm-cov` for Rust coverage, Vitest for UI; combine and upload to Codecov. Gate: overall coverage ≥90% before merging.
  - Soak tests (time‑dilated where possible) to validate unattended operation: ensure no memory leaks, watchdog trips as configured, and correct recovery after stop/start.
  - Ubuntu/X11 backends: add integration tests behind feature gates where possible; mock X11 when CI access is limited.
 
