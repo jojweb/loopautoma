@@ -60,7 +60,9 @@ RUN if [ -f package.json ]; then bun install --frozen-lockfile || true; fi
 # Prebuild Rust dependencies at the same path CI uses so compiled deps can be reused
 COPY src-tauri/Cargo.toml src-tauri/Cargo.lock /workspace/src-tauri/
 RUN mkdir -p /workspace/src-tauri/src && \
+  # Provide both bin and lib placeholders so Cargo can parse the manifest
   printf 'fn main() { println!("prebuild"); }\n' > /workspace/src-tauri/src/main.rs && \
+  printf 'pub fn __prebuild() {}\n' > /workspace/src-tauri/src/lib.rs && \
   (cd /workspace/src-tauri && cargo build --locked --tests || cargo build --locked) && \
   rm -rf /workspace/src-tauri/src
 

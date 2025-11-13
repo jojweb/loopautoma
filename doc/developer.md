@@ -61,9 +61,9 @@ sudo apt update
 sudo apt install -y pkg-config build-essential libssl-dev libgtk-3-dev libwebkit2gtk-4.1-dev libsoup-3.0-dev librsvg2-dev patchelf libxdo-dev
 ```
 
-### Linux capture backends (warnings)
+### Linux capture backends (defaults and options)
 
-We now default to the `xcap` backend on Linux to avoid a Rust future‑incompatibility warning from the `screenshots` crate (0.8.x). `xcap` requires PipeWire/SPA headers and Clang toolchain (installed in the CI image).
+Default on Linux is the `screenshots` backend for the smoothest local setup (no PipeWire/SPA headers required). If you want to try the newer `xcap` backend, it requires PipeWire/SPA headers and Clang toolchain (installed in the CI image).
 
 Install the extra packages:
 
@@ -71,14 +71,14 @@ Install the extra packages:
 sudo apt install -y libpipewire-0.3-dev libspa-0.2-dev clang llvm-dev libc6-dev
 ```
 
-Build explicitly with xcap capture feature (default already uses this):
+Build explicitly with xcap capture feature:
 
 ```bash
 # from src-tauri/
 cargo build --no-default-features --features os-linux-capture-xcap
 ```
 
-Run the app in dev mode with xcap capture (default):
+Run the app in dev mode with xcap capture:
 
 ```bash
 # from project root
@@ -101,6 +101,58 @@ Then retry:
 source "$HOME/.cargo/env"
 bun run dev
 ```
+
+#### Troubleshooting: libspa/pipewire bindgen error ("stdbool.h not found")
+
+Symptom during `xcap` build (libspa-sys/pipewire-sys):
+
+```
+fatal error: 'stdbool.h' file not found
+```
+
+Fix on Ubuntu/Debian:
+
+- Ensure core build tools and C headers are installed:
+
+  ```bash
+  sudo apt update
+  sudo apt install -y build-essential libc6-dev pkg-config
+  ```
+
+- Ensure Clang/LLVM and libclang headers are present for bindgen:
+
+  ```bash
+  sudo apt install -y clang llvm-dev libclang-dev
+  ```
+
+- Ensure PipeWire/SPA dev headers are present:
+
+  ```bash
+  sudo apt install -y libpipewire-0.3-dev libspa-0.2-dev
+  ```
+
+- Verify clang can see its resource includes (should contain stdbool.h):
+
+  ```bash
+  clang --version
+  ls "$(clang -print-resource-dir)/include" | grep -E '^stdbool.h$' || echo "stdbool.h missing in clang resource dir"
+  ```
+
+- If clang still can’t resolve headers, provide explicit include hints for bindgen and rebuild:
+
+  ```bash
+  export BINDGEN_EXTRA_CLANG_ARGS="--sysroot=/usr -I$(clang -print-resource-dir)/include"
+  cd src-tauri
+  cargo clean -p libspa-sys -p pipewire-sys
+  cargo build --no-default-features --features os-linux-capture-xcap
+  ```
+
+- Quick workaround: run with the screenshots backend instead of xcap:
+
+  ```bash
+  # from project root
+  bun run dev:screenshots
+  ```
 
 ## Scripts and common tasks
 
