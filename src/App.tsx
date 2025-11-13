@@ -93,6 +93,50 @@ function App() {
           </span>
         </div>
 
+        {selectedProfile && (
+          <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
+            <strong>Guardrails:</strong>
+            <label>
+              Cooldown (ms)
+              <input
+                type="number"
+                value={selectedProfile.guardrails?.cooldown_ms ?? 0}
+                onChange={async (e) => {
+                  const v = Number(e.target.value || 0);
+                  await updateProfile({ ...selectedProfile, guardrails: { ...(selectedProfile.guardrails ?? { cooldown_ms: 0 }), cooldown_ms: v } });
+                }}
+                style={{ width: 120, marginLeft: 6 }}
+              />
+            </label>
+            <label>
+              Max runtime (ms)
+              <input
+                type="number"
+                value={selectedProfile.guardrails?.max_runtime_ms ?? ""}
+                onChange={async (e) => {
+                  const v = e.target.value === "" ? undefined : Number(e.target.value);
+                  await updateProfile({ ...selectedProfile, guardrails: { ...(selectedProfile.guardrails ?? { cooldown_ms: 0 }), max_runtime_ms: v } });
+                }}
+                placeholder="unset"
+                style={{ width: 140, marginLeft: 6 }}
+              />
+            </label>
+            <label>
+              Max activations/hour
+              <input
+                type="number"
+                value={selectedProfile.guardrails?.max_activations_per_hour ?? ""}
+                onChange={async (e) => {
+                  const v = e.target.value === "" ? undefined : Number(e.target.value);
+                  await updateProfile({ ...selectedProfile, guardrails: { ...(selectedProfile.guardrails ?? { cooldown_ms: 0 }), max_activations_per_hour: v } });
+                }}
+                placeholder="unset"
+                style={{ width: 120, marginLeft: 6 }}
+              />
+            </label>
+          </div>
+        )}
+
         <div>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <h3 style={{ margin: 0 }}>Events</h3>

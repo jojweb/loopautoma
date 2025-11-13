@@ -1,11 +1,11 @@
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Profile } from "../types";
 
 export function ProfileEditor({ profile, onChange }: { profile: Profile | null; onChange: (p: Profile) => void }) {
   const [text, setText] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
 
-  useMemo(() => {
+  useEffect(() => {
     if (profile) setText(JSON.stringify(profile, null, 2));
   }, [profile]);
 
