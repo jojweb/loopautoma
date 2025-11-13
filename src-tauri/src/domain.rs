@@ -54,7 +54,11 @@ pub enum Event {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub enum MonitorState { Stopped, Running, Stopping }
+pub enum MonitorState {
+    Stopped,
+    Running,
+    Stopping,
+}
 
 // Traits
 pub trait Trigger {
@@ -73,17 +77,29 @@ pub trait Condition {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub enum MouseButton { Left, Right, Middle }
+pub enum MouseButton {
+    Left,
+    Right,
+    Middle,
+}
 
 pub trait Automation {
     fn move_cursor(&self, x: u32, y: u32) -> Result<(), String>;
     fn click(&self, button: MouseButton) -> Result<(), String>;
     fn type_text(&self, text: &str) -> Result<(), String>;
     fn key(&self, key: &str) -> Result<(), String>;
-    fn mouse_down(&self, button: MouseButton) -> Result<(), String> { self.click(button) }
-    fn mouse_up(&self, _button: MouseButton) -> Result<(), String> { Ok(()) }
-    fn key_down(&self, key: &str) -> Result<(), String> { self.key(key) }
-    fn key_up(&self, _key: &str) -> Result<(), String> { Ok(()) }
+    fn mouse_down(&self, button: MouseButton) -> Result<(), String> {
+        self.click(button)
+    }
+    fn mouse_up(&self, _button: MouseButton) -> Result<(), String> {
+        Ok(())
+    }
+    fn key_down(&self, key: &str) -> Result<(), String> {
+        self.key(key)
+    }
+    fn key_up(&self, _key: &str) -> Result<(), String> {
+        Ok(())
+    }
 }
 
 pub type InputEventCallback = Arc<dyn Fn(InputEvent) + Send + Sync>;
@@ -103,16 +119,28 @@ pub struct ActionSequence {
 }
 
 impl ActionSequence {
-    pub fn new(actions: Vec<Box<dyn Action + Send + Sync>>) -> Self { Self { actions } }
+    pub fn new(actions: Vec<Box<dyn Action + Send + Sync>>) -> Self {
+        Self { actions }
+    }
 
     pub fn run(&self, automation: &dyn Automation, events: &mut Vec<Event>) -> bool {
         for a in &self.actions {
-            events.push(Event::ActionStarted { action: a.name().to_string() });
+            events.push(Event::ActionStarted {
+                action: a.name().to_string(),
+            });
             match a.execute(automation) {
-                Ok(()) => events.push(Event::ActionCompleted { action: a.name().to_string(), success: true }),
+                Ok(()) => events.push(Event::ActionCompleted {
+                    action: a.name().to_string(),
+                    success: true,
+                }),
                 Err(e) => {
-                    events.push(Event::Error { message: format!("action '{}': {}", a.name(), e) });
-                    events.push(Event::ActionCompleted { action: a.name().to_string(), success: false });
+                    events.push(Event::Error {
+                        message: format!("action '{}': {}", a.name(), e),
+                    });
+                    events.push(Event::ActionCompleted {
+                        action: a.name().to_string(),
+                        success: false,
+                    });
                     return false;
                 }
             }
@@ -131,7 +159,11 @@ pub struct Guardrails {
 
 impl Default for Guardrails {
     fn default() -> Self {
-        Self { cooldown: Duration::from_millis(0), max_runtime: None, max_activations_per_hour: None }
+        Self {
+            cooldown: Duration::from_millis(0),
+            max_runtime: None,
+            max_activations_per_hour: None,
+        }
     }
 }
 
@@ -149,10 +181,17 @@ pub struct Profile {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct TriggerConfig { pub r#type: String, pub interval_ms: u64 }
+pub struct TriggerConfig {
+    pub r#type: String,
+    pub interval_ms: u64,
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct ConditionConfig { pub r#type: String, pub stable_ms: u64, pub downscale: u32 }
+pub struct ConditionConfig {
+    pub r#type: String,
+    pub stable_ms: u64,
+    pub downscale: u32,
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "type")]
@@ -164,7 +203,11 @@ pub enum ActionConfig {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct GuardrailsConfig { pub max_runtime_ms: Option<u64>, pub max_activations_per_hour: Option<u32>, pub cooldown_ms: u64 }
+pub struct GuardrailsConfig {
+    pub max_runtime_ms: Option<u64>,
+    pub max_activations_per_hour: Option<u32>,
+    pub cooldown_ms: u64,
+}
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
@@ -200,7 +243,14 @@ pub struct Modifiers {
 }
 
 impl Default for Modifiers {
-    fn default() -> Self { Self { shift: false, control: false, alt: false, meta: false } }
+    fn default() -> Self {
+        Self {
+            shift: false,
+            control: false,
+            alt: false,
+            meta: false,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -215,7 +265,10 @@ pub struct KeyboardEvent {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub enum KeyState { Down, Up }
+pub enum KeyState {
+    Down,
+    Up,
+}
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ScrollEvent {
@@ -232,11 +285,18 @@ pub struct BackendError {
 }
 
 impl BackendError {
-    pub fn new(code: &'static str, message: impl Into<String>) -> Self { Self { code, message: message.into() } }
+    pub fn new(code: &'static str, message: impl Into<String>) -> Self {
+        Self {
+            code,
+            message: message.into(),
+        }
+    }
 }
 
 impl std::fmt::Display for BackendError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result { write!(f, "{}: {}", self.code, self.message) }
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}: {}", self.code, self.message)
+    }
 }
 
 impl std::error::Error for BackendError {}

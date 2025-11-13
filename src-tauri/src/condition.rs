@@ -12,7 +12,11 @@ pub struct RegionCondition {
 
 impl RegionCondition {
     pub fn new(stable_ms: Duration, downscale: u32) -> Self {
-        Self { stable_ms, downscale: downscale.max(1), last: HashMap::new() }
+        Self {
+            stable_ms,
+            downscale: downscale.max(1),
+            last: HashMap::new(),
+        }
     }
 }
 
@@ -34,7 +38,9 @@ impl Condition for RegionCondition {
                         all_stable = false;
                     } else {
                         // unchanged; stable if duration exceeds stable_ms
-                        if now.duration_since(*last_change) < self.stable_ms { all_stable = false; }
+                        if now.duration_since(*last_change) < self.stable_ms {
+                            all_stable = false;
+                        }
                     }
                 }
             }

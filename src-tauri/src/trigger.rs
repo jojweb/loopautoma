@@ -8,18 +8,28 @@ pub struct IntervalTrigger {
 }
 
 impl IntervalTrigger {
-    pub fn new(interval: Duration) -> Self { Self { interval, last: None } }
+    pub fn new(interval: Duration) -> Self {
+        Self {
+            interval,
+            last: None,
+        }
+    }
 }
 
 impl Trigger for IntervalTrigger {
     fn should_fire(&mut self, now: Instant) -> bool {
         match self.last {
-            None => { self.last = Some(now); true }
+            None => {
+                self.last = Some(now);
+                true
+            }
             Some(prev) => {
                 if now.duration_since(prev) >= self.interval {
                     self.last = Some(now);
                     true
-                } else { false }
+                } else {
+                    false
+                }
             }
         }
     }

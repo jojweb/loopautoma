@@ -189,8 +189,8 @@ Profile schema (minimal contract):
 
 Ubuntu/X11 MVP (primary focus):
 - ScreenCapture: `xcap` crate (PipeWire + SPA + Xorg helpers) provides monitor/region capture, hashing, and display enumeration. Requires PipeWire/SPA headers and clang/LLVM for bindgen; hashes are computed directly on captured RGBA buffers.
-- InputCapture: XInput2 + XKB remain the long‑term target; interim builds rely on the `device_query` crate to unblock authoring tooling until native X11 hooks land.
-- Automation (Input replay): XTest extension is still the target abstraction; interim builds use `enigo` as a placeholder while we wire XTest for deterministic pointer/keyboard synthesis.
+- InputCapture: implemented with XInput2 + XKB for Ubuntu/X11 so authoring helpers receive raw keyboard/mouse data without falling back to `device_query`.
+- Automation (Input replay): implemented via the XTest extension on Ubuntu/X11 for deterministic pointer/keyboard synthesis, with layout-aware key mapping via XKB.
 - Note: requires an X11 session for MVP; Wayland remains out of scope.
 
 macOS (post‑MVP):
