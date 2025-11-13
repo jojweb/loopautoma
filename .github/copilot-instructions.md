@@ -17,10 +17,6 @@ You must read both before writing code. If in doubt, re-open and re-read.
 - TypeScript 5.x (latest stable)
 - Bun ≥ 1.3 for UI dev/build/test (preferred). If Bun causes blocking compatibility issues with Tauri tooling or libraries, fall back to Node.js 20 LTS.
 
-Scaffolding:
-
-- Create the app via Tauri v2 Bun template: `bun create tauri-app` (choose React + TypeScript).
-	- The typical layout is a `package.json` at the root and a `src-tauri/` folder containing Tauri’s Rust crate and config. If you created the app in a subfolder, run all commands from that subfolder.
 
 ## Non-negotiables
 
