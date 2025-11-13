@@ -1,0 +1,2 @@
+# loopautoma
+Automate your desktop
