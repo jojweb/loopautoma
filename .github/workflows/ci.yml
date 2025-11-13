@@ -2,89 +2,60 @@ name: CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, master ]
   pull_request:
-    branches: [ main ]
 
 jobs:
-  build-and-test:
-    runs-on: ubuntu-latest
-    name: CI
+  build-test:
+    runs-on: ubuntu-24.04
+    env:
+      CI: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
-    on:
-      push:
-        branches: [ main, master ]
-      pull_request:
+      - name: Install Linux prerequisites for Tauri
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            pkg-config build-essential libssl-dev libgtk-3-dev \
+            libwebkit2gtk-4.1-dev libsoup-3.0-dev librsvg2-dev patchelf
 
-    jobs:
-      build-test:
-        runs-on: ubuntu-24.04
-        env:
-          # Allow headless WebKit2GTK on Linux
-          CI: true
-        steps:
-          - name: Checkout
-            uses: actions/checkout@v4
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: 1.3.x
 
-          - name: Install Linux prerequisites for Tauri
-            run: |
-              sudo apt-get update
-              sudo apt-get install -y \
-                pkg-config build-essential libssl-dev libgtk-3-dev \
-                libwebkit2gtk-4.1-dev libsoup-3.0-dev librsvg2-dev patchelf
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
 
-          - name: Setup Bun
-            uses: oven-sh/setup-bun@v1
-            with:
-              bun-version: 1.3.x
-
-          - name: Setup Rust
-            uses: dtolnay/rust-toolchain@stable
-
-          - name: Detect app dir
-            id: detect
-            shell: bash
-            run: |
-              # Prefer repo root package.json; otherwise find first package.json that has tauri dep
-              if [[ -f package.json ]]; then echo "app_dir=." >> "$GITHUB_OUTPUT"; exit 0; fi
-              found=$(grep -Rsl '"tauri"' **/package.json || true)
-              if [[ -n "$found" ]]; then echo "app_dir=$(dirname "$found")" >> "$GITHUB_OUTPUT"; else echo "app_dir=." >> "$GITHUB_OUTPUT"; fi
-
-          - name: Install JS deps
-            working-directory: ${{ steps.detect.outputs.app_dir }}
-            run: bun install
-
-          - name: Rust tests (if src-tauri exists)
-            working-directory: ${{ steps.detect.outputs.app_dir }}
-            shell: bash
-            run: |
-              if [[ -d src-tauri ]]; then (cd src-tauri && cargo test --all --locked); else echo "No src-tauri/; skipping Rust tests"; fi
-
-          - name: UI tests (only if tests exist)
-            working-directory: ${{ steps.detect.outputs.app_dir }}
-            shell: bash
-            run: |
-              # Look for common test file patterns under src and tests directories
-              count=$(find . \( -path './node_modules' -o -path './dist' -o -path './.turbo' -o -path './.next' \) -prune -false -o \
-                       -type f \( -name "*.test.*" -o -name "*.spec.*" -o -path "./tests/*" \) | wc -l)
-              if [[ "$count" -gt 0 ]]; then
-                echo "Found $count test files. Running bun test with coverage..."
-                bun test --coverage
-              else
-                echo "No UI tests found. Skipping bun test."
-              fi
-
-          - name: Tauri build (smoke)
-            working-directory: ${{ steps.detect.outputs.app_dir }}
-            run: bun run tauri build
-          fi
-
-      - name: Tauri build (smoke)
+      - name: Install JS deps (if package.json exists)
         shell: bash
         run: |
-          APP_DIR="${{ steps.detect.outputs.app_dir }}"
-          if [ -f "$APP_DIR/package.json" ] && [ -f "$APP_DIR/src-tauri/Cargo.toml" ]; then
-            cd "$APP_DIR"
+          if [[ -f package.json ]]; then bun install; else echo "No package.json; skipping"; fi
+
+      - name: UI tests (only if tests exist)
+        shell: bash
+        run: |
+          if [[ ! -f package.json ]]; then echo "No package.json; skipping UI tests"; exit 0; fi
+          count=$(find . \( -path './node_modules' -o -path './dist' -o -path './.turbo' -o -path './.next' \) -prune -false -o \
+                   -type f \( -name "*.test.*" -o -name "*.spec.*" -o -path "./tests/*" \) | wc -l)
+          if [[ "$count" -gt 0 ]]; then
+            echo "Found $count test files. Running bun test with coverage..."
+            bun test --coverage
+          else
+            echo "No UI tests found. Skipping bun test."
+          fi
+
+      - name: Rust tests (if src-tauri exists)
+        shell: bash
+        run: |
+          if [[ -d src-tauri ]]; then (cd src-tauri && cargo test --all --locked); else echo "No src-tauri/; skipping Rust tests"; fi
+
+      - name: Tauri build (smoke, if app present)
+        shell: bash
+        run: |
+          if [[ -f package.json && -f src-tauri/Cargo.toml ]]; then
             bun run tauri build || echo "Skipping failure of bundling in CI smoke"
           else
             echo "No Tauri app detected; skipping bundling"
