@@ -13,6 +13,7 @@ RUN apt-get update && \
       ca-certificates \
       curl \
       wget \
+    unzip \
       git \
       pkg-config \
       build-essential \
@@ -40,7 +41,9 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --pr
 # Install Bun
 ENV BUN_INSTALL=/root/.bun
 ENV PATH=/root/.bun/bin:$PATH
-RUN curl -fsSL https://bun.sh/install | bash
+ARG BUN_INSTALL_URL=https://bun.sh/install
+RUN curl -fsSL "$BUN_INSTALL_URL" | bash && \
+  echo 'export PATH="$BUN_INSTALL/bin:$PATH"' >> /etc/profile.d/bun.sh
 
 # Optional: Coverage tool for Rust
 RUN cargo install cargo-tarpaulin || true
