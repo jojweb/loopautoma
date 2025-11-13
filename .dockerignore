@@ -1,0 +1,27 @@
+# Node/Bun
+node_modules
+.pnp
+.pnp.js
+.yarn/*
+*.log
+coverage
+dist
+build
+
+# Rust
+target
+**/*.rs.bk
+
+# Vite/Cache
+.vite
+.parcel-cache
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.idea
+.vscode
+
+# Git
+.git
+.gitignore

@@ -22,6 +22,11 @@ export async function windowPosition(): Promise<{ x: number; y: number }> {
   return { x, y };
 }
 
+export async function windowInfo(): Promise<{ x: number; y: number; scale: number }> {
+  const [x, y, scale] = (await invoke("window_info")) as [number, number, number];
+  return { x, y, scale };
+}
+
 export async function regionPick(): Promise<{ x: number; y: number; width: number; height: number }> {
   const [x, y, width, height] = (await invoke("region_pick")) as [number, number, number, number];
   return { x, y, width, height };

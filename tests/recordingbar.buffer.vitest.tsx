@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { RecordingBar, toActions } from "../src/components/RecordingBar";
 
-vi.mock("../src/tauriBridge", () => ({ windowPosition: async () => ({ x: 0, y: 0 }) }));
+vi.mock("../src/tauriBridge", () => ({ windowPosition: async () => ({ x: 0, y: 0 }), windowInfo: async () => ({ x: 0, y: 0, scale: 1 }) }));
 
 describe("RecordingBar buffer", () => {
   it("coalesces typed characters and flushes on stop", async () => {

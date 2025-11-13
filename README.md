@@ -33,6 +33,25 @@ Cross‑platform desktop automation to keep AI agents working indefinitely. Watc
   ```bash
   LOOPAUTOMA_BACKEND=fake bun run tauri dev
   ```
+
+### Run in Docker (optional)
+
+You can build a container with all Linux deps (Rust, Bun, Tauri) preinstalled:
+
+```bash
+# Build once
+docker build -t loopautoma/ci:local .
+
+# Install deps and run UI tests
+docker run --rm -v "$PWD:/workspace" -w /workspace loopautoma/ci:local \
+  bash -lc 'bun install && bun run test:ui:cov'
+
+# Run Rust tests
+docker run --rm -v "$PWD:/workspace" -w /workspace loopautoma/ci:local \
+  bash -lc 'cd src-tauri && cargo test --all --locked'
+```
+
+Our CI uses this same image and uploads coverage to Codecov.
 ## Docs 📚
 - Architecture: [doc/architecture.md](doc/architecture.md)
 - Rollout plan: [doc/rollout-plan.md](doc/rollout-plan.md)

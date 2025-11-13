@@ -168,6 +168,7 @@ pub fn run() {
             profiles_save,
             monitor_start,
             monitor_stop,
+            window_info,
             window_position,
             region_pick
         ])
@@ -180,6 +181,14 @@ fn window_position(window: tauri::Window) -> Result<(i32, i32), String> {
     window.outer_position()
         .map(|p| (p.x as i32, p.y as i32))
         .map_err(|e| e.to_string())
+}
+
+// Window geometry helper providing outer position and scale factor (for HiDPI / multi-monitor)
+#[tauri::command]
+fn window_info(window: tauri::Window) -> Result<(i32, i32, f64), String> {
+    let pos = window.outer_position().map_err(|e| e.to_string())?;
+    let scale = window.scale_factor().map_err(|e| e.to_string())?;
+    Ok((pos.x as i32, pos.y as i32, scale))
 }
 
 // Placeholder for a graphical region picker; will be implemented with a transparent overlay window.

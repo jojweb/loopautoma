@@ -3,7 +3,7 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import { RecordingBar, toActions } from "../src/components/RecordingBar";
 
 // Mock windowPosition to keep stable coordinates in tests
-vi.mock("../src/tauriBridge", () => ({ windowPosition: async () => ({ x: 0, y: 0 }) }));
+vi.mock("../src/tauriBridge", () => ({ windowPosition: async () => ({ x: 0, y: 0 }), windowInfo: async () => ({ x: 0, y: 0, scale: 1 }) }));
 
 describe("RecordingBar", () => {
   it("toggles record/stop and saves click+key", async () => {
