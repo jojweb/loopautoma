@@ -39,6 +39,14 @@ Local development:
 - Rust tests: `cargo test` (run from the folder containing `src-tauri/`)
 - Build installers: `bun run tauri build`
 
+Rust toolchain (required):
+
+```bash
+curl https://sh.rustup.rs -sSf | sh
+source "$HOME/.cargo/env"
+cargo --version
+```
+
 Linux prerequisites (Ubuntu/Debian): install WebKitGTK 4.1, libsoup3, GTK3, etc. (see docs/developer.md). Example:
 
 ```bash

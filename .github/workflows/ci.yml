@@ -43,6 +43,10 @@ jobs:
           if [[ "$count" -gt 0 ]]; then
             echo "Found $count test files. Running bun test with coverage..."
             bun test --coverage
+            # Try to produce an lcov report if available; bun may not output it by default
+            if [[ -d coverage ]]; then echo "UI coverage dir exists"; else echo "No UI coverage dir; will rely on runner output"; fi
+             echo "Also running vitest to produce lcov..."
+             bun run test:ui:cov || true
           else
             echo "No UI tests found. Skipping bun test."
           fi
@@ -51,6 +55,33 @@ jobs:
         shell: bash
         run: |
           if [[ -d src-tauri ]]; then (cd src-tauri && cargo test --all --locked); else echo "No src-tauri/; skipping Rust tests"; fi
+
+      - name: Rust coverage (tarpaulin)
+        if: ${{ hashFiles('src-tauri/Cargo.toml') != '' }}
+        shell: bash
+        run: |
+          sudo apt-get update && sudo apt-get install -y libssl-dev pkg-config
+          cargo install cargo-tarpaulin --locked || true
+          cd src-tauri && cargo tarpaulin --out Xml --timeout 120 --engine llvm || cargo tarpaulin --out Xml --timeout 120
+          cd ..
+          echo "Generated Rust coverage: src-tauri/tarpaulin-report.xml"
+
+      - name: Upload coverage to Codecov
+        if: ${{ always() }}
+        uses: codecov/codecov-action@v4
+        with:
+          files: |
+            src-tauri/tarpaulin-report.xml
+          flags: rust
+          fail_ci_if_error: false
+
+      - name: Upload UI coverage to Codecov (if found)
+        if: ${{ always() && hashFiles('coverage/lcov.info') != '' }}
+        uses: codecov/codecov-action@v4
+        with:
+          files: coverage/lcov.info
+          flags: ui
+          fail_ci_if_error: false
 
       - name: Tauri build (smoke, if app present)
         shell: bash
