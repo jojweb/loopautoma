@@ -82,9 +82,109 @@ Gate: tests green (Rust + UI), soak runner reflects the new cadence, docs descri
 - [x] Profiles, presets, audit tooling, and docs all use the seconds-based cadence with the 60 s default for the RegionCondition preset.
 - [x] Authoring instructions emphasize overlay capture, thumbnails, and RecordingBar; no preview stream is exposed in the UI.
 
-## Phase 4 — Cross‑OS Enablement (post‑MVP)
+## Phase 4 — Productionization & UX Correctness
 
-## Phase 4 — Cross‑OS Enablement (post‑MVP)
+Goal: move from “feature complete on paper” to “behaves like a polished app in practice,” with a focus on quit behavior, authoring flows, and end-to-end correctness. This phase assumes Linux/X11 remains the primary runtime but the tests and structure should be OS-agnostic where possible.
+
+### 4.1 Quit behavior and lifecycle
+
+- [ ] Backend
+  - Implement `app_quit` using Tauri’s app/window API such that:
+    - All windows (main + region overlay) are closed.
+    - Monitor runner and input capture backends are stopped before exit.
+  - Add a small integration test verifying `app_quit` is callable under:
+    - Idle state.
+    - While monitor is running with fake backends.
+- [ ] UI
+  - Ensure the “Quit” button in `src/App.tsx`:
+    - Calls `appQuit()` when Tauri IPC is present.
+    - Falls back to `window.close()` in pure web mode.
+    - Logs or shows a toast on failure.
+  - Add Vitest tests to verify:
+    - Tauri path calls `appQuit` once and does not throw.
+    - Web path calls `window.close`.
+    - Simulated errors do not break the app (button remains usable).
+
+### 4.2 Region authoring flows (overlay + thumbnails)
+
+- [ ] Overlay interaction
+  - Guarantee that `region_picker_show`:
+    - Hides the main window while the overlay is active.
+    - Reuses an existing overlay if already open instead of creating duplicates.
+  - Implement and test `region_picker_complete` / `region_picker_cancel` such that:
+    - Overlay is closed on complete/cancel.
+    - Main window is brought back to the foreground.
+    - Invalid or zero-area selections are rejected with a clear error.
+- [ ] Coordinate mapping & thumbnails
+  - Add Rust tests to confirm:
+    - Rects built from `(start, end)` `PickPoint`s are normalized (min/max x/y).
+    - `region_capture_thumbnail` uses `ScreenCapture` to capture the correct region and returns a Base64 PNG.
+    - Error paths (no capture backend, capture failure) return errors that the UI can present.
+  - Add UI tests:
+    - `RegionOverlay`: drag selection translates into the expected submission payload.
+    - `RegionAuthoringPanel`: “Capture thumbnail” button calls `captureRegionThumbnail` and renders the image or error.
+
+### 4.3 Input recording & replay fidelity
+
+- [ ] Backend
+  - Provide a deterministic fake `InputCapture` under `LOOPAUTOMA_BACKEND=fake`:
+    - Emits a known sequence of `InputEvent`s for tests.
+    - Can be started/stopped multiple times without leaks.
+  - Add tests ensuring:
+    - `start_input_recording` refuses to run with incompatible flags/env (e.g., `LOOPAUTOMA_BACKEND=fake` or missing OS features) with a clear `BackendError`.
+    - `stop_input_recording` always stops the backend and clears `AuthoringState.input_capture`.
+- [ ] UI
+  - Extend `RecordingBar` tests to:
+    - Verify start/stop calls to `startInputRecording` / `stopInputRecording`.
+    - Given a canonical sequence of events (mouse moves + clicks + key presses), assert `toActions` produces the expected `ActionConfig[]` sequence.
+    - Confirm the saved actions are appended to the profile and persisted via `profilesSave`.
+
+### 4.4 Monitor + ActionSequence behavior in realistic profiles
+
+- [ ] Domain/runtime tests
+  - Add an integration test that:
+    - Constructs a profile using actions similar to RecordingBar output (MoveCursor, Click, Type, Key).
+    - Uses a fake `ScreenCapture` whose hash stream simulates “no change” then “change.”
+    - Asserts:
+      - ActionSequence only runs after `stable_ms` with no change.
+      - Guardrails (cooldown, `max_activations_per_hour`, `max_runtime_ms`) prevent repeated activations and emit the correct `WatchdogTripped` events.
+- [ ] High-level contract test
+  - Add a test harness that:
+    - Uses `build_monitor_from_profile`.
+    - Runs a simulated monitor loop with fake backends.
+    - Compares the emitted `Event` sequence against an expected snapshot for a simple “keep agent going” profile.
+
+### 4.5 Profile editing & persistence guarantees
+
+- [ ] UI tests
+  - Add a profile persistence test that:
+    - Loads the default preset via `profilesLoad`.
+    - Modifies regions, actions, and guardrails.
+    - Saves via `profilesSave`.
+    - “Restarts” by re-rendering `App` with `profilesLoad` mocked to return the saved profiles.
+    - Asserts that the UI reflects the saved configuration exactly (regions list, thumbnails, guardrails, actions).
+- [ ] Validation
+  - Ensure `auditProfile` and related validation logic:
+    - Reject invalid profiles before save.
+    - Surface errors inline in the editor (and not just in logs).
+
+### 4.6 Usability & ergonomics checks
+
+- [ ] UX checklist
+  - Introduce a short “UX validation checklist” in docs that includes:
+    - Onboarding: starting app, seeing a preset profile, understanding start/stop/quit.
+    - Authoring: creating a region, capturing thumbnail, recording actions, saving profile.
+    - Runtime: starting monitor, observing events, using Panic Stop, and quitting.
+  - Add tests or scripted steps (e.g., in `doc/phase4Completion.md`) that must be run and checked manually until fully automated.
+- [ ] E2E smoke
+  - Add at least one automated E2E (Playwright or equivalent) for Linux that:
+    - Launches the Tauri app in fake-backend mode.
+    - Loads preset, starts monitor, waits for one activation, then stops and quits.
+    - Asserts app exits and leaves no hanging processes.
+
+Gate: all above items are either automated tests or documented manual checks with clear pass/fail criteria; test suite (Rust + UI) still achieves ≥90% coverage; at least one E2E “quit and shutdown” scenario passes repeatably.
+
+## Phase 5 — Cross‑OS Enablement (post‑MVP)
 
 - [ ] macOS backends behind existing traits:
   - ScreenCapture implementation reachable via ScreenCapture trait and used by RegionCondition and thumbnails.
@@ -105,7 +205,7 @@ Gate: tests green (Rust + UI), soak runner reflects the new cadence, docs descri
 Gate: smoke runs on each OS; domain/runtime coverage ≥90%; UI unchanged across OSes.
 
 
-## Backlog / Future
+## Phase 6 — Backlog / Future
 
 - [ ] Focus‑binding Condition to restrict actions to an app/window.
 - [ ] Optional keep‑awake Action (jiggle/sleep inhibition) behind traits.
