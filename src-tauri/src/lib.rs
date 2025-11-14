@@ -15,16 +15,23 @@ mod soak;
 mod tests;
 mod trigger;
 
+use std::io::Cursor;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
+use base64::engine::general_purpose::STANDARD as Base64Standard;
+use base64::Engine as _;
 use domain::*;
+use image::imageops::FilterType;
+use image::{DynamicImage, ImageOutputFormat, RgbaImage};
 use tauri::Emitter; // for Window.emit
+use tauri::Manager;
 mod fakes;
 #[cfg(feature = "os-linux-input")]
 use crate::os::linux::LinuxInputCapture;
 use fakes::{FakeAutomation, FakeCapture};
+use serde::{Deserialize, Serialize};
 pub use soak::{run_soak, SoakConfig, SoakReport};
 use std::env;
 
@@ -42,84 +49,8 @@ fn is_release_runtime() -> bool {
     !cfg!(debug_assertions)
 }
 
-struct StreamHandle {
-    cancel: Arc<AtomicBool>,
-    handle: std::thread::JoinHandle<()>,
-}
-
-struct FrameThrottle {
-    base_delay: Duration,
-    max_delay: Duration,
-    next_due: Instant,
-    consecutive_failures: u32,
-}
-
-impl FrameThrottle {
-    fn new(fps: u32) -> Self {
-        let base_delay = Duration::from_millis(1000 / fps.max(1) as u64);
-        Self {
-            base_delay,
-            max_delay: Duration::from_millis(1_500),
-            next_due: Instant::now(),
-            consecutive_failures: 0,
-        }
-    }
-
-    fn wait(&mut self) {
-        let now = Instant::now();
-        if now < self.next_due {
-            std::thread::sleep(self.next_due - now);
-        }
-    }
-
-    fn record_success(&mut self) {
-        self.consecutive_failures = 0;
-        self.next_due = Instant::now() + self.base_delay;
-    }
-
-    fn record_failure(&mut self) {
-        self.consecutive_failures = (self.consecutive_failures + 1).min(10);
-        let backoff =
-            self.base_delay + Duration::from_millis((self.consecutive_failures as u64) * 200);
-        self.next_due = Instant::now() + backoff.min(self.max_delay);
-    }
-
-    #[cfg(test)]
-    fn failure_count(&self) -> u32 {
-        self.consecutive_failures
-    }
-
-    #[cfg(test)]
-    fn due_in(&self) -> Duration {
-        self.next_due.saturating_duration_since(Instant::now())
-    }
-}
-
-const DUPLICATE_WINDOW: Duration = Duration::from_millis(400);
-
-fn sample_checksum(bytes: &[u8]) -> u64 {
-    if bytes.is_empty() {
-        return 0;
-    }
-    let mut acc = 0u64;
-    let step = (bytes.len() / 1024).max(1);
-    let mut count = 0usize;
-    let limit = bytes.len().min(8_192);
-    let mut idx = 0usize;
-    while idx < limit {
-        acc = acc.wrapping_add(bytes[idx] as u64);
-        count += 1;
-        if count >= 1024 {
-            break;
-        }
-        idx += step;
-    }
-    acc
-}
-
 #[derive(Default)]
 struct AuthoringState {
-    screen_stream: Mutex<Option<StreamHandle>>,
     input_capture: Mutex<Option<Box<dyn InputCapture + Send>>>,
 }
 
@@ -162,8 +93,8 @@ enum StopReason {
 
 pub fn build_monitor_from_profile<'a>(p: &Profile) -> (monitor::Monitor<'a>, Vec<Region>) {
     // Trigger
-    let interval = Duration::from_millis(p.trigger.interval_ms);
-    let trig = Box::new(trigger::IntervalTrigger::new(interval));
+    let secs = p.trigger.check_interval_sec.clamp(0.1, 86_400.0);
+    let trig = Box::new(trigger::IntervalTrigger::new(Duration::from_secs_f64(secs)));
 
     // Condition
     let cond = Box::new(condition::RegionCondition::new(
@@ -415,105 +346,6 @@ fn monitor_panic_stop(state: tauri::State<AppState>) -> Result<(), String> {
 }
 
 #[tauri::command]
-fn start_screen_stream(
-    window: tauri::Window,
-    state: tauri::State<AppState>,
-    fps: Option<u32>,
-) -> Result<(), String> {
-    let mut guard = state.authoring.screen_stream.lock().unwrap();
-    if guard.is_some() {
-        return Ok(());
-    }
-    let capture = make_capture();
-    let running = Arc::new(AtomicBool::new(true));
-    let runner = running.clone();
-    let win = window.clone();
-    let target_fps = fps.unwrap_or(3).clamp(1, 15);
-    let handle = std::thread::spawn(move || {
-        let mut throttle = FrameThrottle::new(target_fps);
-        let mut last_checksum: Option<u64> = None;
-        let mut last_emit_at = Instant::now() - Duration::from_secs(1);
-        while runner.load(Ordering::Relaxed) {
-            throttle.wait();
-            if !runner.load(Ordering::Relaxed) {
-                break;
-            }
-
-            let displays = match capture.displays() {
-                Ok(list) => list,
-                Err(err) => {
-                    eprintln!("screen_stream displays error: {err}");
-                    throttle.record_failure();
-                    continue;
-                }
-            };
-            let Some(display) = displays.first() else {
-                throttle.record_failure();
-                continue;
-            };
-            if display.width == 0 || display.height == 0 {
-                throttle.record_failure();
-                continue;
-            }
-
-            let region = Region {
-                id: format!("display-{}", display.id),
-                rect: Rect {
-                    x: display.x.max(0) as u32,
-                    y: display.y.max(0) as u32,
-                    width: display.width,
-                    height: display.height,
-                },
-                name: display.name.clone(),
-            };
-
-            match capture.capture_region(&region) {
-                Ok(frame) => {
-                    let checksum = sample_checksum(&frame.bytes);
-                    let now = Instant::now();
-                    if let Some(prev) = last_checksum {
-                        if prev == checksum && now.duration_since(last_emit_at) < DUPLICATE_WINDOW {
-                            throttle.record_success();
-                            continue;
-                        }
-                    }
-                    match win.emit("loopautoma://screen_frame", &frame) {
-                        Ok(_) => {
-                            last_checksum = Some(checksum);
-                            last_emit_at = now;
-                            throttle.record_success();
-                        }
-                        Err(err) => {
-                            eprintln!("screen_stream emit error: {err}");
-                            throttle.record_failure();
-                        }
-                    }
-                }
-                Err(err) => {
-                    eprintln!("screen_stream capture error: {err}");
-                    throttle.record_failure();
-                }
-            }
-        }
-    });
-    *guard = Some(StreamHandle {
-        cancel: running,
-        handle,
-    });
-    Ok(())
-}
-
-#[tauri::command]
-fn stop_screen_stream(state: tauri::State<AppState>) -> Result<(), String> {
-    let mut guard = state.authoring.screen_stream.lock().unwrap();
-    if let Some(handle) = guard.take() {
-        handle.cancel.store(false, Ordering::Relaxed);
-        let _ = handle.handle.join();
-    }
-    Ok(())
-}
-
-#[tauri::command]
 fn start_input_recording(
     window: tauri::Window,
     state: tauri::State<AppState>,
@@ -585,15 +417,17 @@ pub fn run() {
             monitor_start,
             monitor_stop,
             monitor_panic_stop,
-            start_screen_stream,
-            stop_screen_stream,
             start_input_recording,
             stop_input_recording,
             inject_mouse_event,
             inject_keyboard_event,
             window_info,
             window_position,
-            region_pick
+            region_picker_show,
+            region_picker_complete,
+            region_picker_cancel,
+            region_capture_thumbnail,
+            app_quit
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
@@ -615,10 +449,174 @@ fn window_info(window: tauri::Window) -> Result<(i32, i32, f64), String> {
     Ok((pos.x as i32, pos.y as i32, scale))
 }
 
-// Placeholder for a graphical region picker; will be implemented with a transparent overlay window.
+#[derive(Debug, Deserialize)]
+pub(crate) struct PickPoint {
+    pub(crate) x: i32,
+    pub(crate) y: i32,
+}
+
+#[derive(Debug, Deserialize)]
+struct RegionPickSubmission {
+    start: PickPoint,
+    end: PickPoint,
+}
+
+#[derive(Debug, Serialize)]
+struct RegionPickPayload {
+    rect: Rect,
+    thumbnail_png_base64: Option<String>,
+}
+
 #[tauri::command]
-fn region_pick() -> Result<(i32, i32, u32, u32), String> {
-    Err("region_pick not yet implemented".into())
+fn region_picker_show(app: tauri::AppHandle) -> Result<(), String> {
+    if let Some(win) = app.get_webview_window("region-overlay") {
+        let _ = win.set_focus();
+        return Ok(());
+    }
+    if let Some(main) = app.get_webview_window("main") {
+        let _ = main.hide();
+    }
+    tauri::WebviewWindowBuilder::new(
+        &app,
+        "region-overlay",
+        tauri::WebviewUrl::App("index.html".into()),
+    )
+    .title("Select region")
+    .fullscreen(true)
+    .decorations(false)
+    .transparent(true)
+    .always_on_top(true)
+    .resizable(false)
+    .skip_taskbar(true)
+    .build()
+    .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
+fn region_picker_complete(
+    app: tauri::AppHandle,
+    submission: RegionPickSubmission,
+) -> Result<(), String> {
+    let rect = normalize_rect(&submission.start, &submission.end)
+        .ok_or_else(|| "Region must have a non-zero area".to_string())?;
+    let preview = capture_thumbnail(&rect).map_err(|e| e.to_string())?;
+    let payload = RegionPickPayload {
+        rect,
+        thumbnail_png_base64: preview,
+    };
+    app.emit("loopautoma://region_pick_complete", &payload)
+        .map_err(|e| e.to_string())?;
+    if let Some(main) = app.get_webview_window("main") {
+        let _ = main.show();
+        let _ = main.set_focus();
+    }
+    if let Some(overlay) = app.get_webview_window("region-overlay") {
+        let _ = overlay.close();
+    }
+    Ok(())
+}
+
+#[tauri::command]
+fn region_picker_cancel(app: tauri::AppHandle) -> Result<(), String> {
+    if let Some(main) = app.get_webview_window("main") {
+        let _ = main.show();
+        let _ = main.set_focus();
+    }
+    if let Some(overlay) = app.get_webview_window("region-overlay") {
+        let _ = overlay.close();
+    }
+    Ok(())
+}
+
+#[tauri::command]
+fn app_quit(app: tauri::AppHandle) -> Result<(), String> {
+    if let Some(overlay) = app.get_webview_window("region-overlay") {
+        let _ = overlay.close();
+    }
+    if let Some(main) = app.get_webview_window("main") {
+        let _ = main.close();
+    }
+    app.exit(0);
+    Ok(())
+}
+
+#[tauri::command]
+fn region_capture_thumbnail(rect: Rect) -> Result<Option<String>, String> {
+    capture_thumbnail(&rect).map_err(|e| e.to_string())
+}
+
+pub(crate) fn normalize_rect(start: &PickPoint, end: &PickPoint) -> Option<Rect> {
+    let raw_min_x = start.x.min(end.x);
+    let raw_min_y = start.y.min(end.y);
+    let raw_max_x = start.x.max(end.x);
+    let raw_max_y = start.y.max(end.y);
+
+    let clamped_min_x = raw_min_x.max(0);
+    let clamped_min_y = raw_min_y.max(0);
+    let clamped_max_x = raw_max_x.max(clamped_min_x);
+    let clamped_max_y = raw_max_y.max(clamped_min_y);
+
+    let width = (clamped_max_x - clamped_min_x) as u32;
+    let height = (clamped_max_y - clamped_min_y) as u32;
+    if width == 0 || height == 0 {
+        return None;
+    }
+    Some(Rect {
+        x: clamped_min_x as u32,
+        y: clamped_min_y as u32,
+        width,
+        height,
+    })
+}
+
+fn capture_thumbnail(rect: &Rect) -> Result<Option<String>, BackendError> {
+    if rect.width == 0 || rect.height == 0 {
+        return Ok(None);
+    }
+    let capture = make_capture();
+    let region = Region {
+        id: "region-thumbnail".into(),
+        rect: *rect,
+        name: None,
+    };
+    match capture.capture_region(&region) {
+        Ok(frame) => Ok(encode_png_thumbnail(&frame)),
+        Err(err) => {
+            eprintln!("thumbnail capture failed: {err}");
+            Ok(None)
+        }
+    }
+}
+
+fn encode_png_thumbnail(frame: &ScreenFrame) -> Option<String> {
+    if frame.width == 0 || frame.height == 0 || frame.bytes.is_empty() {
+        return None;
+    }
+    let image = match RgbaImage::from_vec(frame.width, frame.height, frame.bytes.clone()) {
+        Some(img) => img,
+        None => return None,
+    };
+    let mut dynamic = DynamicImage::ImageRgba8(image);
+    const MAX_EDGE: u32 = 240;
+    if frame.width > MAX_EDGE || frame.height > MAX_EDGE {
+        let width_f = frame.width as f32;
+        let height_f = frame.height as f32;
+        let scale = (MAX_EDGE as f32 / width_f)
+            .min(MAX_EDGE as f32 / height_f)
+            .min(1.0);
+        let new_w = (width_f * scale).round().max(1.0) as u32;
+        let new_h = (height_f * scale).round().max(1.0) as u32;
+        dynamic = dynamic.resize_exact(new_w.max(1), new_h.max(1), FilterType::Triangle);
+    }
+    let mut buffer = Vec::new();
+    if dynamic
+        .write_to(&mut Cursor::new(&mut buffer), ImageOutputFormat::Png)
+        .is_err()
+    {
+        return None;
+    }
+    Some(Base64Standard.encode(buffer))
 }
 
 #[cfg(test)]

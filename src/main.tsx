@@ -1,9 +1,37 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
+import { RegionOverlay } from "./components/RegionOverlay";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 
-ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>,
-);
+async function bootstrap() {
+  const rootEl = document.getElementById("root") as HTMLElement;
+  let Component: React.ComponentType = App;
+  const isTauri = typeof window !== "undefined" && (window as any).__TAURI_IPC__;
+
+  if (isTauri) {
+    try {
+      const current = await getCurrentWindow();
+      if (current.label === "region-overlay") {
+        Component = RegionOverlay;
+      }
+    } catch (err) {
+      console.warn("Unable to determine window label:", err);
+    }
+  }
+
+  const render = () =>
+    ReactDOM.createRoot(rootEl).render(
+      <React.StrictMode>
+        <Component />
+      </React.StrictMode>,
+    );
+
+  if (isTauri) {
+    render();
+  } else {
+    render();
+  }
+}
+
+bootstrap();

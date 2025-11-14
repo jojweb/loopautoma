@@ -43,7 +43,7 @@ Release detection happens inside `ensure_dev_injection_allowed`:
 
 - Ship release bundles (CI artifacts, nightly builds) without `LOOPAUTOMA_ALLOW_INJECT`. End users would need to recompile the app in debug mode to enable developer helpers.
 - Keep the `coverage/perf/` metrics so regressions can be spotted without re-enabling the helpers.
-- When onboarding new operators, walk through this doc plus `doc/install.md` to ensure they understand what permissions the app holds and how to revoke them (Panic Stop, env flags, etc.).
+- When onboarding new operators, walk through this doc plus `doc/install.md` to ensure they understand what permissions the app holds and how to revoke them (guardrails, env flags, etc.).
 
 Phase 2 exit criteria (“security basics” + permissions review) are now satisfied by:
 

@@ -5,12 +5,12 @@ import { ProfileSelector } from "./components/ProfileSelector";
 import { EventLog } from "./components/EventLog";
 import { ProfileEditor } from "./components/ProfileEditor";
 import { RecordingBar, toActions } from "./components/RecordingBar";
-import { ScreenPreview } from "./components/ScreenPreview";
+import { RegionAuthoringPanel } from "./components/RegionAuthoringPanel";
 import { GraphComposer } from "./components/GraphComposer";
 import { ProfileInsights } from "./components/ProfileInsights";
 import { useEventStream, useProfiles, useRunState } from "./store";
 import { defaultPresetProfile, Profile } from "./types";
-import { monitorStart, monitorStop, monitorPanicStop, profilesLoad, profilesSave } from "./tauriBridge";
+import { monitorStart, monitorStop, profilesLoad, profilesSave, appQuit } from "./tauriBridge";
 import logo from "../doc/img/logo.png";
 import { useEffectOnce } from "./hooks/useEffectOnce";
 import { registerBuiltins } from "./plugins/builtins";
@@ -82,10 +82,21 @@ function App() {
     setRunningProfileId(null);
   };
 
-  const panicStop = async () => {
-    await monitorPanicStop();
-    setRunningProfileId(null);
-  };
+  const quitApp = useCallback(async () => {
+    try {
+      if (typeof window !== "undefined" && (window as any).__TAURI_IPC__) {
+        await appQuit();
+        return;
+      }
+      if (typeof window !== "undefined") {
+        // In web-only dev mode most browsers will ignore window.close() for
+        // tabs not opened via script, so treat Quit as a no-op with a log.
+        console.info("Quit requested in web dev mode; close the tab/window manually.");
+      }
+    } catch (err) {
+      console.error("Unable to quit Loop Automa:", err);
+    }
+  }, []);
 
   // theme handling: apply data-theme attribute; system is default via CSS
   const themeAttr = theme === "system" ? undefined : theme;
@@ -156,6 +167,13 @@ function App() {
               <img src={reactLogo} className="badge" alt="React" />
             </a>
           </div>
+          <button
+            className="danger"
+            onClick={quitApp}
+            title="Quit LoopAutoma"
+          >
+            Quit
+          </button>
         </div>
       </div>
       <section style={{ display: "grid", gap: 12 }}>
@@ -172,14 +190,6 @@ function App() {
             title={isRunning ? "Stop immediately" : "Start the monitor loop with the selected profile"}
           >
             {isRunning ? "Stop" : "Start"}
-          </button>
-          <button
-            onClick={panicStop}
-            disabled={!isRunning}
-            className="danger"
-            title="Immediate panic stop: halts the monitor and emits a watchdog event"
-          >
-            Panic Stop
           </button>
           {isRunning && (
             <span className="running-chip" aria-live="polite" title="Monitor is running">Running</span>
@@ -255,8 +265,8 @@ function App() {
         </div>
 
         <div>
-          <h3 style={{ margin: 0 }} title="Preview the desktop stream and capture Regions">Screen preview & Regions</h3>
-          <ScreenPreview
+          <h3 style={{ margin: 0 }} title="Capture on-screen regions via the transparent overlay and review saved areas">Regions</h3>
+          <RegionAuthoringPanel
             regions={selectedProfile?.regions}
             disabled={!selectedProfile}
             onRegionAdd={async (draft) => {
@@ -272,6 +282,13 @@ function App() {
               await updateProfile({
                 ...selectedProfile,
                 regions: [...selectedProfile.regions, region],
+              });
+            }}
+            onRegionRemove={async (regionId) => {
+              if (!selectedProfile) return;
+              await updateProfile({
+                ...selectedProfile,
+                regions: selectedProfile.regions.filter((region) => region.id !== regionId),
               });
             }}
           />

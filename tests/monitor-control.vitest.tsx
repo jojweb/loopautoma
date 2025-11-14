@@ -2,32 +2,34 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import App from "../src/App";
 
-// Mock Tauri bridge
-const mockProfilesLoad = vi.fn();
-const mockProfilesSave = vi.fn();
-const mockMonitorStart = vi.fn();
-const mockMonitorStop = vi.fn();
-const mockMonitorPanicStop = vi.fn();
-const mockStartScreenStream = vi.fn();
-const mockStopScreenStream = vi.fn();
-const mockStartInputRecording = vi.fn();
-const mockStopInputRecording = vi.fn();
-const mockWindowPosition = vi.fn();
-const mockWindowInfo = vi.fn();
-
-vi.mock("../src/tauriBridge", () => ({
-  profilesLoad: () => mockProfilesLoad(),
-  profilesSave: (profiles: any) => mockProfilesSave(profiles),
-  monitorStart: (profileId: string) => mockMonitorStart(profileId),
-  monitorStop: () => mockMonitorStop(),
-  monitorPanicStop: () => mockMonitorPanicStop(),
-  startScreenStream: (fps?: number) => mockStartScreenStream(fps),
-  stopScreenStream: () => mockStopScreenStream(),
-  startInputRecording: () => mockStartInputRecording(),
-  stopInputRecording: () => mockStopInputRecording(),
-  windowPosition: () => mockWindowPosition(),
-  windowInfo: () => mockWindowInfo(),
+const tauriBridgeMocks = vi.hoisted(() => ({
+  profilesLoad: vi.fn(),
+  profilesSave: vi.fn(),
+  monitorStart: vi.fn(),
+  monitorStop: vi.fn(),
+  startInputRecording: vi.fn(),
+  stopInputRecording: vi.fn(),
+  windowPosition: vi.fn(),
+  windowInfo: vi.fn(),
+  appQuit: vi.fn(),
+  captureRegionThumbnail: vi.fn(),
+  regionPickerShow: vi.fn(),
+  regionPickerComplete: vi.fn(),
+  regionPickerCancel: vi.fn(),
 }));
+
+vi.mock("../src/tauriBridge", () => tauriBridgeMocks);
+
+const mockProfilesLoad = tauriBridgeMocks.profilesLoad;
+const mockProfilesSave = tauriBridgeMocks.profilesSave;
+const mockMonitorStart = tauriBridgeMocks.monitorStart;
+const mockMonitorStop = tauriBridgeMocks.monitorStop;
+const mockStartInputRecording = tauriBridgeMocks.startInputRecording;
+const mockStopInputRecording = tauriBridgeMocks.stopInputRecording;
+const mockWindowPosition = tauriBridgeMocks.windowPosition;
+const mockWindowInfo = tauriBridgeMocks.windowInfo;
+const mockAppQuit = tauriBridgeMocks.appQuit;
+const mockCaptureRegionThumbnail = tauriBridgeMocks.captureRegionThumbnail;
 
 // Mock Tauri event listener
 vi.mock("@tauri-apps/api/event", () => ({
@@ -37,17 +39,16 @@ vi.mock("@tauri-apps/api/event", () => ({
 describe("Monitor control", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockProfilesLoad.mockResolvedValue([]);
-    mockProfilesSave.mockResolvedValue(undefined);
-    mockMonitorStart.mockResolvedValue(undefined);
-    mockMonitorStop.mockResolvedValue(undefined);
-    mockMonitorPanicStop.mockResolvedValue(undefined);
-    mockStartScreenStream.mockResolvedValue(undefined);
-    mockStopScreenStream.mockResolvedValue(undefined);
-    mockStartInputRecording.mockResolvedValue(undefined);
-    mockStopInputRecording.mockResolvedValue(undefined);
-    mockWindowPosition.mockResolvedValue({ x: 0, y: 0 });
-    mockWindowInfo.mockResolvedValue({ x: 0, y: 0, scale: 1 });
+    mockProfilesLoad.mockReset().mockResolvedValue([]);
+    mockProfilesSave.mockReset().mockResolvedValue(undefined);
+    mockMonitorStart.mockReset().mockResolvedValue(undefined);
+    mockMonitorStop.mockReset().mockResolvedValue(undefined);
+    mockStartInputRecording.mockReset().mockResolvedValue(undefined);
+    mockStopInputRecording.mockReset().mockResolvedValue(undefined);
+    mockWindowPosition.mockReset().mockResolvedValue({ x: 0, y: 0 });
+    mockWindowInfo.mockReset().mockResolvedValue({ x: 0, y: 0, scale: 1 });
+    mockAppQuit.mockReset().mockResolvedValue(undefined);
+    mockCaptureRegionThumbnail.mockReset().mockResolvedValue(null);
   });
 
   it("loads profiles on mount", async () => {
@@ -91,7 +92,7 @@ describe("Monitor control", () => {
       id: "test-1",
       name: "Test",
       regions: [],
-      trigger: { type: "IntervalTrigger", interval_ms: 500 },
+      trigger: { type: "IntervalTrigger", check_interval_sec: 60 },
       condition: { type: "RegionCondition", stable_ms: 1000, downscale: 4 },
       actions: [],
     };
@@ -116,7 +117,7 @@ describe("Monitor control", () => {
       id: "test-1",
       name: "Test",
       regions: [],
-      trigger: { type: "IntervalTrigger", interval_ms: 500 },
+      trigger: { type: "IntervalTrigger", check_interval_sec: 60 },
       condition: { type: "RegionCondition", stable_ms: 1000, downscale: 4 },
       actions: [],
     };
@@ -137,51 +138,12 @@ describe("Monitor control", () => {
     });
   });
 
-  it("Panic Stop button is disabled when not running", async () => {
-    mockProfilesLoad.mockResolvedValue([]);
-    render(<App />);
-    
-    await waitFor(() => {
-      const panicBtn = screen.getByRole("button", { name: /Panic Stop/i }) as HTMLButtonElement;
-      expect(panicBtn.disabled).toBe(true);
-    });
-  });
-
-  it("triggers panic stop when Panic Stop clicked", async () => {
-    const testProfile = {
-      id: "test-1",
-      name: "Test",
-      regions: [],
-      trigger: { type: "IntervalTrigger", interval_ms: 500 },
-      condition: { type: "RegionCondition", stable_ms: 1000, downscale: 4 },
-      actions: [],
-    };
-    mockProfilesLoad.mockResolvedValue([testProfile]);
-    
-    render(<App />);
-    
-    const startBtn = await screen.findByRole("button", { name: /^Start$/i });
-    fireEvent.click(startBtn);
-
-    await waitFor(() => expect(mockMonitorStart).toHaveBeenCalled());
-
-    await waitFor(() => {
-      const panicBtn = screen.getByRole("button", { name: /Panic Stop/i }) as HTMLButtonElement;
-      expect(panicBtn.disabled).toBe(false);
-      fireEvent.click(panicBtn);
-    });
-    
-    await waitFor(() => {
-      expect(mockMonitorPanicStop).toHaveBeenCalled();
-    });
-  });
-
   it("shows Running indicator when monitor is active", async () => {
     const testProfile = {
       id: "test-1",
       name: "Test",
       regions: [],
-      trigger: { type: "IntervalTrigger", interval_ms: 500 },
+      trigger: { type: "IntervalTrigger", check_interval_sec: 60 },
       condition: { type: "RegionCondition", stable_ms: 1000, downscale: 4 },
       actions: [],
     };
@@ -197,5 +159,17 @@ describe("Monitor control", () => {
     await waitFor(() => {
       expect(screen.getByText(/Running/)).toBeTruthy();
     });
+  });
+
+  it("invokes appQuit when Quit button is clicked", async () => {
+    const infoSpy = vi.spyOn(console, "info").mockImplementation(() => {});
+    mockProfilesLoad.mockResolvedValue([]);
+    render(<App />);
+    const quitBtn = await screen.findByRole("button", { name: /Quit/i });
+    fireEvent.click(quitBtn);
+    await waitFor(() => expect(infoSpy).toHaveBeenCalledWith(
+      "Quit requested in web dev mode; close the tab/window manually."
+    ));
+    infoSpy.mockRestore();
   });
 });

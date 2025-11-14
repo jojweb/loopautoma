@@ -127,19 +127,38 @@ bun run build
 
 # Find the packages in:
 ls -lh src-tauri/target/release/bundle/
+
+# Build a web-only bundle (no desktop shell)
+bun run build:web
 ```
 
-#### Development Mode
+#### Development Workflows
 
-For development or testing without creating packages:
+- **Install JS deps**: `bun install`
+- **Full desktop app with hot reload**: `bun run dev`
+- **Safe mode (no real automation)**: `LOOPAUTOMA_BACKEND=fake bun run dev`
+- **Pure web UI (no Tauri shell)**: `bun run dev:web`
+- **Rust tests**: `cd src-tauri && cargo test --all --locked`
+- **Rust coverage**: `cd src-tauri && cargo llvm-cov --workspace --locked --lcov --output-path lcov.info`
+
+### Containerized Dev/Test
+
+Loop Automa ships with a reproducible Docker image (see `Dockerfile`) that bundles all Linux dependencies, Rust, Bun, and the tooling used in CI. Build it once, then reuse it locally or in CI:
 
 ```bash
-# Run in development mode with hot reload
-bun run dev
+# Build the CI/dev image locally
+docker build -t loopautoma/ci:local .
 
-# Run in safe mode (no real input automation)
-LOOPAUTOMA_BACKEND=fake bun run dev
+# Run UI tests inside the container
+docker run --rm -v "$PWD:/workspace" -w /workspace loopautoma/ci:local \
+  bash -lc 'bun install && bun run test:ui:cov'
+
+# Run Rust tests inside the container
+docker run --rm -v "$PWD:/workspace" -w /workspace loopautoma/ci:local \
+  bash -lc 'cd src-tauri && cargo test --all --locked'
 ```
+
+> The GitHub Actions pipeline reuses this same image, so local runs mirror CI exactly.
 
 ## System Dependencies
 
@@ -218,7 +237,7 @@ If the problem persists, run in safe mode to verify other functionality:
 LOOPAUTOMA_BACKEND=fake loopautoma
 ```
 
-### "Screen preview unavailable" or capture errors
+### "Screen capture unavailable" errors
 
 **Cause**: Missing PipeWire/screen capture libraries.
 
@@ -226,14 +245,6 @@ LOOPAUTOMA_BACKEND=fake loopautoma
 ```bash
 sudo apt install -y libpipewire-0.3-0 libspa-0.2-modules
 ```
-
-### High CPU usage during screen preview
-
-**Expected behavior**: The screen preview is throttled to 3 FPS by default. If CPU usage is high:
-
-1. Stop the screen preview when not actively authoring regions
-2. The preview FPS is set to 3 fps for optimal performance
-3. Close regions you're not monitoring
 
 ### AppImage won't run
 
@@ -280,7 +291,7 @@ bun run tauri clean
 
 - **Ubuntu 24.04 Only**: The MVP is tested and supported on Ubuntu 24.04 LTS. Other Linux distributions may work but are not officially supported yet.
 
-- **Single Monitor Preference**: While multi-monitor setups are detected, the screen preview currently shows only the primary display. You can still define regions on any monitor by entering coordinates manually.
+- **Single Monitor Preference**: The region picker overlay launches on the currently focused display; if you're authoring on a secondary monitor, move the app window there before starting the picker.
 
 ## Security and Privacy
 
@@ -290,7 +301,7 @@ Loop Automa is designed with security and privacy in mind:
 - **Local Operation**: All automation runs locally on your machine
 - **Hash-Only Region Monitoring**: By default, only downscaled image hashes are compared, not full pixel data
 - **Explicit Permissions**: The app requires accessibility permissions for input automation, which you grant explicitly
-- **Panic Stop**: A prominent "Panic Stop" button immediately halts all automation
+- **Guardrails**: Cooldown, runtime, and activation limits ensure automation remains bounded; the monitor can always be stopped from the main UI.
 
 ## Next Steps
 
