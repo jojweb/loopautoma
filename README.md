@@ -15,7 +15,7 @@ Cross‑platform desktop automation that watches configurable screen regions and
 ## Features
 - Keep agents moving: automatically type "Continue" and press enter when an agent stalls.
 - Run unattended: detect stable/changed UI regions and advance the flow.
-- Stay safe: cooldowns, rate limits, max runtime, and a Panic Stop.
+- Stay safe: cooldowns, rate limits, and guardrails to keep automation bounded.
 
 ## Get Started
 

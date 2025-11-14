@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { regionPickerComplete, RegionPickPoint } from "../tauriBridge";
+import { regionPickerComplete, regionPickerCancel, RegionPickPoint } from "../tauriBridge";
 
 function toCssRect(start: Point, current: Point) {
   const left = Math.min(start.x, current.x);
@@ -54,7 +54,13 @@ export function RegionOverlay() {
   useEffect(() => {
     const handler = (ev: KeyboardEvent) => {
       if (ev.key === "Escape") {
-        void pickerWindow.close();
+        void (async () => {
+          try {
+            await regionPickerCancel();
+          } finally {
+            await pickerWindow.close();
+          }
+        })();
       }
     };
     window.addEventListener("keydown", handler);
@@ -77,6 +83,8 @@ export function RegionOverlay() {
   };
 
   const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
     if ((event.target as HTMLElement)?.closest?.(".region-overlay-hud")) {
       return;
     }
@@ -88,11 +96,15 @@ export function RegionOverlay() {
   };
 
   const handlePointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
     if (!start) return;
     setCurrent({ x: event.clientX, y: event.clientY });
   };
 
   const handlePointerUp = async (event: React.PointerEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
     if (!start) return;
     rootRef.current?.releasePointerCapture(event.pointerId);
     const endPoint = { x: event.clientX, y: event.clientY };
@@ -121,7 +133,18 @@ export function RegionOverlay() {
           <h2>Define watch region</h2>
           <p>{overlayStatus}</p>
         </div>
-        <button type="button" onClick={() => pickerWindow.close()}>
+        <button
+          type="button"
+          onClick={() => {
+            void (async () => {
+              try {
+                await regionPickerCancel();
+              } finally {
+                await pickerWindow.close();
+              }
+            })();
+          }}
+        >
           Cancel
         </button>
       </div>

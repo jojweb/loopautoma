@@ -20,9 +20,9 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
-use domain::*;
 use base64::engine::general_purpose::STANDARD as Base64Standard;
 use base64::Engine as _;
+use domain::*;
 use image::imageops::FilterType;
 use image::{DynamicImage, ImageOutputFormat, RgbaImage};
 use tauri::Emitter; // for Window.emit
@@ -31,9 +31,9 @@ mod fakes;
 #[cfg(feature = "os-linux-input")]
 use crate::os::linux::LinuxInputCapture;
 use fakes::{FakeAutomation, FakeCapture};
+use serde::{Deserialize, Serialize};
 pub use soak::{run_soak, SoakConfig, SoakReport};
 use std::env;
-use serde::{Deserialize, Serialize};
 
 fn env_truthy(name: &str) -> bool {
     matches!(
@@ -93,10 +93,7 @@ enum StopReason {
 
 pub fn build_monitor_from_profile<'a>(p: &Profile) -> (monitor::Monitor<'a>, Vec<Region>) {
     // Trigger
-    let secs = p
-        .trigger
-        .check_interval_sec
-        .clamp(0.1, 86_400.0);
+    let secs = p.trigger.check_interval_sec.clamp(0.1, 86_400.0);
     let trig = Box::new(trigger::IntervalTrigger::new(Duration::from_secs_f64(secs)));
 
     // Condition
@@ -428,7 +425,9 @@ pub fn run() {
             window_position,
             region_picker_show,
             region_picker_complete,
-            region_capture_thumbnail
+            region_picker_cancel,
+            region_capture_thumbnail,
+            app_quit
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
@@ -474,20 +473,23 @@ fn region_picker_show(app: tauri::AppHandle) -> Result<(), String> {
         let _ = win.set_focus();
         return Ok(());
     }
+    if let Some(main) = app.get_webview_window("main") {
+        let _ = main.hide();
+    }
     tauri::WebviewWindowBuilder::new(
         &app,
         "region-overlay",
         tauri::WebviewUrl::App("index.html".into()),
     )
-        .title("Select region")
-        .fullscreen(true)
-        .decorations(false)
-        .transparent(true)
-        .always_on_top(true)
-        .resizable(false)
-        .skip_taskbar(true)
-        .build()
-        .map_err(|e| e.to_string())?;
+    .title("Select region")
+    .fullscreen(true)
+    .decorations(false)
+    .transparent(true)
+    .always_on_top(true)
+    .resizable(false)
+    .skip_taskbar(true)
+    .build()
+    .map_err(|e| e.to_string())?;
     Ok(())
 }
 
@@ -504,7 +506,39 @@ fn region_picker_complete(
         thumbnail_png_base64: preview,
     };
     app.emit("loopautoma://region_pick_complete", &payload)
-        .map_err(|e| e.to_string())
+        .map_err(|e| e.to_string())?;
+    if let Some(main) = app.get_webview_window("main") {
+        let _ = main.show();
+        let _ = main.set_focus();
+    }
+    if let Some(overlay) = app.get_webview_window("region-overlay") {
+        let _ = overlay.close();
+    }
+    Ok(())
+}
+
+#[tauri::command]
+fn region_picker_cancel(app: tauri::AppHandle) -> Result<(), String> {
+    if let Some(main) = app.get_webview_window("main") {
+        let _ = main.show();
+        let _ = main.set_focus();
+    }
+    if let Some(overlay) = app.get_webview_window("region-overlay") {
+        let _ = overlay.close();
+    }
+    Ok(())
+}
+
+#[tauri::command]
+fn app_quit(app: tauri::AppHandle) -> Result<(), String> {
+    if let Some(overlay) = app.get_webview_window("region-overlay") {
+        let _ = overlay.close();
+    }
+    if let Some(main) = app.get_webview_window("main") {
+        let _ = main.close();
+    }
+    app.exit(0);
+    Ok(())
 }
 
 #[tauri::command]

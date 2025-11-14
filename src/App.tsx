@@ -10,11 +10,10 @@ import { GraphComposer } from "./components/GraphComposer";
 import { ProfileInsights } from "./components/ProfileInsights";
 import { useEventStream, useProfiles, useRunState } from "./store";
 import { defaultPresetProfile, Profile } from "./types";
-import { monitorStart, monitorStop, profilesLoad, profilesSave } from "./tauriBridge";
+import { monitorStart, monitorStop, profilesLoad, profilesSave, appQuit } from "./tauriBridge";
 import logo from "../doc/img/logo.png";
 import { useEffectOnce } from "./hooks/useEffectOnce";
 import { registerBuiltins } from "./plugins/builtins";
-import { appWindow } from "@tauri-apps/api/window";
 
 function App() {
   const { profiles, setProfiles } = useProfiles();
@@ -86,8 +85,10 @@ function App() {
   const quitApp = useCallback(async () => {
     try {
       if (typeof window !== "undefined" && (window as any).__TAURI_IPC__) {
-        await appWindow.close();
-      } else {
+        await appQuit();
+        return;
+      }
+      if (typeof window !== "undefined") {
         window.close();
       }
     } catch (err) {

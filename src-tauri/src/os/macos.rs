@@ -30,8 +30,8 @@ impl ScreenCapture for MacCapture {
     }
 
     fn displays(&self) -> Result<Vec<DisplayInfo>, BackendError> {
-        let screens = Screen::all()
-            .map_err(|e| BackendError::new("mac_displays_failed", e.to_string()))?;
+        let screens =
+            Screen::all().map_err(|e| BackendError::new("mac_displays_failed", e.to_string()))?;
         if screens.is_empty() {
             return Err(BackendError::new(
                 "mac_displays_failed",
@@ -55,10 +55,7 @@ struct CapturedRegion {
 impl MacCapture {
     fn capture_raw(&self, region: &Region) -> Result<CapturedRegion, BackendError> {
         if region.rect.width == 0 || region.rect.height == 0 {
-            return Err(BackendError::new(
-                "invalid_region",
-                "region has zero area",
-            ));
+            return Err(BackendError::new("invalid_region", "region has zero area"));
         }
         let screen = self.find_screen(region)?;
         let display = to_display_info(&screen.display_info);

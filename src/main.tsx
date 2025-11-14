@@ -7,8 +7,9 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 async function bootstrap() {
   const rootEl = document.getElementById("root") as HTMLElement;
   let Component: React.ComponentType = App;
+  const isTauri = typeof window !== "undefined" && (window as any).__TAURI_IPC__;
 
-  if (typeof window !== "undefined" && (window as any).__TAURI_IPC__) {
+  if (isTauri) {
     try {
       const current = await getCurrentWindow();
       if (current.label === "region-overlay") {
@@ -19,11 +20,18 @@ async function bootstrap() {
     }
   }
 
-  ReactDOM.createRoot(rootEl).render(
-    <React.StrictMode>
-      <Component />
-    </React.StrictMode>,
-  );
+  const render = () =>
+    ReactDOM.createRoot(rootEl).render(
+      <React.StrictMode>
+        <Component />
+      </React.StrictMode>,
+    );
+
+  if (isTauri) {
+    render();
+  } else {
+    render();
+  }
 }
 
 bootstrap();

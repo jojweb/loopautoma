@@ -26,7 +26,7 @@ Project bootstrap (idiomatic):
 - Persistence as JSON profiles; efficient screen hashing with minimal CPU load.
 - Extensible: adding new Triggers/Conditions/Actions must not require redesign.
 - Test‑driven: overall coverage ≥90% (Rust + UI combined) with unit + integration + E2E. CI uploads coverage to Codecov.
-- Unattended operation: runs safely without a user present, with strong guardrails (watchdog, rate limits, bounded scope) and a single‑click “panic stop”.
+- Unattended operation: runs safely without a user present, with strong guardrails (watchdog, rate limits, bounded scope) and clear stop controls.
  - MVP scope explicitly targets Ubuntu/X11; other OSes must be supportable by adding backends behind the same traits without modifying UI or core contracts.
 
 ## Layered architecture (modules and data flow)
@@ -45,7 +45,7 @@ Top to bottom layers; arrows indicate primary call/flow direction.
   - Monitor: orchestrates Trigger → Condition evaluation → ActionSequence execution → Event emission
   - Profile Manager (JSON load/save/validate; schema versioning)
   - Event Bus (typed, async channel)
-  - Watchdog and Guardrails: max runtime/activations, cooldowns, panic stop, and rate limiting applied around Monitor
+  - Watchdog and Guardrails: max runtime/activations, cooldowns, and rate limiting applied around Monitor
   - Registry: maps JSON `type` descriptors to concrete Trigger/Condition/Action implementations
    ↓
 4) Domain layer (core)
@@ -182,7 +182,7 @@ Profile schema (minimal contract):
 
 - Profile editor: define Regions (via selection tool), Trigger (interval), Condition (stable duration, downscale), and ActionSequence.
 - Monitor control: Start/Stop + status; live Event log/metrics.
-- Unattended mode: toggle to enable guardrails (max runtime/activations, cooldowns) and a prominent Panic Stop button; preset selector (e.g., “Copilot Keep‑Alive”).
+- Unattended mode: toggle to enable guardrails (max runtime/activations, cooldowns); preset selector (e.g., “Copilot Keep‑Alive”).
 - State management: Zustand store; React Query optional for command calls; types mirror Rust models.
 - Serialization: JSON round‑trip to/from backend; validation errors surfaced inline.
 - Authoring helpers: recording bar to start/stop input capture plus the region selection overlay with thumbnail refresh; all OSes reuse the same UI over OS-specific backends.
@@ -246,7 +246,7 @@ Implementation notes:
 ## Unattended operation: design notes
 
 - Bounded scope: Profiles explicitly define Regions; hashes only (no pixel persistence by default) to respect privacy.
-- Panic stop: immediate termination of Monitor loop from UI or hotkey; emits MonitorStateChanged and ensures idempotent shutdown.
+- Stop command: immediate termination of the Monitor loop from UI or hotkey; emits MonitorStateChanged and ensures idempotent shutdown.
 - Guardrails: max runtime, max activations/hour, and cooldown between activations; all configurable per Profile.
 - Resilience: on crash/restart, Profiles reload and default to stopped; start is explicit.
 - Focus binding (optional extension): a Condition variant may assert the expected app/window is focused before actions occur.
@@ -256,4 +256,4 @@ Implementation notes:
 - States: Stopped → Running → Stopping → Stopped
 - Start: monitor_start(profileId) when in Stopped → Running
 - Tick: on Trigger tick, evaluate Condition; if true and guardrails allow, execute ActionSequence; apply cooldown
-- Panic Stop: transition to Stopping; prevent scheduling of new actions; allow in‑flight Action to finish; emit MonitorStateChanged; then Stopped
+- Stop command: transition to Stopping; prevent scheduling of new actions; allow in‑flight Action to finish; emit MonitorStateChanged; then Stopped

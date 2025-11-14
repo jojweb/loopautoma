@@ -11,6 +11,7 @@ const tauriBridgeMocks = vi.hoisted(() => ({
   stopInputRecording: vi.fn(),
   windowPosition: vi.fn(),
   windowInfo: vi.fn(),
+  appQuit: vi.fn(),
 }));
 
 vi.mock("../src/tauriBridge", () => tauriBridgeMocks);
@@ -23,6 +24,7 @@ const mockStartInputRecording = tauriBridgeMocks.startInputRecording;
 const mockStopInputRecording = tauriBridgeMocks.stopInputRecording;
 const mockWindowPosition = tauriBridgeMocks.windowPosition;
 const mockWindowInfo = tauriBridgeMocks.windowInfo;
+const mockAppQuit = tauriBridgeMocks.appQuit;
 
 // Mock Tauri event listener
 vi.mock("@tauri-apps/api/event", () => ({
@@ -40,6 +42,7 @@ describe("Monitor control", () => {
     mockStopInputRecording.mockReset().mockResolvedValue(undefined);
     mockWindowPosition.mockReset().mockResolvedValue({ x: 0, y: 0 });
     mockWindowInfo.mockReset().mockResolvedValue({ x: 0, y: 0, scale: 1 });
+    mockAppQuit.mockReset().mockResolvedValue(undefined);
   });
 
   it("loads profiles on mount", async () => {
@@ -150,5 +153,13 @@ describe("Monitor control", () => {
     await waitFor(() => {
       expect(screen.getByText(/Running/)).toBeTruthy();
     });
+  });
+
+  it("invokes appQuit when Quit button is clicked", async () => {
+    mockProfilesLoad.mockResolvedValue([]);
+    render(<App />);
+    const quitBtn = await screen.findByRole("button", { name: /Quit/i });
+    fireEvent.click(quitBtn);
+    await waitFor(() => expect(mockAppQuit).toHaveBeenCalled());
   });
 });

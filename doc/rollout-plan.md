@@ -12,7 +12,7 @@ Required reading: doc/architecture.md for contracts and OS abstraction; this fil
 - [x] Shared model: Region, Event (incl. WatchdogTripped, MonitorStateChanged), Profile JSON schema.
 - [x] Initial implementations: IntervalTrigger, RegionCondition, basic Actions, Monitor with guardrails; fakes for tests.
 - [x] Tauri bridge: profiles_load/save, monitor_start/stop, optional region_pick; event delivery to UI over a Tauri event channel.
-- [x] UI MVP: Profile editor, Monitor Start/Stop, live Event log, guardrail inputs, Panic Stop.
+- [x] UI MVP: Profile editor, Monitor Start/Stop, live Event log, guardrail inputs.
 - [x] CI with coverage upload and gate at ≥90%.
 
 ## Phase 1 — Ubuntu/X11 Backends (MVP core)
@@ -34,7 +34,7 @@ Deliverables: working unattended app on Ubuntu/X11 with first‑class backend su
 - [x] Linux ScreenCapture uses `xcap` (PipeWire + SPA + clang) by default alongside native XI2 input capture and XTest automation for Ubuntu/X11 sessions.
 - [x] Authoring Tauri commands (region picker, thumbnail capture, input recorder, input injection) fully implemented and wired to UI.
 - [x] UI authoring helpers complete: Region overlay for selection, RegionAuthoringPanel with thumbnails, RecordingBar with live timeline.
-- [x] Monitor runtime hardened: guardrail enforcement (cooldown, max_runtime, max_activations_per_hour), panic stop UX.
+- [x] Monitor runtime hardened: guardrail enforcement (cooldown, max_runtime, max_activations_per_hour) and general stop/shutdown UX.
 - [x] Comprehensive test suite: 16 Rust tests + 13 UI test files covering units, integration, edge cases, and E2E happy path.
 - [x] Installation documentation created (doc/install.md) with Ubuntu package instructions, X11 requirements, troubleshooting.
 - [ ] Outstanding: Coverage measurement (≥90%), Ubuntu bundling verification, CI validation (blocked by network access in current environment).
@@ -52,7 +52,7 @@ Gate: all tasks done on Ubuntu/X11, tests green, coverage ≥90%, Ubuntu package
 ## Phase 2 — Hardening on Ubuntu/X11
 
 - [x] Performance pass: throttle authoring helpers; buffer reuse; enforce cooldowns/backoff; document CPU/memory baselines.
-- [x] Soak test: long-running unattended loops validate guardrails and clean Panic Stop; memory/cpu bounds checked.
+- [x] Soak test: long-running unattended loops validate guardrails and clean shutdown; memory/cpu bounds checked.
 - [x] Security basics: input-synthesis safety, permissions review; dev-only flags locked down for production builds.
 - [x] UX polish: clearer preset(s) like “Copilot Keep-Alive”; improved profile validation feedback.
 
@@ -61,7 +61,7 @@ Gate: tests green, coverage ≥90% for domain/runtime/UI; soak stability documen
 ### Phase 2 status — 2025-11-15 update
 
 - [x] Region authoring UI reuses buffers and suppresses duplicate renders; ProfileInsights panel surfaces guardrail/preset health inline.
-- [x] Panic stop finalizer and soak/monitor regression tests extended to cover guardrail trips plus new throttle helpers.
+- [x] Stop/shutdown finalizer and soak/monitor regression tests extended to cover guardrail trips plus new throttle helpers.
 - [x] Input injection commands require the explicit `LOOPAUTOMA_ALLOW_INJECT=1` env flag, keeping them dev-only.
 - [x] Profile editor validates JSON via `auditProfile`, rendering actionable errors before persisting, and includes a one-click preset restore CTA.
 - [x] Added `src-tauri/src/bin/soak_report.rs` plus `doc/perfBaseline.md` so we can regenerate soak JSON/CPU baselines on demand (fake backends today, hardware next).

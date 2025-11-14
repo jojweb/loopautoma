@@ -301,7 +301,7 @@ Loop Automa is designed with security and privacy in mind:
 - **Local Operation**: All automation runs locally on your machine
 - **Hash-Only Region Monitoring**: By default, only downscaled image hashes are compared, not full pixel data
 - **Explicit Permissions**: The app requires accessibility permissions for input automation, which you grant explicitly
-- **Panic Stop**: A prominent "Panic Stop" button immediately halts all automation
+- **Guardrails**: Cooldown, runtime, and activation limits ensure automation remains bounded; the monitor can always be stopped from the main UI.
 
 ## Next Steps
 

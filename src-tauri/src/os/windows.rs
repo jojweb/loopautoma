@@ -11,9 +11,9 @@ use windows::core::Error as WinError;
 #[cfg(target_os = "windows")]
 use windows::Win32::UI::Input::KeyboardAndMouse::{
     SendInput, INPUT, INPUT_0, INPUT_KEYBOARD, INPUT_MOUSE, KEYBDINPUT, KEYBD_EVENT_FLAGS,
-    KEYEVENTF_KEYUP, KEYEVENTF_UNICODE, MOUSEINPUT, MOUSE_EVENT_FLAGS, MOUSEEVENTF_LEFTDOWN,
-    MOUSEEVENTF_LEFTUP, MOUSEEVENTF_MIDDLEDOWN, MOUSEEVENTF_MIDDLEUP, MOUSEEVENTF_RIGHTDOWN,
-    MOUSEEVENTF_RIGHTUP, VIRTUAL_KEY, VK_BACK, VK_ESCAPE, VK_RETURN, VK_SPACE, VK_TAB,
+    KEYEVENTF_KEYUP, KEYEVENTF_UNICODE, MOUSEEVENTF_LEFTDOWN, MOUSEEVENTF_LEFTUP,
+    MOUSEEVENTF_MIDDLEDOWN, MOUSEEVENTF_MIDDLEUP, MOUSEEVENTF_RIGHTDOWN, MOUSEEVENTF_RIGHTUP,
+    MOUSEINPUT, MOUSE_EVENT_FLAGS, VIRTUAL_KEY, VK_BACK, VK_ESCAPE, VK_RETURN, VK_SPACE, VK_TAB,
 };
 #[cfg(target_os = "windows")]
 use windows::Win32::UI::WindowsAndMessaging::SetCursorPos;
@@ -42,8 +42,8 @@ impl ScreenCapture for WinCapture {
     }
 
     fn displays(&self) -> Result<Vec<DisplayInfo>, BackendError> {
-        let screens = Screen::all()
-            .map_err(|e| BackendError::new("win_displays_failed", e.to_string()))?;
+        let screens =
+            Screen::all().map_err(|e| BackendError::new("win_displays_failed", e.to_string()))?;
         if screens.is_empty() {
             return Err(BackendError::new(
                 "win_displays_failed",
@@ -67,10 +67,7 @@ struct CapturedRegion {
 impl WinCapture {
     fn capture_raw(&self, region: &Region) -> Result<CapturedRegion, BackendError> {
         if region.rect.width == 0 || region.rect.height == 0 {
-            return Err(BackendError::new(
-                "invalid_region",
-                "region has zero area",
-            ));
+            return Err(BackendError::new("invalid_region", "region has zero area"));
         }
         let screen = self.find_screen(region)?;
         let display = to_display_info(&screen.display_info);
@@ -243,7 +240,11 @@ impl WinAutomation {
 
     fn dispatch(inputs: &mut [INPUT]) -> Result<(), String> {
         unsafe {
-            let sent = SendInput(inputs.len() as u32, inputs.as_ptr(), size_of::<INPUT>() as i32);
+            let sent = SendInput(
+                inputs.len() as u32,
+                inputs.as_ptr(),
+                size_of::<INPUT>() as i32,
+            );
             if sent == inputs.len() as u32 {
                 Ok(())
             } else {
@@ -521,10 +522,7 @@ mod tests {
     #[test]
     fn classify_single_char_keys() {
         assert!(matches!(classify_key("a").unwrap(), KeySpec::Char('a')));
-        assert!(matches!(
-            classify_key("✅").unwrap(),
-            KeySpec::Char('✅')
-        ));
+        assert!(matches!(classify_key("✅").unwrap(), KeySpec::Char('✅')));
     }
 
     #[test]
