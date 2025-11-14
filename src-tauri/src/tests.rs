@@ -318,4 +318,119 @@ mod tests {
         // No panics, and last state is stopped
         assert!(evs.iter().rev().any(|e| matches!(e, crate::domain::Event::MonitorStateChanged{ state } if *state == crate::domain::MonitorState::Stopped)));
     }
+
+    #[test]
+    fn region_condition_handles_empty_regions() {
+        let mut c = RegionCondition::new(Duration::from_millis(100), 4);
+        let cap = FakeCap { seq: vec![42] };
+        let t0 = Instant::now();
+        // No regions means stable immediately (vacuously true)
+        assert!(c.evaluate(t0, &[], &cap));
+    }
+
+    #[test]
+    fn region_condition_resets_on_hash_change() {
+        let mut c = RegionCondition::new(Duration::from_millis(200), 4);
+        let r = Region { id: "r1".into(), rect: Rect { x: 0, y: 0, width: 10, height: 10 }, name: None };
+        // First hash: 42
+        struct Cap1; impl ScreenCapture for Cap1 {
+            fn hash_region(&self, _r:&Region,_d:u32)->u64{42}
+            fn capture_region(&self, _region: &Region) -> Result<ScreenFrame, BackendError> { capture_region_stub() }
+            fn displays(&self) -> Result<Vec<DisplayInfo>, BackendError> { displays_stub() }
+        }
+        let cap1 = Cap1;
+        let t0 = Instant::now();
+        assert!(!c.evaluate(t0, &[r.clone()], &cap1)); // first eval: not stable yet
+        assert!(!c.evaluate(t0 + Duration::from_millis(150), &[r.clone()], &cap1)); // still not stable
+        // Hash changes to 99
+        struct Cap2; impl ScreenCapture for Cap2 {
+            fn hash_region(&self, _r:&Region,_d:u32)->u64{99}
+            fn capture_region(&self, _region: &Region) -> Result<ScreenFrame, BackendError> { capture_region_stub() }
+            fn displays(&self) -> Result<Vec<DisplayInfo>, BackendError> { displays_stub() }
+        }
+        let cap2 = Cap2;
+        // Even after stable duration, change resets timer
+        assert!(!c.evaluate(t0 + Duration::from_millis(250), &[r.clone()], &cap2)); // hash changed, reset
+        // Must wait another stable_ms from t250
+        assert!(!c.evaluate(t0 + Duration::from_millis(400), &[r.clone()], &cap2)); // still not stable
+        assert!(c.evaluate(t0 + Duration::from_millis(460), &[r], &cap2)); // now stable
+    }
+
+    #[test]
+    fn action_sequence_stops_on_first_failure() {
+        let auto = FakeAuto::new();
+        struct FailAction;
+        impl Action for FailAction {
+            fn name(&self) -> &'static str { "Fail" }
+            fn execute(&self, _: &dyn Automation) -> Result<(), String> { Err("intentional failure".into()) }
+        }
+        let seq = ActionSequence::new(vec![
+            Box::new(TypeText { text: "before".into() }) as Box<dyn Action + Send + Sync>,
+            Box::new(FailAction),
+            Box::new(TypeText { text: "after".into() }),
+        ]);
+        let mut events = vec![];
+        let ok = seq.run(&auto, &mut events);
+        assert!(!ok);
+        let calls = auto.calls.lock().unwrap().clone();
+        // "before" should execute, "after" should not
+        assert_eq!(calls, vec!["type:before"]);
+        // Check error event was emitted
+        assert!(events.iter().any(|e| matches!(e, crate::domain::Event::Error{..})));
+        // Check failure completion event
+        assert!(events.iter().any(|e| matches!(e, crate::domain::Event::ActionCompleted{action, success: false} if action == "Fail")));
+    }
+
+    #[test]
+    fn monitor_cooldown_prevents_immediate_reactivation() {
+        let mut m = Monitor::new(
+            Box::new(AlwaysTrigger),
+            Box::new(RegionCondition::new(Duration::from_millis(0), 1)),
+            ActionSequence::new(vec![Box::new(TypeText { text: "x".into() }) as Box<dyn Action + Send + Sync>]),
+            Guardrails { cooldown: Duration::from_millis(100), max_runtime: None, max_activations_per_hour: None },
+        );
+        let r = Region { id: "r".into(), rect: Rect { x: 0, y: 0, width: 1, height: 1 }, name: None };
+        struct C;
+        impl ScreenCapture for C {
+            fn hash_region(&self, _r:&Region,_d:u32)->u64{0}
+            fn capture_region(&self, _region: &Region) -> Result<ScreenFrame, BackendError> { capture_region_stub() }
+            fn displays(&self) -> Result<Vec<DisplayInfo>, BackendError> { displays_stub() }
+        }
+        let cap=C;
+        let auto=FakeAuto::new();
+        let mut evs=vec![]; m.start(&mut evs);
+        let t0=Instant::now();
+        // First tick: condition initializes (not stable)
+        m.tick(t0, &[r.clone()], &cap, &auto, &mut evs);
+        // Second tick: condition becomes stable, first activation
+        m.tick(t0 + Duration::from_millis(1), &[r.clone()], &cap, &auto, &mut evs);
+        assert_eq!(m.activations, 1);
+        // Third tick: still in cooldown, no activation
+        m.tick(t0 + Duration::from_millis(50), &[r.clone()], &cap, &auto, &mut evs);
+        assert_eq!(m.activations, 1);
+        // Fourth tick: after cooldown, second activation
+        m.tick(t0 + Duration::from_millis(110), &[r], &cap, &auto, &mut evs);
+        assert_eq!(m.activations, 2);
+    }
+
+    #[test]
+    fn fakes_provide_deterministic_data() {
+        use crate::fakes::{FakeAutomation, FakeCapture};
+        let cap = FakeCapture;
+        let r = Region { id: "test".into(), rect: Rect { x: 0, y: 0, width: 100, height: 100 }, name: None };
+        let h1 = cap.hash_region(&r, 4);
+        let h2 = cap.hash_region(&r, 4);
+        assert_eq!(h1, h2); // consistent hash
+        let frame = cap.capture_region(&r).unwrap();
+        assert_eq!(frame.width, 100);
+        assert_eq!(frame.height, 100);
+        assert_eq!(frame.bytes.len(), 100 * 100 * 4);
+        let displays = cap.displays().unwrap();
+        assert_eq!(displays.len(), 1);
+        let auto = FakeAutomation;
+        assert!(auto.move_cursor(10, 20).is_ok());
+        assert!(auto.click(MouseButton::Left).is_ok());
+        assert!(auto.type_text("test").is_ok());
+        assert!(auto.key("Enter").is_ok());
+    }
 }
