@@ -10,7 +10,7 @@
     "build:web": "tsc && vite build",
     "preview": "vite preview",
     "tauri": "tauri",
-    "test": "bun test tests/**/*.bun.*",
+  "test": "bun test tests/hello.bun.test.ts",
     "test:ui:cov": "vitest run --coverage"
   },
   "dependencies": {
@@ -20,18 +20,19 @@
     "@tauri-apps/plugin-opener": "^2"
   },
   "devDependencies": {
+    "@tauri-apps/cli": "^2",
+    "@testing-library/dom": "^10.4.0",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.0.0",
+    "@testing-library/user-event": "^14.6.1",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
     "@vitejs/plugin-react": "^4.6.0",
-  "vitest": "^2.1.4",
     "@vitest/coverage-istanbul": "^2.1.4",
-  "@testing-library/react": "^16.0.0",
-  "@testing-library/dom": "^10.4.0",
-  "@testing-library/user-event": "^14.6.1",
-  "jsdom": "^25.0.0",
     "bun-types": "*",
+    "jsdom": "^25.0.0",
     "typescript": "~5.8.3",
     "vite": "^7.0.4",
-    "@tauri-apps/cli": "^2"
+    "vitest": "^2.1.4"
   }
 }

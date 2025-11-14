@@ -217,6 +217,13 @@ cd src-tauri
 cargo test
 ```
 
+- Deterministic soak/profiling runs (fake backends):
+
+```bash
+cd src-tauri
+LOOPAUTOMA_BACKEND=fake cargo run --bin soak_report -- --ticks 20000 --interval-ms 50 --cooldown-ms 50 --max-runtime-ms 2000
+```
+
 Conventions to keep runners separate:
 
 - Vitest files use the pattern: `tests/**/*.vitest.{ts,tsx,js,jsx}`.
@@ -265,6 +272,21 @@ Modules:
 - `src-tauri/src/os/windows.rs` → `WinCapture`, `WinAutomation` (stubs)
 
 At runtime, selection occurs in `src-tauri/src/lib.rs::select_backends()` using feature gates, with `LOOPAUTOMA_BACKEND=fake` as an override.
+
+## Security + dev-only helpers
+
+Authoring helpers that synthesize input (`inject_mouse_event`, `inject_keyboard_event`) are disabled by default and only available in debug/dev builds:
+
+- Enable locally by exporting `LOOPAUTOMA_ALLOW_INJECT=1` in the shell that launches `bun run tauri dev` or `cargo test`:
+
+  ```bash
+  export LOOPAUTOMA_ALLOW_INJECT=1
+  bun run tauri dev
+  ```
+
+- Packaged/release builds ignore the flag and always return an error so end users cannot inject input accidentally.
+- To simulate a release build without producing installers, set `LOOPAUTOMA_TREAT_AS_RELEASE=1` before running the binary; the guard will behave as if `debug_assertions` were disabled.
+- The guard logic lives in `ensure_dev_injection_allowed` and is documented in `doc/securityReview.md` alongside the permissions checklist.
 
 
 ## E2E and soak

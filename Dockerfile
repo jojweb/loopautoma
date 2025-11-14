@@ -13,7 +13,7 @@ RUN apt-get update && \
       ca-certificates \
       curl \
       wget \
-    unzip \
+      unzip \
       git \
       pkg-config \
       build-essential \
@@ -21,8 +21,6 @@ RUN apt-get update && \
       libdrm-dev \
       libssl-dev \
       libgtk-3-dev \
-      libxkbcommon-x11-dev \
-      libxcb-xkb-dev \
       libwebkit2gtk-4.1-dev \
       libsoup-3.0-dev \
       librsvg2-dev \
@@ -33,9 +31,19 @@ RUN apt-get update && \
       libpipewire-0.3-dev \
       libspa-0.2-dev \
       libclang-dev \
+      libc6-dev \
       cmake \
       xz-utils \
       sudo \
+      libx11-dev \
+      libxext-dev \
+      libxrandr-dev \
+      libxi-dev \
+      libxtst-dev \
+      libxkbcommon-dev \
+      libxkbcommon-x11-dev \
+      libxcb-xkb-dev \
+      libxdo-dev \
       && rm -rf /var/lib/apt/lists/*
 
 # Install Rust (stable) via rustup
@@ -45,7 +53,8 @@ ENV PATH=/root/.cargo/bin:$PATH
 ENV CARGO_TARGET_DIR=/workspace/target
 ENV BINDGEN_EXTRA_CLANG_ARGS="--sysroot=/usr -I/usr/lib/llvm-18/lib/clang/18/include -I/usr/include/x86_64-linux-gnu"
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal && \
-    rustup default stable
+    rustup default stable && \
+    rustup component add llvm-tools-preview --toolchain stable
 
 # Install Bun
 ENV BUN_INSTALL=/root/.bun

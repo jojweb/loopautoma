@@ -8,12 +8,12 @@
 [![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS%20%7C%20Windows-forestgreen)](doc/architecture.md)
 
 > [!NOTE] 
-> This project is under active development and not yet fully functional.
+> This project is under active development and not yet fully functional. Some of this documentation refers to not yet fully implemented features.
 
-Cross‑platform desktop automation to keep AI agents working indefinitely. Watches screen regions and performs actions when conditions are met. 
+Cross‑platform desktop automation that watches configurable screen regions and performs keyboard/mouse actions when conditions are met. 
 
 ## Features 🤖
-- Keep agents moving: press Enter or click Continue when they stall.
+- Keep agents moving: automatically type "Continue" and press enter when an agent stalls.
 - Run unattended: detect stable/changed UI regions and advance the flow.
 - Stay safe: cooldowns, rate limits, max runtime, and a Panic Stop.
 
@@ -23,7 +23,26 @@ Cross‑platform desktop automation to keep AI agents working indefinitely. Watc
 
 ## Quick Start ⚡
 
-- Prereqs and OS notes: [doc/developer.md](doc/developer.md)
+### Installation
+
+See the **[Installation Guide](doc/install.md)** for detailed instructions on:
+- Installing pre-built packages (.deb, .rpm, AppImage)
+- System requirements and X11 setup
+- Building from source
+- Troubleshooting
+
+**Ubuntu 24.04 Quick Install**:
+```bash
+# Download and install the .deb package
+wget https://github.com/chrisgleissner/loopautoma/releases/latest/download/loopautoma_0.1.0_amd64.deb
+sudo apt install ./loopautoma_0.1.0_amd64.deb
+
+# Run (requires X11 session - see Installation Guide if on Wayland)
+loopautoma
+```
+
+### Development
+
 - Dev run (full app):
   ```bash
   bun install
@@ -31,23 +50,25 @@ Cross‑platform desktop automation to keep AI agents working indefinitely. Watc
   ```
 - Safe mode (no real clicks/keys):
   ```bash
-  LOOPAUTOMA_BACKEND=fake bun run tauri dev
+  LOOPAUTOMA_BACKEND=fake bun run dev
   ```
-  (or: `LOOPAUTOMA_BACKEND=fake bun run dev`)
 
-Pure web dev (no Tauri window):
+- Pure web dev (no Tauri window):
   ```bash
   bun run dev:web
   ```
 
-Builds:
-  ```bash
-  # full Tauri bundles
-  bun run build
+### Building
 
-  # web-only bundle
-  bun run build:web
-  ```
+```bash
+# Full Tauri bundles (.deb, .rpm, .AppImage)
+bun run build
+
+# Packages will be in: src-tauri/target/release/bundle/
+
+# Web-only bundle
+bun run build:web
+```
 
 ### Run in Docker (optional)
 
@@ -70,9 +91,10 @@ Our CI uses this same image and uploads coverage to Codecov.
 
 CI is container-native: jobs run inside the prebuilt image (no repeated `docker run` wrappers). The image prewarms Bun and compiles Rust dependencies so test jobs don’t re-download crates on each run.
 ## Docs 📚
-- Architecture: [doc/architecture.md](doc/architecture.md)
-- Rollout plan: [doc/rollout-plan.md](doc/rollout-plan.md)
-- Dev setup: [doc/developer.md](doc/developer.md)
+- **Installation**: [doc/install.md](doc/install.md) — System requirements, packages, and troubleshooting
+- **Architecture**: [doc/architecture.md](doc/architecture.md) — Technical design and contracts
+- **Rollout plan**: [doc/rollout-plan.md](doc/rollout-plan.md) — Development roadmap and phases
+- **Dev setup**: [doc/developer.md](doc/developer.md) — Building and testing from source
 
 ## License 📄
 GPL‑2.0 — see [LICENSE](LICENSE).
