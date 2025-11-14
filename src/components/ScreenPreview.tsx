@@ -18,12 +18,73 @@ export function ScreenPreview({ regions, disabled, onRegionAdd }: ScreenPreviewP
   const [frame, setFrame] = useState<ScreenFrame | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [drag, setDrag] = useState<DragSelection | null>(null);
+  const dragRef = useRef<DragSelection | null>(null);
   const [pendingRect, setPendingRect] = useState<Rect | null>(null);
   const [regionName, setRegionName] = useState("");
   const [regionId, setRegionId] = useState("");
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const streamingRef = useRef(false);
+  const canvasDimensionsRef = useRef<{ width: number; height: number } | null>(null);
   const regionCount = regions?.length ?? 0;
+
+  const computeCanvasBounds = useCallback(
+    (element: HTMLCanvasElement) => {
+      const rect = element.getBoundingClientRect?.();
+      const width = rect && rect.width > 0 ? rect.width : element.width || frame?.width || 0;
+      const height = rect && rect.height > 0 ? rect.height : element.height || frame?.height || 0;
+      if (width <= 0 || height <= 0) {
+        console.warn("computeCanvasBounds width/height zero", { rect, width, height });
+        return null;
+      }
+      if (rect && rect.width > 0 && rect.height > 0) {
+        return rect;
+      }
+      const left = rect?.left ?? 0;
+      const top = rect?.top ?? 0;
+      return {
+        left,
+        top,
+        width,
+        height,
+        right: left + width,
+        bottom: top + height,
+        x: rect?.x ?? left,
+        y: rect?.y ?? top,
+        toJSON: rect?.toJSON ?? (() => ({})),
+      } as DOMRect;
+    },
+    [frame],
+  );
+
+  const getClientCoordinate = useCallback(
+    (event: ReactPointerEvent<HTMLCanvasElement>, axis: "x" | "y", bounds: DOMRect) => {
+      const primary = axis === "x" ? event.clientX : event.clientY;
+      if (Number.isFinite(primary)) {
+        return primary;
+      }
+      const nativeEvent = event.nativeEvent as PointerEvent & { __loopautomaInit?: PointerEventInit };
+      const initValue = nativeEvent?.__loopautomaInit
+        ? axis === "x"
+          ? nativeEvent.__loopautomaInit.clientX
+          : nativeEvent.__loopautomaInit.clientY
+        : undefined;
+      if (Number.isFinite(initValue)) {
+        return Number(initValue);
+      }
+      if (nativeEvent) {
+        const offset = axis === "x" ? nativeEvent.offsetX : nativeEvent.offsetY;
+        if (Number.isFinite(offset)) {
+          return (axis === "x" ? bounds.left : bounds.top) + Number(offset);
+        }
+        const pageCoord = axis === "x" ? nativeEvent.pageX : nativeEvent.pageY;
+        if (Number.isFinite(pageCoord)) {
+          return pageCoord;
+        }
+      }
+      return axis === "x" ? bounds.left : bounds.top;
+    },
+    [],
+  );
 
   useEffect(() => {
     let unlisten: (() => void) | undefined;
@@ -106,34 +167,76 @@ export function ScreenPreview({ regions, disabled, onRegionAdd }: ScreenPreviewP
   const handlePointerDown = useCallback(
     (event: ReactPointerEvent<HTMLCanvasElement>) => {
       if (!frame || disabled) return;
-      const bounds = event.currentTarget.getBoundingClientRect();
-      const x = clamp(event.clientX - bounds.left, 0, bounds.width);
-      const y = clamp(event.clientY - bounds.top, 0, bounds.height);
-      setDrag({ start: { x, y }, current: { x, y } });
+      const canvasElement = event.currentTarget;
+      const bounds = canvasElement ? computeCanvasBounds(canvasElement) : null;
+      if (!bounds) return;
+      const resolvedWidth = bounds.width || frame.display.width || frame.width || 1;
+      const resolvedHeight = bounds.height || frame.display.height || frame.height || 1;
+      canvasDimensionsRef.current = { width: resolvedWidth, height: resolvedHeight };
+      const clientX = getClientCoordinate(event, "x", bounds);
+      const clientY = getClientCoordinate(event, "y", bounds);
+      const x = clamp(clientX - bounds.left, 0, bounds.width);
+      const y = clamp(clientY - bounds.top, 0, bounds.height);
+      const next = { start: { x, y }, current: { x, y } };
+      dragRef.current = next;
+      setDrag(next);
       resetPending();
-      event.currentTarget.setPointerCapture(event.pointerId);
+      event.currentTarget?.setPointerCapture?.(event.pointerId);
     },
-    [disabled, frame, resetPending],
+    [computeCanvasBounds, disabled, frame, getClientCoordinate, resetPending],
   );
 
   const handlePointerMove = useCallback((event: ReactPointerEvent<HTMLCanvasElement>) => {
     setDrag((current) => {
-      if (!current) return current;
-      const bounds = event.currentTarget.getBoundingClientRect();
-      const x = clamp(event.clientX - bounds.left, 0, bounds.width);
-      const y = clamp(event.clientY - bounds.top, 0, bounds.height);
-      return { start: current.start, current: { x, y } };
+      const active = dragRef.current ?? current;
+      if (!active) {
+        return current;
+      }
+      const canvasElement = canvasRef.current ?? event.currentTarget;
+      const bounds = canvasElement ? computeCanvasBounds(canvasElement) : null;
+      if (!bounds) {
+        return current;
+      }
+      const resolvedWidth = bounds.width || frame?.display.width || frame?.width || 1;
+      const resolvedHeight = bounds.height || frame?.display.height || frame?.height || 1;
+      canvasDimensionsRef.current = { width: resolvedWidth, height: resolvedHeight };
+      const clientX = getClientCoordinate(event, "x", bounds);
+      const clientY = getClientCoordinate(event, "y", bounds);
+      const x = clamp(clientX - bounds.left, 0, bounds.width);
+      const y = clamp(clientY - bounds.top, 0, bounds.height);
+      const next = { start: active.start, current: { x, y } };
+      dragRef.current = next;
+      return next;
     });
-  }, []);
+  }, [computeCanvasBounds, getClientCoordinate]);
 
-  const finalizeDrag = useCallback(() => {
-    if (!drag || !frame || !canvasRef.current) {
+  const finalizeDrag = useCallback((canvas?: HTMLCanvasElement | null) => {
+    const selection = dragRef.current ?? drag;
+    if (!selection || !frame) {
       setDrag(null);
+      dragRef.current = null;
       return;
     }
-    const bounds = canvasRef.current.getBoundingClientRect();
-    const rect = dragToScreenRect(drag, frame, { width: bounds.width, height: bounds.height });
+    const target = canvas ?? canvasRef.current;
+    if (target) {
+      const bounds = target.getBoundingClientRect?.();
+      if (bounds && bounds.width > 0 && bounds.height > 0) {
+        const resolvedWidth = bounds.width || frame?.display.width || frame?.width || 1;
+        const resolvedHeight = bounds.height || frame?.display.height || frame?.height || 1;
+        canvasDimensionsRef.current = { width: resolvedWidth, height: resolvedHeight };
+      }
+    }
+    if (!canvasDimensionsRef.current) {
+      setDrag(null);
+      dragRef.current = null;
+      return;
+    }
+    const rect = dragToScreenRect(selection, frame, canvasDimensionsRef.current);
     setDrag(null);
+    dragRef.current = null;
+    if (!rect) {
+      return;
+    }
     if (rect) {
       setPendingRect(rect);
       setRegionName((prev) => prev || `Region ${regionCount + 1}`);
@@ -143,8 +246,10 @@ export function ScreenPreview({ regions, disabled, onRegionAdd }: ScreenPreviewP
 
   const handlePointerTerminal = useCallback(
     (event: ReactPointerEvent<HTMLCanvasElement>) => {
-      try { event.currentTarget.releasePointerCapture(event.pointerId); } catch {}
-      finalizeDrag();
+      try {
+        event.currentTarget?.releasePointerCapture?.(event.pointerId);
+      } catch {}
+      finalizeDrag(event.currentTarget);
     },
     [finalizeDrag],
   );

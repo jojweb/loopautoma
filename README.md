@@ -8,12 +8,12 @@
 [![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS%20%7C%20Windows-forestgreen)](doc/architecture.md)
 
 > [!NOTE] 
-> This project is under active development and not yet fully functional.
+> This project is under active development and not yet fully functional. Some of this documentation refers to not yet fully implemented features.
 
-Cross‑platform desktop automation to keep AI agents working indefinitely. Watches screen regions and performs actions when conditions are met. 
+Cross‑platform desktop automation that watches configurable screen regions and performs keyboard/mouse actions when conditions are met. 
 
 ## Features 🤖
-- Keep agents moving: press Enter or click Continue when they stall.
+- Keep agents moving: automatically type "Continue" and press enter when an agent stalls.
 - Run unattended: detect stable/changed UI regions and advance the flow.
 - Stay safe: cooldowns, rate limits, max runtime, and a Panic Stop.
 

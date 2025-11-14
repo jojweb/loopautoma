@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import App from "../src/App";
 
@@ -78,10 +78,10 @@ describe("Monitor control", () => {
     render(<App />);
     
     await waitFor(() => {
-      const startBtn = screen.queryByRole("button", { name: /^Start$/i });
+      const startBtn = screen.queryByRole("button", { name: /^Start$/i }) as HTMLButtonElement | null;
       // Start button may not exist or be disabled initially
       if (startBtn) {
-        expect(startBtn).toBeDisabled();
+        expect(startBtn.disabled).toBe(true);
       }
     });
   });
@@ -124,15 +124,13 @@ describe("Monitor control", () => {
     
     render(<App />);
     
-    await waitFor(() => {
-      const startBtn = screen.getByRole("button", { name: /^Start$/i });
-      fireEvent.click(startBtn);
-    });
-    
-    await waitFor(() => {
-      const stopBtn = screen.getByRole("button", { name: /^Stop$/i });
-      fireEvent.click(stopBtn);
-    });
+    const startBtn = await screen.findByRole("button", { name: /^Start$/i });
+    fireEvent.click(startBtn);
+
+    await waitFor(() => expect(mockMonitorStart).toHaveBeenCalled());
+
+    const stopBtn = await screen.findByRole("button", { name: /^Stop$/i });
+    fireEvent.click(stopBtn);
     
     await waitFor(() => {
       expect(mockMonitorStop).toHaveBeenCalled();
@@ -144,8 +142,8 @@ describe("Monitor control", () => {
     render(<App />);
     
     await waitFor(() => {
-      const panicBtn = screen.getByRole("button", { name: /Panic Stop/i });
-      expect(panicBtn).toBeDisabled();
+      const panicBtn = screen.getByRole("button", { name: /Panic Stop/i }) as HTMLButtonElement;
+      expect(panicBtn.disabled).toBe(true);
     });
   });
 
@@ -162,14 +160,14 @@ describe("Monitor control", () => {
     
     render(<App />);
     
+    const startBtn = await screen.findByRole("button", { name: /^Start$/i });
+    fireEvent.click(startBtn);
+
+    await waitFor(() => expect(mockMonitorStart).toHaveBeenCalled());
+
     await waitFor(() => {
-      const startBtn = screen.getByRole("button", { name: /^Start$/i });
-      fireEvent.click(startBtn);
-    });
-    
-    await waitFor(() => {
-      const panicBtn = screen.getByRole("button", { name: /Panic Stop/i });
-      expect(panicBtn).not.toBeDisabled();
+      const panicBtn = screen.getByRole("button", { name: /Panic Stop/i }) as HTMLButtonElement;
+      expect(panicBtn.disabled).toBe(false);
       fireEvent.click(panicBtn);
     });
     
@@ -191,11 +189,11 @@ describe("Monitor control", () => {
     
     render(<App />);
     
-    await waitFor(() => {
-      const startBtn = screen.getByRole("button", { name: /^Start$/i });
-      fireEvent.click(startBtn);
-    });
-    
+    const startBtn = await screen.findByRole("button", { name: /^Start$/i });
+    fireEvent.click(startBtn);
+
+    await waitFor(() => expect(mockMonitorStart).toHaveBeenCalled());
+
     await waitFor(() => {
       expect(screen.getByText(/Running/)).toBeTruthy();
     });

@@ -8,7 +8,7 @@ const mockListener = vi.fn();
 const mockOff = vi.fn();
 
 vi.mock("@tauri-apps/api/event", () => ({
-  listen: vi.fn().mockImplementation((channel, callback) => {
+  listen: vi.fn().mockImplementation((_channel, callback) => {
     mockListener.mockImplementation(callback);
     return Promise.resolve(mockOff);
   }),

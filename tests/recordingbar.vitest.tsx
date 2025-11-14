@@ -1,9 +1,103 @@
-import { describe, it, expect, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { RecordingBar, toActions } from "../src/components/RecordingBar";
+import type { InputEvent } from "../src/types";
 
-// Mock windowPosition to keep stable coordinates in tests
-vi.mock("../src/tauriBridge", () => ({ windowPosition: async () => ({ x: 0, y: 0 }), windowInfo: async () => ({ x: 0, y: 0, scale: 1 }) }));
+const mockStartInputRecording = vi.fn();
+const mockStopInputRecording = vi.fn();
+const inputListeners: Array<(payload: { payload: InputEvent }) => void> = [];
+
+vi.mock("../src/tauriBridge", () => ({
+  startInputRecording: () => mockStartInputRecording(),
+  stopInputRecording: () => mockStopInputRecording(),
+  windowPosition: async () => ({ x: 0, y: 0 }),
+  windowInfo: async () => ({ x: 0, y: 0, scale: 1 }),
+}));
+
+vi.mock("@tauri-apps/api/event", () => ({
+  listen: vi.fn().mockImplementation((_name, handler) => {
+    inputListeners.push(handler);
+    return Promise.resolve(() => {});
+  }),
+}));
+
+const emitInputEvent = (event: InputEvent) => {
+  inputListeners.forEach((cb) => cb({ payload: event }));
+};
+
+const baseModifiers = { shift: false, control: false, alt: false, meta: false };
+
+const emitMouseDown = (button: "Left" | "Right" | "Middle", x: number, y: number) => {
+  emitInputEvent({
+    kind: "mouse",
+    mouse: {
+      event_type: { button_down: button },
+      x,
+      y,
+      modifiers: baseModifiers,
+      timestamp_ms: Date.now(),
+    },
+  });
+};
+
+const emitMouseUp = (button: "Left" | "Right" | "Middle") => {
+  emitInputEvent({
+    kind: "mouse",
+    mouse: {
+      event_type: { button_up: button },
+      x: 0,
+      y: 0,
+      modifiers: baseModifiers,
+      timestamp_ms: Date.now(),
+    },
+  });
+};
+
+const emitMouseMove = () => {
+  emitInputEvent({
+    kind: "mouse",
+    mouse: {
+      event_type: "move",
+      x: 1,
+      y: 1,
+      modifiers: baseModifiers,
+      timestamp_ms: Date.now(),
+    },
+  });
+};
+
+const emitKeyEvent = (state: "down" | "up", key: string, text?: string | null) => {
+  emitInputEvent({
+    kind: "keyboard",
+    keyboard: {
+      state,
+      key,
+      code: key === "Enter" ? 13 : 0,
+      text,
+      modifiers: baseModifiers,
+      timestamp_ms: Date.now(),
+    },
+  });
+};
+
+const emitScrollEvent = (deltaX: number, deltaY: number) => {
+  emitInputEvent({
+    kind: "scroll",
+    scroll: {
+      delta_x: deltaX,
+      delta_y: deltaY,
+      modifiers: baseModifiers,
+      timestamp_ms: Date.now(),
+    },
+  });
+};
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  mockStartInputRecording.mockResolvedValue(undefined);
+  mockStopInputRecording.mockResolvedValue(undefined);
+  inputListeners.length = 0;
+});
 
 describe("RecordingBar", () => {
   it("toggles record/stop and saves click+key", async () => {
@@ -11,31 +105,75 @@ describe("RecordingBar", () => {
     render(<RecordingBar onSave={onSave} />);
 
     const btn = screen.getByRole("button", { name: /Record/i });
-  fireEvent.click(btn);
-  // wait a microtask so effect installs listeners and windowPosition resolves
-  await new Promise((r) => setTimeout(r, 0));
+    fireEvent.click(btn);
 
-    // Simulate a click inside window
-    fireEvent.mouseDown(window, { button: 0, clientX: 5, clientY: 7 });
-    // Simulate typing 'a' then Enter
-    fireEvent.keyDown(window, { key: "a" });
-    fireEvent.keyDown(window, { key: "Enter" });
+    await waitFor(() => expect(mockStartInputRecording).toHaveBeenCalled());
+    await screen.findByText(/Recording/i);
 
-    // Stop
-  const stopBtn = screen.getByRole("button", { name: /Stop/i });
+    emitMouseDown("Left", 5, 7);
+    emitKeyEvent("down", "a", "a");
+    emitKeyEvent("down", "Enter", null);
+
+    const stopBtn = await screen.findByRole("button", { name: /Stop/i });
     fireEvent.click(stopBtn);
+    await waitFor(() => expect(mockStopInputRecording).toHaveBeenCalled());
 
-    // Save
-    const saveBtn = screen.getByRole("button", { name: /Save as ActionSequence/i });
+    const saveBtn = screen.getByRole("button", { name: /Save as ActionSequence/i }) as HTMLButtonElement;
+    await waitFor(() => expect(saveBtn.disabled).toBe(false));
     fireEvent.click(saveBtn);
 
-    expect(onSave).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
     const events = onSave.mock.calls[0][0];
     const actions = toActions(events);
 
-  // Expect a MoveCursor to (5, 7) and a Click Left, plus a Key Enter
-  expect(actions.find(a => (a as any).type === "MoveCursor" && (a as any).x === 5 && (a as any).y === 7)).toBeTruthy();
+    // Expect a MoveCursor to (5, 7) and a Click Left, plus a Key Enter
+    expect(actions.find(a => (a as any).type === "MoveCursor" && (a as any).x === 5 && (a as any).y === 7)).toBeTruthy();
     expect(actions.find(a => (a as any).type === "Click" && (a as any).button === "Left")).toBeTruthy();
     expect(actions.find(a => (a as any).type === "Key" && (a as any).key === "Enter")).toBeTruthy();
+  });
+
+  it("handles timeline events, buffer flush, scroll, and clear", async () => {
+    render(<RecordingBar />);
+    const recordBtn = screen.getByRole("button", { name: /Record/i });
+    fireEvent.click(recordBtn);
+    await waitFor(() => expect(mockStartInputRecording).toHaveBeenCalled());
+
+    emitMouseMove();
+    emitMouseUp("Left");
+    emitScrollEvent(5, -3);
+    emitKeyEvent("down", "a", "a");
+    emitKeyEvent("up", "a", "a");
+
+    await screen.findByText(/Left release/);
+    await screen.findByText(/scroll Δ5,-3/);
+    await screen.findByText(/type "a"/);
+
+    const clearBtn = screen.getByRole("button", { name: /Clear/i }) as HTMLButtonElement;
+    await waitFor(() => expect(clearBtn.disabled).toBe(false));
+    fireEvent.click(clearBtn);
+    expect(clearBtn.disabled).toBe(true);
+    expect(screen.getByText(/No events yet\./)).toBeTruthy();
+  });
+
+  it("surfaces start errors and swallows stop errors", async () => {
+    mockStartInputRecording.mockRejectedValueOnce(new Error("hook denied"));
+    mockStopInputRecording.mockRejectedValueOnce(new Error("stop fail"));
+    const onStop = vi.fn();
+    render(<RecordingBar onStop={onStop} />);
+
+    const recordBtn = screen.getByRole("button", { name: /Record/i });
+    fireEvent.click(recordBtn);
+
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toContain("hook denied");
+    expect(recordBtn.textContent).toMatch(/Record/i);
+
+    fireEvent.click(recordBtn);
+    await waitFor(() => expect(mockStartInputRecording).toHaveBeenCalledTimes(2));
+    const stopBtn = await screen.findByRole("button", { name: /Stop/i });
+    fireEvent.click(stopBtn);
+
+    await waitFor(() => expect(mockStopInputRecording).toHaveBeenCalled());
+    await waitFor(() => expect(onStop).toHaveBeenCalledTimes(1));
   });
 });

@@ -1,8 +1,52 @@
-import { describe, it, expect, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { RecordingBar, toActions } from "../src/components/RecordingBar";
+import type { InputEvent } from "../src/types";
 
-vi.mock("../src/tauriBridge", () => ({ windowPosition: async () => ({ x: 0, y: 0 }), windowInfo: async () => ({ x: 0, y: 0, scale: 1 }) }));
+const mockStartInputRecording = vi.fn();
+const mockStopInputRecording = vi.fn();
+const inputListeners: Array<(payload: { payload: InputEvent }) => void> = [];
+
+vi.mock("../src/tauriBridge", () => ({
+  startInputRecording: () => mockStartInputRecording(),
+  stopInputRecording: () => mockStopInputRecording(),
+  windowPosition: async () => ({ x: 0, y: 0 }),
+  windowInfo: async () => ({ x: 0, y: 0, scale: 1 }),
+}));
+
+vi.mock("@tauri-apps/api/event", () => ({
+  listen: vi.fn().mockImplementation((_name, handler) => {
+    inputListeners.push(handler);
+    return Promise.resolve(() => {});
+  }),
+}));
+
+const emitInputEvent = (event: InputEvent) => {
+  inputListeners.forEach((cb) => cb({ payload: event }));
+};
+
+const baseModifiers = { shift: false, control: false, alt: false, meta: false };
+
+const emitKeyEvent = (state: "down" | "up", key: string, text?: string | null) => {
+  emitInputEvent({
+    kind: "keyboard",
+    keyboard: {
+      state,
+      key,
+      code: 0,
+      text,
+      modifiers: baseModifiers,
+      timestamp_ms: Date.now(),
+    },
+  });
+};
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  mockStartInputRecording.mockResolvedValue(undefined);
+  mockStopInputRecording.mockResolvedValue(undefined);
+  inputListeners.length = 0;
+});
 
 describe("RecordingBar buffer", () => {
   it("coalesces typed characters and flushes on stop", async () => {
@@ -10,15 +54,21 @@ describe("RecordingBar buffer", () => {
     render(<RecordingBar onSave={onSave} />);
 
     fireEvent.click(screen.getByRole("button", { name: /Record/i }));
-    await new Promise((r) => setTimeout(r, 0));
+    await waitFor(() => expect(mockStartInputRecording).toHaveBeenCalled());
+    await screen.findByText(/Recording/i);
 
-    fireEvent.keyDown(window, { key: "h" });
-    fireEvent.keyDown(window, { key: "i" });
-    // Stop (flush happens)
-    fireEvent.click(screen.getByRole("button", { name: /Stop/i }));
+    emitKeyEvent("down", "h", "h");
+    emitKeyEvent("down", "i", "i");
 
-    fireEvent.click(screen.getByRole("button", { name: /Save as ActionSequence/i }));
+    const stopBtn = await screen.findByRole("button", { name: /Stop/i });
+    fireEvent.click(stopBtn);
+    await waitFor(() => expect(mockStopInputRecording).toHaveBeenCalled());
 
+    const saveBtn = screen.getByRole("button", { name: /Save as ActionSequence/i }) as HTMLButtonElement;
+    await waitFor(() => expect(saveBtn.disabled).toBe(false));
+    fireEvent.click(saveBtn);
+
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
     const events = onSave.mock.calls[0][0];
     const actions = toActions(events);
     expect(actions.find(a => (a as any).type === "Type" && (a as any).text === "hi")).toBeTruthy();
