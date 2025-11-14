@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { Event, Profile } from "./types";
-import { listen } from "@tauri-apps/api/event";
+import { Event as RuntimeEvent, Profile } from "./types";
+import { subscribeEvent } from "./eventBridge";
 
 export function useProfiles() {
   const [profiles, setProfiles] = useState<Profile[]>([]);
@@ -8,15 +8,18 @@ export function useProfiles() {
 }
 
 export function useEventStream() {
-  const [events, setEvents] = useState<Event[]>([]);
+  const [events, setEvents] = useState<RuntimeEvent[]>([]);
 
   useEffect(() => {
-    let unlisten: (() => void) | undefined;
-    listen<Event>("loopautoma://event", (e) => {
-      setEvents((prev) => [...prev.slice(-499), e.payload]);
-    }).then((off) => (unlisten = off));
+    let dispose: (() => void) | undefined;
+    subscribeEvent<RuntimeEvent>("loopautoma://event", (payload) => {
+      if (!payload) return;
+      setEvents((prev) => [...prev.slice(-499), payload]);
+    }).then((off) => (dispose = off));
     return () => {
-      try { unlisten?.(); } catch {}
+      try {
+        dispose?.();
+      } catch {}
     };
   }, []);
 
@@ -27,15 +30,15 @@ export function useEventStream() {
 export function useRunState() {
   const [runningProfileId, setRunningProfileId] = useState<string | null>(null);
   useEffect(() => {
-    let unlisten: (() => void) | undefined;
-    listen<Event>("loopautoma://event", (evt) => {
-      if (evt.payload?.type === "MonitorStateChanged" && evt.payload.state !== "Running") {
+    let dispose: (() => void) | undefined;
+    subscribeEvent<RuntimeEvent>("loopautoma://event", (payload) => {
+      if (payload?.type === "MonitorStateChanged" && (payload as any).state !== "Running") {
         setRunningProfileId(null);
       }
-    }).then((off) => (unlisten = off));
+    }).then((off) => (dispose = off));
     return () => {
       try {
-        unlisten?.();
+        dispose?.();
       } catch {}
     };
   }, []);

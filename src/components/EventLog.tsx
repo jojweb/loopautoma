@@ -21,11 +21,11 @@ function fmt(e: Event): string {
 
 export function EventLog({ events }: { events: Event[] }) {
   return (
-    <div style={{ maxHeight: 240, overflow: "auto", border: "1px solid #444", padding: 8 }}>
+    <div className="event-log" style={{ maxHeight: 240, overflow: "auto", border: "1px solid #444", padding: 8 }}>
       {events.length === 0 ? (
         <div style={{ opacity: 0.7 }}>No events yet</div>
       ) : (
-        <ul style={{ margin: 0, paddingLeft: 16 }}>
+        <ul className="event-log-list" style={{ margin: 0, paddingLeft: 16 }}>
           {events.map((e, i) => (
             <li key={i} style={{ fontFamily: "monospace", fontSize: 12 }}>
               {fmt(e)}

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { listen } from "@tauri-apps/api/event";
 import { startInputRecording, stopInputRecording } from "../tauriBridge";
 import { InputEvent, KeyboardInputEvent, MouseInputEvent } from "../types";
+import { subscribeEvent } from "../eventBridge";
 
 export type RecordingEvent =
   | { t: "click"; button: "Left" | "Right" | "Middle"; x: number; y: number }
@@ -78,10 +78,9 @@ export function RecordingBar(props: {
   }, [flushTypeBuffer, pushKey]);
 
   useEffect(() => {
-    let unlisten: (() => void) | undefined;
-    listen<InputEvent>("loopautoma://input_event", (payload) => {
+    let dispose: (() => void) | undefined;
+    subscribeEvent<InputEvent>("loopautoma://input_event", (data) => {
       if (!recordingRef.current) return;
-      const data = payload.payload;
       if (!data) return;
       if (data.kind === "mouse" && data.mouse) {
         handleMouseEvent(data.mouse);
@@ -90,9 +89,9 @@ export function RecordingBar(props: {
       } else if (data.kind === "scroll" && data.scroll) {
         setTimeline((prev) => [...prev.slice(-19), `scroll Δ${data.scroll.delta_x},${data.scroll.delta_y}`]);
       }
-    }).then((off) => (unlisten = off));
+    }).then((off) => (dispose = off));
     return () => {
-      try { unlisten?.(); } catch {}
+      try { dispose?.(); } catch {}
     };
   }, [handleKeyboardEvent, handleMouseEvent]);
 

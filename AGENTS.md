@@ -70,6 +70,7 @@ These notes are to help different tools discover and obey the same instructions:
 - **GitHub Copilot (including Workspace/Agents)**:
   - Always read `.github/copilot-instructions.md` (which points back to this file and `PLANS.md`) before large changes.
   - For multi‑step work, keep `PLANS.md` in sync with any internal Copilot plan or workspace.
+  - Important: Do not auto-serve Playwright HTML reports during `bun run test:e2e`. The HTML server blocks the terminal and your session. Our Playwright config sets `open: "never"`; if you need to view the report, run `bun run test:e2e:report` in a new terminal.
 - **Cursor**:
   - Always obey `.cursorrules` in the repo root, which requires reading this file and `PLANS.md` before editing.
   - Keep Cursor’s inline “Plan” or “Agent” view consistent with `PLANS.md`.
