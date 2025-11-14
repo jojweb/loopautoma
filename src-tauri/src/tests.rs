@@ -224,8 +224,11 @@ mod tests {
         struct A; impl Automation for A{ fn move_cursor(&self,_:u32,_:u32)->Result<(),String>{Ok(())} fn click(&self,_:MouseButton)->Result<(),String>{Ok(())} fn type_text(&self,_:&str)->Result<(),String>{Ok(())} fn key(&self,_:&str)->Result<(),String>{Ok(())} }
         let cap=C; let auto=A; let mut evs=vec![]; m.start(&mut evs);
         let t0 = Instant::now();
-        m.tick(t0, &[r.clone()], &cap, &auto, &mut evs); // first activation allowed
-        m.tick(t0 + Duration::from_millis(1), &[r.clone()], &cap, &auto, &mut evs); // rate limited
+        // First tick initializes hashes; second tick performs the first activation.
+        m.tick(t0, &[r.clone()], &cap, &auto, &mut evs);
+        m.tick(t0 + Duration::from_millis(1), &[r.clone()], &cap, &auto, &mut evs);
+        // Third tick occurs inside the 1h window and should trip the guardrail.
+        m.tick(t0 + Duration::from_millis(2), &[r.clone()], &cap, &auto, &mut evs);
         assert!(evs.iter().any(|e| matches!(e, crate::domain::Event::WatchdogTripped{reason} if reason == "max_activations_per_hour")));
         let before = m.activations;
         m.tick(t0 + Duration::from_secs(3600) + Duration::from_millis(5), &[r], &cap, &auto, &mut evs);
