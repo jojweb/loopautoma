@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
-import { listen } from "@tauri-apps/api/event";
 import { captureRegionThumbnail, regionPickerShow } from "../tauriBridge";
 import { Rect, Region } from "../types";
+import { subscribeEvent } from "../eventBridge";
 
 type RegionPickEventPayload = {
   rect: Rect;
@@ -34,23 +34,22 @@ export function RegionAuthoringPanel({ regions, disabled, onRegionAdd, onRegionR
   const [thumbLoading, setThumbLoading] = useState<string | null>(null);
 
   useEffect(() => {
-    let unlisten: (() => void) | undefined;
-    listen<RegionPickEventPayload>("loopautoma://region_pick_complete", (event) => {
+    let dispose: (() => void) | undefined;
+    subscribeEvent<RegionPickEventPayload>("loopautoma://region_pick_complete", (payload) => {
+      if (!payload) return;
       setOverlayActive(false);
       setPending({
-        rect: event.payload.rect,
-        thumbnail: event.payload.thumbnail_png_base64 ?? null,
+        rect: payload.rect,
+        thumbnail: payload.thumbnail_png_base64 ?? null,
       });
       setPendingId(`region-${Date.now().toString(36)}`);
       setPendingName(`Region ${regionCount + 1}`);
       setStatus("Region captured — review details below.");
       setError(null);
-    }).then((off) => {
-      unlisten = off;
-    });
+    }).then((off) => (dispose = off));
     return () => {
       try {
-        unlisten?.();
+        dispose?.();
       } catch {
         // ignore
       }

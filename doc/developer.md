@@ -84,6 +84,20 @@ cd src-tauri && cargo test --all --locked                 # Rust tests
 cd src-tauri && cargo llvm-cov --workspace --locked --lcov --output-path lcov.info
 ```
 
+### E2E tests (Playwright)
+
+```bash
+# Run headless E2E tests against the web preview (Vite dev server)
+bun run test:e2e
+
+# OPTIONALLY open the HTML report after (does not block the test run)
+bun run test:e2e:report
+```
+
+Notes:
+- The Playwright HTML reporter is configured not to auto-open (open: "never") to avoid blocking terminals and agent sessions. If you need the report, run the separate `test:e2e:report` command.
+- If a previous command appears to hang with a message like "Serving HTML report at http://localhost:XXXX", stop it with Ctrl+C and use the explicit report command instead.
+
 ## 3. Cross‑OS (macOS + Windows) Backends
 
 Phase 3 work adds first-party backends for macOS (capture today, input later) and Windows (stubs). These builds are opt-in so the Linux MVP stays lean. Use feature flags to target each OS:
@@ -114,3 +128,4 @@ cargo check --no-default-features --features os-windows
 - `src-tauri/.cargo/config.toml` already exports `BINDGEN_EXTRA_CLANG_ARGS=--sysroot=/usr -I/usr/lib/llvm-18/lib/clang/18/include -I/usr/include/x86_64-linux-gnu`, so local `cargo` picks up the same headers as CI.
 - If the hardware capture/input crates fail to build, re-run the apt block above and confirm you are on an X11 session. To unblock development without native hooks, use `LOOPAUTOMA_BACKEND=fake bun run dev`.
 - Want reproducible tooling without touching the host? Build the CI image locally (`docker build -t loopautoma/ci:local .`) and run commands inside: `docker run --rm -v "$PWD:/workspace" -w /workspace loopautoma/ci:local bash -lc 'bun install && bun run dev'`.
+ - If E2E runs seem to block, verify the HTML report server is not running in the foreground. Our config disables auto-open; prefer `bun run test:e2e:report` to view results.
