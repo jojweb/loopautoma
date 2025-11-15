@@ -44,7 +44,12 @@ jobs:
             libsoup-3.0-dev \
             librsvg2-dev \
             patchelf \
-            libayatana-appindicator3-dev
+            libayatana-appindicator3-dev \
+            libpipewire-0.3-dev \
+            libspa-0.2-dev \
+            libxkbcommon-dev \
+            libxkbcommon-x11-dev \
+            libgbm-dev
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v1
