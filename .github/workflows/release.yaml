@@ -17,13 +17,13 @@ jobs:
       matrix:
         include:
           - platform: 'macos-latest'
-            args: '--target aarch64-apple-darwin'
+            args: '--target aarch64-apple-darwin -- --no-default-features --features os-macos'
           - platform: 'macos-latest'
-            args: '--target x86_64-apple-darwin'
+            args: '--target x86_64-apple-darwin -- --no-default-features --features os-macos'
           - platform: 'ubuntu-22.04'
-            args: ''
+            args: '-- --no-default-features --features os-linux-input'
           - platform: 'windows-latest'
-            args: ''
+            args: '-- --no-default-features --features os-windows'
 
     runs-on: ${{ matrix.platform }}
     
@@ -43,9 +43,7 @@ jobs:
             libsoup-3.0-dev \
             librsvg2-dev \
             patchelf \
-            libayatana-appindicator3-dev \
-            libpipewire-0.3-dev \
-            libspa-0.2-dev
+            libayatana-appindicator3-dev
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v1
