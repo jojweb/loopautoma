@@ -21,18 +21,18 @@ Cross‑platform desktop automation that watches configurable screen regions and
 
 ![LoopAutoma UI](./doc/img/ui-screenshot.png)
 
-**Get the latest release** (v0.1.2) with pre-built installers for Linux, macOS, and Windows:
+**[Download the latest release](https://github.com/chrisgleissner/loopautoma/releases/latest)** with pre-built installers for Linux, macOS, and Windows.
 
-- **Linux**: [.deb](https://github.com/chrisgleissner/loopautoma/releases/latest/download/loopautoma_0.1.1_amd64.deb) • [.rpm](https://github.com/chrisgleissner/loopautoma/releases/latest/download/loopautoma-0.1.1-1.x86_64.rpm) • [AppImage](https://github.com/chrisgleissner/loopautoma/releases/latest/download/loopautoma_0.1.1_amd64.AppImage)
-- **macOS**: [Intel](https://github.com/chrisgleissner/loopautoma/releases/latest/download/loopautoma_0.1.1_x64.dmg) • [Apple Silicon](https://github.com/chrisgleissner/loopautoma/releases/latest/download/loopautoma_0.1.1_aarch64.dmg)
-- **Windows**: [Installer](https://github.com/chrisgleissner/loopautoma/releases/latest/download/loopautoma_0.1.1_x64-setup.exe) • [MSI](https://github.com/chrisgleissner/loopautoma/releases/latest/download/loopautoma_0.1.1_x64_en-US.msi)
+Available formats:
+- **Linux**: .deb, .rpm, AppImage
+- **macOS**: .dmg (Intel and Apple Silicon)
+- **Windows**: .exe installer and .msi
 
 ### Ubuntu/Debian Example
 
 ```bash
-# Download and install
-wget https://github.com/chrisgleissner/loopautoma/releases/latest/download/loopautoma_0.1.1_amd64.deb
-sudo apt install ./loopautoma_0.1.1_amd64.deb
+# Download the .deb from releases page, then install
+sudo apt install ./loopautoma_*.deb
 
 # Run the app
 loopautoma
