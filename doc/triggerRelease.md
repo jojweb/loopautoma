@@ -85,7 +85,7 @@ Choose the appropriate installer for your platform:
 - **Linux**: `.deb` (Debian/Ubuntu) or `.AppImage` (universal)
 - **macOS**: `.dmg` installer
 
-See [RELEASE_FIX_SUMMARY.md](./RELEASE_FIX_SUMMARY.md) for technical details.
+See [releaseFixSummary.md](./releaseFixSummary.md) for technical details.
 ```
 
 ## What Happens When You Push the Tag
@@ -206,7 +206,7 @@ git show 0.1.1
 ## Support
 
 If you encounter issues not covered here:
-- Check `RELEASE_FIX_SUMMARY.md` for technical details
+- Check `doc/releaseFixSummary.md` for technical details
 - Review GitHub Actions logs for specific error messages
 - Compare with the successful 0.1.0 macOS builds to identify differences
 
