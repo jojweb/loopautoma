@@ -1,4 +1,5 @@
-use crate::domain::{Action, ActionContext, Automation, LLMPromptResponse, MouseButton, Region};
+use crate::domain::{Action, ActionContext, Automation, MouseButton, Region, ScreenCapture};
+use crate::llm::{build_risk_guidance, capture_region_images, LLMClient};
 
 pub struct MoveCursor {
     pub x: u32,
@@ -58,6 +59,8 @@ pub struct LLMPromptGenerationAction {
     pub system_prompt: Option<String>,
     pub variable_name: String,
     pub all_regions: Vec<Region>,
+    pub capture: std::sync::Arc<dyn ScreenCapture + Send + Sync>,
+    pub llm_client: std::sync::Arc<dyn LLMClient>,
 }
 
 impl Action for LLMPromptGenerationAction {
@@ -66,7 +69,7 @@ impl Action for LLMPromptGenerationAction {
     }
 
     fn execute(&self, _automation: &dyn Automation, context: &mut ActionContext) -> Result<(), String> {
-        // 1. Validate region_ids
+        // 1. Validate region_ids and collect regions
         let mut captured_regions = Vec::new();
         for region_id in &self.region_ids {
             if let Some(region) = self.all_regions.iter().find(|r| &r.id == region_id) {
@@ -76,11 +79,21 @@ impl Action for LLMPromptGenerationAction {
             }
         }
 
-        // 2. Call LLM (for now, we'll use a mock/fake implementation)
-        // In a real implementation, we'd pass a ScreenCapture reference and capture the regions
-        let llm_response = self.call_llm(&captured_regions, &self.system_prompt)?;
+        // 2. Capture screen regions as PNG images
+        let region_images = capture_region_images(&captured_regions, self.capture.as_ref())?;
 
-        // 3. Validate risk threshold
+        // 3. Build risk guidance
+        let risk_guidance = build_risk_guidance();
+
+        // 4. Call LLM with regions and images
+        let llm_response = self.llm_client.generate_prompt(
+            &captured_regions,
+            region_images,
+            self.system_prompt.as_deref(),
+            &risk_guidance,
+        )?;
+
+        // 5. Validate risk threshold
         if llm_response.risk > self.risk_threshold {
             // Play audible alarm
             self.play_alarm();
@@ -90,7 +103,7 @@ impl Action for LLMPromptGenerationAction {
             ));
         }
 
-        // 4. Validate prompt
+        // 6. Validate prompt
         if llm_response.prompt.is_empty() {
             return Err("LLM returned empty prompt".to_string());
         }
@@ -101,7 +114,7 @@ impl Action for LLMPromptGenerationAction {
             ));
         }
 
-        // 5. Set the variable in context
+        // 7. Set the variable in context
         context.set(&self.variable_name, llm_response.prompt);
 
         Ok(())
@@ -109,25 +122,6 @@ impl Action for LLMPromptGenerationAction {
 }
 
 impl LLMPromptGenerationAction {
-    /// Call LLM with captured regions
-    /// In a real implementation, this would:
-    /// - Use ScreenCapture to get region pixels
-    /// - Convert regions to base64 images
-    /// - Call GPT-5.1 vision API
-    /// - Parse JSON response
-    fn call_llm(
-        &self,
-        _regions: &[Region],
-        _system_prompt: &Option<String>,
-    ) -> Result<LLMPromptResponse, String> {
-        // Mock implementation for testing
-        // In production, this would call actual LLM API
-        Ok(LLMPromptResponse {
-            prompt: "continue".to_string(),
-            risk: 0.1, // Low risk
-        })
-    }
-
     /// Play audible alarm when risk threshold is exceeded
     fn play_alarm(&self) {
         // In a real implementation, this would:

@@ -1126,6 +1126,49 @@ mod tests {
         use super::*;
         use crate::action::LLMPromptGenerationAction;
         use crate::domain::ActionContext;
+        use crate::llm::MockLLMClient;
+        use std::sync::Arc;
+
+        struct TestCapture;
+        impl ScreenCapture for TestCapture {
+            fn hash_region(&self, _region: &Region, _downscale: u32) -> u64 {
+                42
+            }
+            fn capture_region(&self, region: &Region) -> Result<ScreenFrame, BackendError> {
+                // Create a simple test image (10x10 pixels, all white)
+                let width = region.rect.width.min(10);
+                let height = region.rect.height.min(10);
+                let bytes = vec![255u8; (width * height * 4) as usize]; // RGBA white
+                Ok(ScreenFrame {
+                    display: DisplayInfo {
+                        id: 0,
+                        name: Some("Test Display".to_string()),
+                        x: 0,
+                        y: 0,
+                        width: 1920,
+                        height: 1080,
+                        scale_factor: 1.0,
+                        is_primary: true,
+                    },
+                    width,
+                    height,
+                    stride: width * 4,
+                    bytes,
+                    timestamp_ms: 0,
+                })
+            }
+            fn displays(&self) -> Result<Vec<DisplayInfo>, BackendError> {
+                Ok(vec![])
+            }
+        }
+
+        fn make_test_capture() -> Arc<dyn ScreenCapture + Send + Sync> {
+            Arc::new(TestCapture)
+        }
+
+        fn make_test_llm_client() -> Arc<dyn crate::llm::LLMClient + Send + Sync> {
+            Arc::new(MockLLMClient::new())
+        }
 
         #[test]
         fn llm_action_sets_prompt_variable_on_success() {
@@ -1149,6 +1192,8 @@ mod tests {
                 system_prompt: None,
                 variable_name: "prompt".to_string(),
                 all_regions: regions,
+                capture: make_test_capture(),
+                llm_client: make_test_llm_client(),
             };
 
             let mut context = ActionContext::new();
@@ -1184,6 +1229,8 @@ mod tests {
                 system_prompt: None,
                 variable_name: "prompt".to_string(),
                 all_regions: regions,
+                capture: make_test_capture(),
+                llm_client: make_test_llm_client(),
             };
 
             let mut context = ActionContext::new();
@@ -1195,9 +1242,6 @@ mod tests {
 
         #[test]
         fn llm_action_respects_risk_threshold() {
-            // This test would use a mock LLM response with high risk
-            // For now, the mock implementation always returns low risk (0.1)
-            // In a real implementation, we'd inject a mock LLM client
             let auto = FakeAuto::new();
             let regions = vec![
                 Region {
@@ -1212,26 +1256,28 @@ mod tests {
                 },
             ];
 
-            // Test with very low threshold - mock returns 0.1 which should pass
+            // Test with high-risk LLM response
+            let high_risk_client = Arc::new(MockLLMClient::with_response(
+                "dangerous command".to_string(),
+                0.8, // High risk
+            ));
+
             let action = LLMPromptGenerationAction {
                 region_ids: vec!["r1".to_string()],
-                risk_threshold: 0.05, // Lower than mock's 0.1
+                risk_threshold: 0.5, // Lower than response's 0.8
                 system_prompt: None,
                 variable_name: "prompt".to_string(),
                 all_regions: regions,
+                capture: make_test_capture(),
+                llm_client: high_risk_client,
             };
 
             let mut context = ActionContext::new();
-            // This would fail if LLM returned risk > 0.05
-            // But our mock returns 0.1, so this test demonstrates the check
-            // In a real test, we'd inject a mock that returns high risk
             let result = action.execute(&auto, &mut context);
 
-            // With mock returning 0.1 and threshold 0.05, this should fail
-            // However, our current mock implementation needs to be improved
-            // to support configurable risk values for proper testing
-            // For now, this documents the expected behavior
-            assert!(result.is_err() || result.is_ok());
+            // Should fail because risk (0.8) > threshold (0.5)
+            assert!(result.is_err(), "Should fail on high risk");
+            assert!(result.unwrap_err().contains("Risk threshold exceeded"));
         }
 
         #[test]
@@ -1311,6 +1357,8 @@ mod tests {
                 system_prompt: None,
                 variable_name: "custom_var".to_string(),
                 all_regions: regions,
+                capture: make_test_capture(),
+                llm_client: make_test_llm_client(),
             };
 
             let mut context = ActionContext::new();

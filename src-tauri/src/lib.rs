@@ -2,6 +2,7 @@
 mod action;
 mod condition;
 mod domain;
+mod llm;
 mod monitor;
 #[cfg(any(
     feature = "os-linux-capture-xcap",
@@ -104,6 +105,11 @@ pub fn build_monitor_from_profile<'a>(p: &Profile) -> (monitor::Monitor<'a>, Vec
 
     // Actions
     let mut acts: Vec<Box<dyn Action + Send + Sync>> = vec![];
+    let capture: Arc<dyn ScreenCapture + Send + Sync> = Arc::from(make_capture());
+    let llm_client = llm::create_llm_client().unwrap_or_else(|e| {
+        eprintln!("Warning: Failed to create LLM client: {}", e);
+        Arc::new(llm::MockLLMClient::new())
+    });
     
     for a in &p.actions {
         match a {
@@ -129,6 +135,8 @@ pub fn build_monitor_from_profile<'a>(p: &Profile) -> (monitor::Monitor<'a>, Vec
                     system_prompt: system_prompt.clone(),
                     variable_name: variable_name.clone().unwrap_or_else(|| "prompt".to_string()),
                     all_regions: p.regions.clone(),
+                    capture: capture.clone(),
+                    llm_client: llm_client.clone(),
                 }))
             }
         }
