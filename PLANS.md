@@ -51,6 +51,52 @@ Guidelines:
 
 ## Active tasks
 
+### Task: Fix Release Build Failures (0.1.0 → 0.1.1)
+
+**Started:** 2025-11-15
+
+**User request (summary)**
+- The 0.1.0 release build triggered by tag failed for Windows and Linux targets
+- Analyze root causes and create comprehensive fix plan
+- Implement all fixes and demonstrate successful release build
+- Do not stop until all platforms pass
+
+**Context and constraints**
+- macOS builds (both aarch64 and x86_64) succeeded
+- Windows build failed due to Windows API changes in windows crate v0.58
+- Linux build failed due to libspa incompatibility with xcap dependency
+- It is OK to target only Ubuntu 24.04+ for Linux builds
+
+**Plan (checklist)**
+- [x] Task 1: Analyze failures from GitHub Actions logs
+- [x] Task 2: Fix Windows API compatibility (SetCursorPos, SendInput)
+- [x] Task 3: Fix Linux libspa issue (update to ubuntu-24.04)
+- [x] Task 4: Bump version to 0.1.1
+- [ ] Task 5: Trigger release and verify all platforms pass
+- [ ] Task 6: Document resolution
+
+**Progress log**
+- 2025-11-15 — Analyzed workflow run 19389430617 for tag 0.1.0
+- 2025-11-15 — Identified Windows API breaking changes (SetCursorPos returns Result, SendInput takes 2 params)
+- 2025-11-15 — Identified Linux libspa struct incompatibility with ubuntu-22.04
+- 2025-11-15 — Fixed src-tauri/src/os/windows.rs for new Windows API signatures
+- 2025-11-15 — Updated .github/workflows/release.yaml from ubuntu-22.04 to ubuntu-24.04
+- 2025-11-15 — Bumped version to 0.1.1 in all config files
+- 2025-11-15 — Created local tag 0.1.1 (needs push by user to trigger release)
+
+**Assumptions and open questions**
+- Assumption: Windows crate v0.58 API changes are correct (SetCursorPos returns Result, SendInput uses slice)
+- Assumption: Ubuntu 24.04 has libspa 0.8.0 compatible with xcap crate
+- Note: Cannot push tags from agent due to authentication restrictions
+
+**Follow‑ups / future work**
+- User needs to push tag 0.1.1 to trigger release workflow: `git push origin 0.1.1`
+- Verify Windows and Linux builds succeed in GitHub Actions
+- Download and smoke test release artifacts
+- Update README badges if needed
+
+---
+
 ### Task: UI Behavior Verification — E2E Test Suite (Phase 4.7 / Stabilization)
 
 **Started:** 2025-11-14
