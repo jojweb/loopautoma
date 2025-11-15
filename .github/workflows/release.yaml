@@ -3,7 +3,7 @@ name: Release
 on:
   push:
     tags:
-      - 'v*.*.*'  # Triggered by tags like v1.0.0, v0.1.0, etc.
+      - '*.*.*'
 
 permissions:
   contents: write  # Required to create releases and upload assets
@@ -21,7 +21,9 @@ jobs:
 
       - name: Get version from tag
         id: get_version
-        run: echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+        run: |
+          raw_ref="${GITHUB_REF#refs/tags/}"
+          echo "version=${raw_ref#v}" >> "$GITHUB_OUTPUT"
 
       - name: Create Release
         id: create_release
