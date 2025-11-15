@@ -226,6 +226,11 @@ pub struct ConditionConfig {
     pub downscale: u32,
 }
 
+/// Action configuration variants for the automation sequence.
+///
+/// Note: This enum derives `PartialEq` but not `Eq` because the `LLMPromptGeneration` variant
+/// contains a floating-point field (`risk_threshold: f64`). Floating-point comparisons are
+/// intentionally partial rather than total equality, as per Rust best practices.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type")]
 pub enum ActionConfig {
