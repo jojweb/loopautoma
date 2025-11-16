@@ -4,6 +4,10 @@ import { ProfileEditor } from "../src/components/ProfileEditor";
 import { defaultProfilesConfig } from "../src/types";
 
 const sampleConfig = defaultProfilesConfig();
+// Add a region so validation passes (auditProfile requires at least one region)
+sampleConfig.profiles[0].regions = [
+  { id: "test-region", rect: { x: 0, y: 0, width: 100, height: 100 } },
+];
 
 function getTextarea() {
   const textareas = screen.getAllByRole("textbox");

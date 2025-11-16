@@ -10,7 +10,14 @@ beforeAll(() => registerBuiltins());
 describe("GraphComposer Clear All", () => {
   it("clears all actions and disables button", () => {
     const Wrapper = () => {
-      const [p, setP] = useState(defaultPresetProfile());
+      const [p, setP] = useState(() => {
+        const profile = defaultPresetProfile();
+        profile.actions = [
+          { type: "Click", x: 100, y: 200, button: "Left" },
+          { type: "Type", text: "hello" },
+        ];
+        return profile;
+      });
       return <GraphComposer profile={p} onChange={setP as any} />;
     };
     render(<Wrapper />);

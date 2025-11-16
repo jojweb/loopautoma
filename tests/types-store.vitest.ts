@@ -7,8 +7,6 @@ describe("Types and defaults", () => {
     expect(profile.id).toBeTruthy();
     expect(profile.name).toBe("New Profile");
     expect(profile.regions).toEqual([]);
-    expect(profile.regions[0].id).toBe("chat-out");
-    expect(profile.regions[1].id).toBe("progress");
     expect(profile.trigger.type).toBe("IntervalTrigger");
     expect(profile.trigger.check_interval_sec).toBeGreaterThan(0);
     expect(profile.condition.type).toBe("RegionCondition");
