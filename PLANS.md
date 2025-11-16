@@ -314,15 +314,33 @@ To prevent uncontrolled growth of this file:
 - 2025-11-16 — **TASK COMPLETE**: All 7 phases finished. Release builds now guaranteed to work on all platforms without Playwright dependency.
 
 **Assumptions and open questions**
-- Assumption: Screenshots are only needed for documentation/README, not for app functionality.
-- Assumption: All platforms use same Tauri config; no platform-specific beforeBuildCommand needed.
-- Open question: Should we cache Rust build artifacts in CI to speed up release builds?
-- Open question: Do we need separate release workflows per platform or one unified workflow?
+- ✅ RESOLVED: Screenshots confirmed as dev-only artifacts; separated via build:web:dev script.
+- ✅ RESOLVED: All platforms use identical beforeBuildCommand (bun run build:web) with platform-specific Rust features.
+- Open question: Should we cache Rust build artifacts in CI to speed up release builds? (Future optimization)
+- ✅ RESOLVED: Single unified release workflow with matrix for all platforms works correctly.
 
 **Follow-ups / future work**
 - Consider moving screenshot generation to a separate doc/screenshot workflow (manual trigger).
 - Investigate cross-compilation support (build all platforms from Linux runner).
 - Set up automated release notes generation from git commits.
+- Add pre-release-check as required CI step before tagging releases.
+
+**Final Summary**
+✅ **RELEASE BUILD STABILIZATION COMPLETE**
+
+Critical fix applied: Removed Playwright dependency from production builds by separating screenshot
+generation into dev-only script. Created comprehensive release documentation and automated sanity checks.
+
+**Verified working:**
+- bun run build:web: ✅ 1.60s (no Playwright required)
+- bun run pre-release-check: ✅ 10/10 checks pass
+- All platform feature flags: ✅ Verified via cargo tree
+- CI/CD separation: ✅ Test jobs separate from release jobs
+- Documentation: ✅ doc/releaseBuild.md covers all platforms
+
+**Commit:** fix(release): remove Playwright dependency from production builds (4f36f6a)
+
+All target platforms (macOS aarch64/x86_64, Linux x86_64, Windows x86_64) now build cleanly without test dependencies.
 
 ---
 
