@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { startInputRecording, stopInputRecording } from "../tauriBridge";
+import { startInputRecording, stopInputRecording, checkInputPrerequisites } from "../tauriBridge";
 import { InputEvent, KeyboardInputEvent, MouseInputEvent } from "../types";
 import { subscribeEvent } from "../eventBridge";
+import { PrerequisiteCheck } from "./PrerequisiteCheck";
 
 export type RecordingEvent =
   | { t: "click"; button: "Left" | "Right" | "Middle"; x: number; y: number }
@@ -17,6 +18,7 @@ export function RecordingBar(props: {
   const [events, setEvents] = useState<RecordingEvent[]>([]);
   const [timeline, setTimeline] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [showPrereqCheck, setShowPrereqCheck] = useState(false);
   const typeBuffer = useRef<string>("");
   const recordingRef = useRef(false);
   const eventsRef = useRef<RecordingEvent[]>([]);
@@ -129,6 +131,24 @@ export function RecordingBar(props: {
       eventsRef.current = [];
       setTimeline([]);
       typeBuffer.current = "";
+      
+      // Check prerequisites before attempting to start (only in desktop mode)
+      try {
+        const prereqs = await checkInputPrerequisites();
+        const allGood = prereqs.x11_session && prereqs.x11_connection && 
+                        prereqs.xinput_available && prereqs.xtest_available &&
+                        prereqs.backend_not_fake && prereqs.feature_enabled;
+        
+        // In desktop mode, show detailed modal if prerequisites fail
+        // In web mode, let it fail naturally with error message
+        if (!allGood && prereqs.session_type !== "web") {
+          setShowPrereqCheck(true);
+          return;
+        }
+      } catch (prereqErr) {
+        console.warn("Prerequisite check failed, will try to start anyway:", prereqErr);
+      }
+      
       try {
         await startInputRecording();
         recordingRef.current = true;
@@ -138,6 +158,11 @@ export function RecordingBar(props: {
         recordingRef.current = false;
         const message = err instanceof Error ? err.message : String(err);
         setError(message || "Unable to start input capture");
+        // Only show detailed modal in desktop mode, not web mode
+        const isWebMode = message.includes("web preview") || message.includes("Tauri");
+        if (!isWebMode) {
+          setShowPrereqCheck(true);
+        }
       }
     } else {
       await stopRecording();
@@ -145,14 +170,18 @@ export function RecordingBar(props: {
   }, [props, recording, stopRecording]);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-      <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-        <button
-          onClick={toggleRecording}
-          title={recording ? "Stop recording" : "Start recording via system-wide hooks"}
-        >
-          {recording ? "Stop" : "Record"}
-        </button>
+    <>
+      {showPrereqCheck && (
+        <PrerequisiteCheck onClose={() => setShowPrereqCheck(false)} />
+      )}
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+          <button
+            onClick={toggleRecording}
+            title={recording ? "Stop recording" : "Start recording via system-wide hooks"}
+          >
+            {recording ? "Stop" : "Record"}
+          </button>
         {recording && (
           <span className="running-chip" title="Recording in progress">Recording</span>
         )}
@@ -185,7 +214,8 @@ export function RecordingBar(props: {
           </ul>
         )}
       </div>
-    </div>
+      </div>
+    </>
   );
 }
 

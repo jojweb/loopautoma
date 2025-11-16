@@ -48,7 +48,8 @@ export type Event =
   | { type: "ActionCompleted"; action: string; success: boolean }
   | { type: "MonitorStateChanged"; state: MonitorState }
   | { type: "WatchdogTripped"; reason: string }
-  | { type: "Error"; message: string };
+  | { type: "Error"; message: string }
+  | { type: "MonitorTick"; next_check_ms: number; cooldown_remaining_ms: number; condition_met: boolean };
 
 export type MouseInputEvent = {
   event_type: "move" | { button_down: MouseButton } | { button_up: MouseButton } | Record<string, never>;

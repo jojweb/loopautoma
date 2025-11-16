@@ -52,6 +52,12 @@ pub enum Event {
     MonitorStateChanged { state: MonitorState },
     WatchdogTripped { reason: String },
     Error { message: String },
+    /// Emitted on each tick with timing information
+    MonitorTick { 
+        next_check_ms: u64, 
+        cooldown_remaining_ms: u64,
+        condition_met: bool,
+    },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -64,6 +70,8 @@ pub enum MonitorState {
 // Traits
 pub trait Trigger {
     fn should_fire(&mut self, now: Instant) -> bool;
+    /// Returns milliseconds until next expected fire (0 if ready now)
+    fn time_until_next_ms(&self, now: Instant) -> u64;
 }
 
 pub trait ScreenCapture {

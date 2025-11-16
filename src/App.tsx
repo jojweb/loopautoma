@@ -7,6 +7,7 @@ import { ProfileEditor } from "./components/ProfileEditor";
 import { RecordingBar, toActions } from "./components/RecordingBar";
 import { RegionAuthoringPanel } from "./components/RegionAuthoringPanel";
 import { GraphComposer } from "./components/GraphComposer";
+import { CountdownTimer } from "./components/CountdownTimer";
 
 import { useEventStream, useProfiles, useRunState } from "./store";
 import { normalizeProfilesConfig, Profile, ProfilesConfig } from "./types";
@@ -333,6 +334,8 @@ export function App() {
 
             </div>
           </div>
+
+          {isRunning && <CountdownTimer />}
 
           {selectedProfile && (
             <div className="guardrail-controls" aria-label="Guardrail inputs">

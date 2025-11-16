@@ -451,6 +451,22 @@ fn monitor_panic_stop(state: tauri::State<AppState>) -> Result<(), String> {
 }
 
 #[tauri::command]
+fn check_input_prerequisites() -> Result<serde_json::Value, String> {
+    #[cfg(feature = "os-linux-input")]
+    {
+        let check = crate::os::linux::check_prerequisites();
+        serde_json::to_value(&check).map_err(|e| e.to_string())
+    }
+    #[cfg(not(feature = "os-linux-input"))]
+    {
+        Ok(serde_json::json!({
+            "feature_enabled": false,
+            "error_details": ["This build was compiled without os-linux-input feature"]
+        }))
+    }
+}
+
+#[tauri::command]
 fn start_input_recording(
     window: tauri::Window,
     state: tauri::State<AppState>,
@@ -522,6 +538,7 @@ pub fn run() {
             monitor_start,
             monitor_stop,
             monitor_panic_stop,
+            check_input_prerequisites,
             start_input_recording,
             stop_input_recording,
             inject_mouse_event,

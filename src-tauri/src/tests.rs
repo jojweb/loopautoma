@@ -154,6 +154,9 @@ mod tests {
         fn should_fire(&mut self, _now: Instant) -> bool {
             true
         }
+        fn time_until_next_ms(&self, _now: Instant) -> u64 {
+            0 // Always ready
+        }
     }
 
     #[test]

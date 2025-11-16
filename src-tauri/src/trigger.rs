@@ -33,4 +33,19 @@ impl Trigger for IntervalTrigger {
             }
         }
     }
+
+    fn time_until_next_ms(&self, now: Instant) -> u64 {
+        match self.last {
+            None => 0, // Will fire immediately on first tick
+            Some(prev) => {
+                let elapsed = now.duration_since(prev);
+                if elapsed >= self.interval {
+                    0
+                } else {
+                    (self.interval - elapsed).as_millis() as u64
+                }
+            }
+        }
+    }
 }
+

@@ -67,6 +67,19 @@ impl<'a> Monitor<'a> {
             return;
         }
 
+        // Emit timing info at start of every tick
+        let next_check_ms = self.trigger.time_until_next_ms(now);
+        let cooldown_remaining_ms = if let Some(last) = self.last_activation_at {
+            let elapsed = now.duration_since(last);
+            if elapsed < self.guardrails.cooldown {
+                (self.guardrails.cooldown - elapsed).as_millis() as u64
+            } else {
+                0
+            }
+        } else {
+            0
+        };
+
         // guard: max runtime
         if let Some(start) = self.started_at {
             if let Some(max_rt) = self.guardrails.max_runtime {
@@ -81,6 +94,11 @@ impl<'a> Monitor<'a> {
         }
 
         if !self.trigger.should_fire(now) {
+            out_events.push(Event::MonitorTick {
+                next_check_ms,
+                cooldown_remaining_ms,
+                condition_met: false,
+            });
             return;
         }
         out_events.push(Event::TriggerFired);
@@ -88,12 +106,22 @@ impl<'a> Monitor<'a> {
         // cooldown: ensure min time between activations
         if let Some(last) = self.last_activation_at {
             if now.duration_since(last) < self.guardrails.cooldown {
+                out_events.push(Event::MonitorTick {
+                    next_check_ms,
+                    cooldown_remaining_ms,
+                    condition_met: false,
+                });
                 return;
             }
         }
 
         let cond = self.condition.evaluate(now, regions, capture);
         out_events.push(Event::ConditionEvaluated { result: cond });
+        out_events.push(Event::MonitorTick {
+            next_check_ms,
+            cooldown_remaining_ms,
+            condition_met: cond,
+        });
         if !cond {
             return;
         }

@@ -166,3 +166,92 @@ cargo check --no-default-features --features os-windows
 - If the hardware capture/input crates fail to build, re-run the apt block above and confirm you are on an X11 session. To unblock development without native hooks, use `LOOPAUTOMA_BACKEND=fake bun run dev`.
 - Want reproducible tooling without touching the host? Build the CI image locally (`docker build -t loopautoma/ci:local .`) and run commands inside: `docker run --rm -v "$PWD:/workspace" -w /workspace loopautoma/ci:local bash -lc 'bun install && bun run dev'`.
 - If E2E runs seem to block, verify the HTML report server is not running in the foreground. Our config disables auto-open; prefer `bun run test:e2e:report` to view results.
+
+### Input Recording Troubleshooting
+
+If you click "Record" and see an error modal or the recording never starts, check the following:
+
+#### Prerequisite: X11 Session (NOT Wayland)
+
+Input recording requires an X11 session. Most modern Linux distributions default to Wayland.
+
+**Check your session type:**
+```bash
+echo $XDG_SESSION_TYPE
+```
+
+If it shows `wayland`, you must switch to X11:
+
+1. Log out of your current session
+2. At the login screen, click the gear icon (⚙️) in the bottom-right
+3. Select "Ubuntu on Xorg" or "GNOME on Xorg"
+4. Log back in
+5. Verify: `echo $XDG_SESSION_TYPE` should now show `x11`
+
+#### Prerequisite: X11 Development Libraries
+
+Input recording requires the XInput and XTest extensions:
+
+```bash
+sudo apt update
+sudo apt install -y libx11-dev libxext-dev libxi-dev libxtst-dev libxkbcommon-dev libxkbcommon-x11-dev libxcb-xkb-dev
+```
+
+After installing, rebuild the app:
+```bash
+cd src-tauri && cargo build
+```
+
+#### Prerequisite: No LOOPAUTOMA_BACKEND=fake
+
+If you set `LOOPAUTOMA_BACKEND=fake` to run in safe mode, input recording will be disabled.
+
+**Check:**
+```bash
+env | grep LOOPAUTOMA_BACKEND
+```
+
+If it shows `fake`, unset it:
+```bash
+unset LOOPAUTOMA_BACKEND
+```
+
+Then restart the app.
+
+#### Built-in Diagnostics
+
+The app now includes automatic prerequisite checking. When you click "Record", if any requirements are not met, you'll see a detailed error modal showing:
+
+- ✓/✗ X11 Session type
+- ✓/✗ X11 Connection (DISPLAY environment variable)
+- ✓/✗ XInput extension available
+- ✓/✗ XTest extension available
+- ✓/✗ Real backend (not fake mode)
+- ✓/✗ Feature compiled (os-linux-input)
+
+The modal includes copy-pasteable fix commands for each issue.
+
+#### Common Issues
+
+**"Cannot connect to X11 server"**
+- Ensure `DISPLAY` is set: `echo $DISPLAY` should show `:0` or `:1`
+- If running over SSH, use `ssh -X` for X11 forwarding
+- If in a VM, ensure X11 passthrough is enabled
+
+**"XInput not available"**
+- Install libxi-dev: `sudo apt install -y libxi-dev`
+- Rebuild: `cd src-tauri && cargo build`
+
+**"XTest extension not available"**
+- Install libxtst-dev: `sudo apt install -y libxtst-dev`
+- Rebuild: `cd src-tauri && cargo build`
+
+**Recording works but playback does nothing**
+- Playback also requires X11 and XTest
+- Check that the app has permission to inject input events (some security tools block this)
+- Verify with `xdotool` (if installed): `xdotool mousemove 100 100` should move the cursor
+
+**Wayland Detection**
+- If you must use Wayland, input recording will not work (X11-specific)
+- Consider using XWayland in the interim, though native Wayland support may come in a future release via libei
+

@@ -805,3 +805,101 @@ fn select_xinput(conn: &XCBConnection, root: xproto::Window) -> Result<(), Backe
 }
 
 // no crop/resize helpers needed for the sampling hash path
+
+/// Diagnostic information about the system's input recording prerequisites
+#[cfg(feature = "os-linux-input")]
+#[derive(Debug, serde::Serialize)]
+pub struct PrerequisiteCheck {
+    pub x11_session: bool,
+    pub x11_connection: bool,
+    pub xinput_available: bool,
+    pub xtest_available: bool,
+    pub backend_not_fake: bool,
+    pub feature_enabled: bool,
+    pub display_env: String,
+    pub session_type: String,
+    pub error_details: Vec<String>,
+}
+
+#[cfg(feature = "os-linux-input")]
+pub fn check_prerequisites() -> PrerequisiteCheck {
+    let mut check = PrerequisiteCheck {
+        x11_session: false,
+        x11_connection: false,
+        xinput_available: false,
+        xtest_available: false,
+        backend_not_fake: true,
+        feature_enabled: true,
+        display_env: std::env::var("DISPLAY").unwrap_or_else(|_| "not set".to_string()),
+        session_type: std::env::var("XDG_SESSION_TYPE").unwrap_or_else(|_| "unknown".to_string()),
+        error_details: Vec::new(),
+    };
+
+    // Check session type
+    if check.session_type.to_lowercase() == "x11" {
+        check.x11_session = true;
+    } else {
+        check.error_details.push(format!(
+            "Not running X11 session (detected: {}). Input recording requires X11, not Wayland.",
+            check.session_type
+        ));
+    }
+
+    // Check LOOPAUTOMA_BACKEND
+    if let Ok(backend) = std::env::var("LOOPAUTOMA_BACKEND") {
+        if backend.to_lowercase() == "fake" {
+            check.backend_not_fake = false;
+            check.error_details.push(
+                "LOOPAUTOMA_BACKEND=fake is set. Unset it to enable real input recording.".to_string()
+            );
+        }
+    }
+
+    // Try to connect to X11
+    match XCBConnection::connect(None) {
+        Ok((conn, _screen_num)) => {
+            check.x11_connection = true;
+            
+            // Check XInput extension
+            match conn.xinput_xi_query_version(2, 0) {
+                Ok(cookie) => {
+                    match cookie.reply() {
+                        Ok(reply) => {
+                            if reply.major_version >= 2 {
+                                check.xinput_available = true;
+                            } else {
+                                check.error_details.push(format!(
+                                    "XInput version too old: {}.{}. Need 2.0+",
+                                    reply.major_version, reply.minor_version
+                                ));
+                            }
+                        }
+                        Err(e) => {
+                            check.error_details.push(format!("XInput query failed: {}", e));
+                        }
+                    }
+                }
+                Err(e) => {
+                    check.error_details.push(format!("XInput not available: {}", e));
+                }
+            }
+
+            // Check XTest extension
+            use x11rb::connection::RequestConnection;
+            if conn.extension_information("XTEST").ok().flatten().is_some() {
+                check.xtest_available = true;
+            } else {
+                check.error_details.push("XTest extension not available".to_string());
+            }
+        }
+        Err(e) => {
+            check.error_details.push(format!(
+                "Cannot connect to X11 server: {}. Check DISPLAY={} is correct.",
+                e, check.display_env
+            ));
+        }
+    }
+
+    check
+}
+

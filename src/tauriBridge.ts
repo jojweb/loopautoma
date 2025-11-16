@@ -111,3 +111,33 @@ export async function stopInputRecording(): Promise<void> {
   if (!isDesktopMode()) return; // best-effort no-op in web preview
   await callInvoke("stop_input_recording");
 }
+
+export interface PrerequisiteCheck {
+  x11_session: boolean;
+  x11_connection: boolean;
+  xinput_available: boolean;
+  xtest_available: boolean;
+  backend_not_fake: boolean;
+  feature_enabled: boolean;
+  display_env: string;
+  session_type: string;
+  error_details: string[];
+}
+
+export async function checkInputPrerequisites(): Promise<PrerequisiteCheck> {
+  if (!isDesktopMode()) {
+    return {
+      x11_session: false,
+      x11_connection: false,
+      xinput_available: false,
+      xtest_available: false,
+      backend_not_fake: true,
+      feature_enabled: false,
+      display_env: "not applicable",
+      session_type: "web",
+      error_details: ["Running in web preview mode"]
+    };
+  }
+  return (await callInvoke("check_input_prerequisites")) as PrerequisiteCheck;
+}
+
