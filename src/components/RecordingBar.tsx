@@ -106,7 +106,7 @@ export function RecordingBar(props: {
       }
     }).then((off) => (dispose = off));
     return () => {
-      try { dispose?.(); } catch {}
+      try { dispose?.(); } catch { }
     };
   }, [handleKeyboardEvent, handleMouseEvent]);
 
@@ -147,22 +147,22 @@ export function RecordingBar(props: {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
       <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-      <button
+        <button
           onClick={toggleRecording}
           title={recording ? "Stop recording" : "Start recording via system-wide hooks"}
-      >
-        {recording ? "Stop" : "Record"}
-      </button>
-      {recording && (
-        <span className="running-chip" title="Recording in progress">Recording</span>
-      )}
-      <button
+        >
+          {recording ? "Stop" : "Record"}
+        </button>
+        {recording && (
+          <span className="running-chip" title="Recording in progress">Recording</span>
+        )}
+        <button
           onClick={() => props.onSave?.(eventsRef.current)}
-        disabled={events.length === 0}
-        title={events.length ? "Save recorded steps as an ActionSequence" : "Record some interactions to enable saving"}
-      >
-        Save as ActionSequence
-      </button>
+          disabled={events.length === 0}
+          title={events.length ? "Save recorded steps as an ActionSequence" : "Record some interactions to enable saving"}
+        >
+          Save as ActionSequence
+        </button>
         <span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>{events.length} recorded step(s)</span>
       </div>
       {error && (

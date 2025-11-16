@@ -623,6 +623,7 @@ textarea {
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }
@@ -647,6 +648,7 @@ textarea {
     transform: translateY(30px);
     opacity: 0;
   }
+
   to {
     transform: translateY(0);
     opacity: 1;
