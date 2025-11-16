@@ -13,6 +13,7 @@
     "tauri": "tauri",
     "test": "bun test tests/hello.bun.test.ts",
     "test:ui:cov": "vitest run --coverage",
+    "pre-release-check": "bun ./scripts/preReleaseCheck.ts",
     "generate:ui-screenshot": "bun ./scripts/generateUiScreenshot.ts",
     "test:e2e": "playwright test",
     "test:e2e:report": "playwright show-report",
