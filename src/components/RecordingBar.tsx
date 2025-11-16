@@ -131,14 +131,14 @@ export function RecordingBar(props: {
       eventsRef.current = [];
       setTimeline([]);
       typeBuffer.current = "";
-      
+
       // Check prerequisites before attempting to start (only in desktop mode)
       try {
         const prereqs = await checkInputPrerequisites();
-        const allGood = prereqs.x11_session && prereqs.x11_connection && 
-                        prereqs.xinput_available && prereqs.xtest_available &&
-                        prereqs.backend_not_fake && prereqs.feature_enabled;
-        
+        const allGood = prereqs.x11_session && prereqs.x11_connection &&
+          prereqs.xinput_available && prereqs.xtest_available &&
+          prereqs.backend_not_fake && prereqs.feature_enabled;
+
         // In desktop mode, show detailed modal if prerequisites fail
         // In web mode, let it fail naturally with error message
         if (!allGood && prereqs.session_type !== "web") {
@@ -148,7 +148,7 @@ export function RecordingBar(props: {
       } catch (prereqErr) {
         console.warn("Prerequisite check failed, will try to start anyway:", prereqErr);
       }
-      
+
       try {
         await startInputRecording();
         recordingRef.current = true;
@@ -182,38 +182,38 @@ export function RecordingBar(props: {
           >
             {recording ? "Stop" : "Record"}
           </button>
-        {recording && (
-          <span className="running-chip" title="Recording in progress">Recording</span>
-        )}
-        <button
-          onClick={() => props.onSave?.(eventsRef.current)}
-          disabled={events.length === 0}
-          title={events.length ? "Save recorded steps as an ActionSequence" : "Record some interactions to enable saving"}
-        >
-          Save as ActionSequence
-        </button>
-        <span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>{events.length} recorded step(s)</span>
-      </div>
-      {error && (
-        <div role="alert" className="alert" style={{ fontSize: 13 }}>
-          {error}
+          {recording && (
+            <span className="running-chip" title="Recording in progress">Recording</span>
+          )}
+          <button
+            onClick={() => props.onSave?.(eventsRef.current)}
+            disabled={events.length === 0}
+            title={events.length ? "Save recorded steps as an ActionSequence" : "Record some interactions to enable saving"}
+          >
+            Save as ActionSequence
+          </button>
+          <span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>{events.length} recorded step(s)</span>
         </div>
-      )}
-      <div className="timeline-box" aria-live="polite">
-        <div className="timeline-header">
-          <strong>Live input timeline</strong>
-          <button onClick={() => setTimeline([])} disabled={timeline.length === 0}>Clear</button>
-        </div>
-        {timeline.length === 0 ? (
-          <p style={{ margin: 0, fontSize: 13, color: "var(--muted-foreground)" }}>No events yet.</p>
-        ) : (
-          <ul className="timeline-list">
-            {timeline.map((item, idx) => (
-              <li key={idx}>{item}</li>
-            ))}
-          </ul>
+        {error && (
+          <div role="alert" className="alert" style={{ fontSize: 13 }}>
+            {error}
+          </div>
         )}
-      </div>
+        <div className="timeline-box" aria-live="polite">
+          <div className="timeline-header">
+            <strong>Live input timeline</strong>
+            <button onClick={() => setTimeline([])} disabled={timeline.length === 0}>Clear</button>
+          </div>
+          {timeline.length === 0 ? (
+            <p style={{ margin: 0, fontSize: 13, color: "var(--muted-foreground)" }}>No events yet.</p>
+          ) : (
+            <ul className="timeline-list">
+              {timeline.map((item, idx) => (
+                <li key={idx}>{item}</li>
+              ))}
+            </ul>
+          )}
+        </div>
       </div>
     </>
   );

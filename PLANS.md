@@ -218,7 +218,7 @@ Phase 6: Documentation and cleanup
 - [x] 25. Add "Common Issues" section covering Wayland→X11 switch — Detailed step-by-step instructions added
 - [x] 26. Update installation instructions with prerequisite checks — Built-in diagnostics modal documented
 - [x] 27. Run full test suite (UI + Rust + E2E) — ✅ 39 Rust tests, 72/75 UI tests, 75/75 E2E tests
-- [ ] 28. Commit and push all changes — Ready to commit
+- [x] 28. Commit and push all changes — ✅ Committed 98b2cc0 and pushed to main
 
 **Progress log**
 - 2025-11-16 — Task created after deep analysis of input recording implementation
