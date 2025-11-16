@@ -111,8 +111,8 @@ mod real_client {
             let api_endpoint = env::var("OPENAI_API_ENDPOINT")
                 .unwrap_or_else(|_| "https://api.openai.com/v1/chat/completions".to_string());
 
-            let model = env::var("OPENAI_MODEL")
-                .unwrap_or_else(|_| "gpt-4-vision-preview".to_string());
+            let model =
+                env::var("OPENAI_MODEL").unwrap_or_else(|_| "gpt-4-vision-preview".to_string());
 
             Ok(Self {
                 api_key,
@@ -152,10 +152,8 @@ mod real_client {
 
             // Add images as base64 data URLs
             for image_png in region_images {
-                let base64_image = base64::Engine::encode(
-                    &base64::engine::general_purpose::STANDARD,
-                    &image_png,
-                );
+                let base64_image =
+                    base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &image_png);
                 let data_url = format!("data:image/png;base64,{}", base64_image);
                 content.push(MessageContent::ImageUrl {
                     image_url: ImageUrl { url: data_url },
@@ -207,13 +205,20 @@ mod real_client {
                     .trim_end_matches("```")
                     .trim()
             } else if content.starts_with("```") {
-                content.trim_start_matches("```").trim_end_matches("```").trim()
+                content
+                    .trim_start_matches("```")
+                    .trim_end_matches("```")
+                    .trim()
             } else {
                 content
             };
 
-            let llm_response: LLMPromptResponse = serde_json::from_str(json_str)
-                .map_err(|e| format!("Failed to parse LLM JSON response: {}. Content: {}", e, json_str))?;
+            let llm_response: LLMPromptResponse = serde_json::from_str(json_str).map_err(|e| {
+                format!(
+                    "Failed to parse LLM JSON response: {}. Content: {}",
+                    e, json_str
+                )
+            })?;
 
             Ok(llm_response)
         }

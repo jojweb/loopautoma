@@ -229,18 +229,12 @@ impl WinAutomation {
     fn set_cursor_pos(x: u32, y: u32) -> Result<(), String> {
         let xi = x.min(i32::MAX as u32) as i32;
         let yi = y.min(i32::MAX as u32) as i32;
-        unsafe {
-            SetCursorPos(xi, yi)
-                .map_err(|e| format!("SetCursorPos failed: {}", e))
-        }
+        unsafe { SetCursorPos(xi, yi).map_err(|e| format!("SetCursorPos failed: {}", e)) }
     }
 
     fn dispatch(inputs: &mut [INPUT]) -> Result<(), String> {
         unsafe {
-            let sent = SendInput(
-                inputs,
-                size_of::<INPUT>() as i32,
-            );
+            let sent = SendInput(inputs, size_of::<INPUT>() as i32);
             if sent == inputs.len() as u32 {
                 Ok(())
             } else {

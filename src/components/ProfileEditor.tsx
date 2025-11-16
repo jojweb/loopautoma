@@ -53,11 +53,14 @@ export function ProfileEditor({ config, onChange }: Props) {
       <div style={{ fontSize: 12, opacity: 0.8, marginBottom: 6 }}>
         Entire workspace config (all profiles) lives in this JSON. Changes here stay in sync with the editors above.
       </div>
-      <textarea
-        style={{ width: "100%", height: 260, fontFamily: "monospace" }}
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-      />
+      <div className="profile-json-editor__shell">
+        <textarea
+          className="profile-json-editor"
+          aria-label="Profiles JSON editor"
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+        />
+      </div>
       <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
         <button onClick={save}>Save Config</button>
         {error && <span style={{ color: "#e33" }}>{error}</span>}

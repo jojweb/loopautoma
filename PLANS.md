@@ -199,6 +199,37 @@ To prevent uncontrolled growth of this file:
 - Platform-specific audible alarm implementation (Linux: aplay, macOS: afplay, Windows: Windows API)
 - LLM response caching to reduce API costs
 - Support for multiple LLM providers (OpenAI, Anthropic, local models)
+
+### Task: Guardrails UI polish
+
+**User request (summary)**
+- Numeric stepper buttons must accelerate 1 → 5 → 10 → 50 → 100 during sustained press across guardrail and plugin editors.
+- Profile JSON editor needs horizontal/vertical scrolling without escaping layout width.
+- Brand header should respect themes while keeping the turquoise logo readable, with brighter white blur behind the logo.
+
+**Context and constraints**
+- Keep UI changes aligned with design tokens in `App.css` and avoid OS-specific logic (per doc/architecture.md).
+- Reuse the new `AcceleratingNumberInput` component for all numeric fields to maintain interaction consistency.
+- No regressions to existing Vitest coverage; maintain ≥90% UI coverage.
+
+**Plan (checklist)**
+- [x] 1. Replace remaining numeric inputs (plugins, actions, risk threshold) with `AcceleratingNumberInput` and ensure inline layout.
+- [x] 2. Add shared styling tokens for the accelerating input (focus, hover, disabled) so it blends with light/dark themes.
+- [x] 3. Update `ProfileEditor` JSON textarea/container to support wrap-safe width plus horizontal/vertical scroll.
+- [x] 4. Refresh brand header CSS (theme-aware background/border, turquoise logo wrapper, stronger white blur/drop shadow).
+- [x] 5. Run targeted UI tests (`bun test monitor-control` + profile editor suite) to confirm no regressions.
+
+**Progress log**
+- 2025-11-16 — Completed Step 1: audited `src/plugins/builtins.tsx` and swapped every number input for `AcceleratingNumberInput` with flex labels.
+- 2025-11-16 — Completed Steps 2–4: added shared styles for the accelerating control, wrapped the profile JSON textarea in a scrollable shell, and refreshed the brand header/logo glow so it honors light/dark themes.
+- 2025-11-16 — Completed Step 5 by running `bunx vitest run tests/profileeditor.vitest.tsx tests/monitor-control.vitest.tsx` (11 tests passed).
+
+**Assumptions and open questions**
+- Assumption: Guardrail inputs in `App.tsx` already use `AcceleratingNumberInput`; no additional fields outside plugins require updates.
+- Open question: Will the brand header need new theme tokens or can we extend existing CSS variables? (to be answered during Step 4.)
+
+**Follow-ups / future work**
+- Consider reusing the accelerating control within any future numeric dialogs (GraphComposer, advanced guardrails) once designed.
 - Streaming LLM responses for immediate feedback
 - LLM prompt templates library
 - Risk level customization per profile
@@ -519,6 +550,7 @@ Successfully implemented LLM Prompt Generation action with risk-based guardrails
 - 2025-11-16 — Completed guardrail + RegionCondition UI conversions (seconds-based), updated supporting docs/tests, and ensured JSON editor copy/button read “Save Config.”
 - 2025-11-16 — Adjusted Vitest suites for new desktop detection and reran `bun run test:ui:cov` for full coverage; release log triage still pending.
 - 2025-11-16 — Queried the latest Release workflow run (19406366982) and enumerated all job annotations, but downloading the full log archive requires admin rights (GitHub API returned 403). Linux build command reproduced locally with `bun tauri build -- --no-default-features --features os-linux-input,os-linux-capture-xcap` (success); macOS/Windows failures still need raw logs or on-host repro.
+- 2025-11-16 — Pulled logs for run 19410262733 via `gh run view --log`; all targets failed during `bun run build:web` with `src/App.tsx` referencing `JSX.Element` without importing the namespace. Added `type JSX` import in `src/App.tsx` and verified `bun run build:web` locally.
 
 **Assumptions and open questions**
 - Assumption: Persisted data stays in milliseconds; only UI/UX copy changes to seconds.

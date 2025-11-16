@@ -34,6 +34,20 @@
   -webkit-text-size-adjust: 100%;
 }
 
+html,
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+  background-color: var(--brand-bg);
+  color: var(--brand-text);
+}
+
+#root {
+  min-height: 100vh;
+  background-color: var(--brand-bg);
+}
+
 /* Use system theme by default */
 @media (prefers-color-scheme: light) {
   :root {
@@ -113,15 +127,37 @@ main[data-palette="noir"] {
 }
 
 .brand {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 24px;
-  padding: 16px 20px;
+  padding: 18px 22px;
+  border-radius: 20px;
   border: 1px solid var(--brand-border);
-  border-radius: 18px;
-  background: linear-gradient(120deg, rgba(89, 208, 255, 0.12), rgba(110, 243, 165, 0.08));
-  box-shadow: 0 20px 80px rgba(5, 10, 25, 0.45);
+  background:
+    radial-gradient(circle at 12% 20%, rgba(89, 208, 255, 0.20), transparent 55%),
+    radial-gradient(circle at 35% 80%, rgba(110, 243, 165, 0.14), transparent 60%),
+    linear-gradient(140deg, rgba(12, 18, 32, 0.94), rgba(9, 14, 25, 0.92));
+  box-shadow: 0 24px 90px rgba(5, 10, 25, 0.55), 0 8px 28px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(18px);
+  isolation: isolate;
+}
+
+.container[data-theme="light"] .brand {
+  background:
+    radial-gradient(circle at 10% 15%, rgba(89, 208, 255, 0.22), transparent 55%),
+    radial-gradient(circle at 65% 80%, rgba(110, 243, 165, 0.14), transparent 60%),
+    linear-gradient(140deg, rgba(255, 255, 255, 0.98), rgba(247, 250, 252, 0.96));
+  box-shadow: 0 18px 65px rgba(15, 32, 60, 0.18), 0 6px 20px rgba(15, 32, 60, 0.1);
+  border-color: rgba(12, 23, 41, 0.12);
+}
+
+.container[data-theme="dark"] .brand {
+  background:
+    radial-gradient(circle at 12% 20%, rgba(89, 208, 255, 0.22), transparent 55%),
+    radial-gradient(circle at 35% 80%, rgba(110, 243, 165, 0.16), transparent 60%),
+    linear-gradient(145deg, rgba(11, 16, 31, 0.96), rgba(8, 12, 22, 0.94));
 }
 
 .brand-left {
@@ -130,11 +166,41 @@ main[data-palette="noir"] {
   gap: 16px;
 }
 
+.brand-logo-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  border-radius: 20px;
+  background: radial-gradient(circle at 40% 35%, rgba(255, 255, 255, 0.18), transparent 70%);
+  box-shadow: 0 20px 42px rgba(89, 208, 255, 0.35);
+}
+
+.brand-logo-wrap::after {
+  content: "";
+  position: absolute;
+  inset: 6px;
+  border-radius: inherit;
+  background: radial-gradient(circle at 60% 35%, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0));
+  filter: blur(22px);
+  opacity: 0.95;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.container[data-theme="light"] .brand-logo-wrap {
+  box-shadow: 0 16px 36px rgba(89, 208, 255, 0.25);
+}
+
 .brand-logo {
+  position: relative;
+  z-index: 1;
   height: 56px;
   width: auto;
-  filter: drop-shadow(0 0 0.6rem var(--brand-accent));
-  border-radius: 8px;
+  display: block;
+  border-radius: 10px;
+  filter: drop-shadow(0 10px 22px rgba(255, 255, 255, 0.55)) drop-shadow(0 6px 18px rgba(89, 208, 255, 0.7));
 }
 
 .brand-title h1 {
@@ -384,6 +450,138 @@ textarea {
   resize: vertical;
 }
 
+.accelerating-number-input {
+  display: inline-flex;
+  align-items: stretch;
+  border-radius: 12px;
+  border: 1px solid var(--brand-border);
+  background: var(--brand-surface);
+  box-shadow: 0 12px 28px rgba(5, 10, 25, 0.25);
+  overflow: hidden;
+  min-height: 42px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.container[data-theme="light"] .accelerating-number-input {
+  box-shadow: 0 10px 24px rgba(15, 32, 60, 0.18);
+}
+
+.accelerating-number-input:focus-within {
+  border-color: rgba(89, 208, 255, 0.85);
+  box-shadow: 0 0 0 1px rgba(89, 208, 255, 0.4), 0 20px 40px rgba(5, 10, 25, 0.35);
+}
+
+.accelerating-number-input input {
+  flex: 1 1 auto;
+  border: none;
+  padding: 0.45rem 0.75rem;
+  background: transparent;
+  color: var(--brand-text);
+  font-size: 0.95rem;
+  font-variant-numeric: tabular-nums;
+  box-shadow: none;
+  min-width: 0;
+}
+
+.accelerating-number-input input:focus {
+  outline: none;
+}
+
+.accelerating-number-input__controls {
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid var(--brand-border);
+  background: linear-gradient(180deg, rgba(89, 208, 255, 0.12), rgba(110, 243, 165, 0.04));
+}
+
+.accelerating-number-input__controls button {
+  border: none;
+  padding: 0;
+  width: 34px;
+  height: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--brand-text);
+  background: transparent;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.accelerating-number-input__controls button:first-of-type {
+  border-bottom: 1px solid var(--brand-border);
+}
+
+.accelerating-number-input__controls button:hover {
+  background: rgba(89, 208, 255, 0.18);
+  color: var(--brand-bg);
+}
+
+.accelerating-number-input__controls button:active {
+  background: rgba(89, 208, 255, 0.28);
+}
+
+.accelerating-number-input__controls button:focus-visible {
+  outline: 2px solid rgba(89, 208, 255, 0.65);
+  outline-offset: -3px;
+}
+
+.accelerating-number-input input::-webkit-outer-spin-button,
+.accelerating-number-input input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.accelerating-number-input input[type=number] {
+  -moz-appearance: textfield;
+}
+
+.profile-json-editor__shell {
+  width: 100%;
+  max-width: 100%;
+  border-radius: 16px;
+  border: 1px solid var(--brand-border);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0));
+  box-shadow: 0 22px 60px rgba(5, 10, 25, 0.28);
+  overflow: hidden;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.container[data-theme="light"] .profile-json-editor__shell {
+  box-shadow: 0 18px 52px rgba(15, 32, 60, 0.15);
+}
+
+.profile-json-editor__shell:focus-within {
+  border-color: rgba(89, 208, 255, 0.7);
+  box-shadow: 0 0 0 1px rgba(89, 208, 255, 0.35), 0 24px 60px rgba(5, 10, 25, 0.35);
+}
+
+.profile-json-editor {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  min-height: 260px;
+  padding: 16px 18px;
+  border: none;
+  background: transparent;
+  color: var(--brand-text);
+  font-family: "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 0.92rem;
+  line-height: 1.5;
+  white-space: pre;
+  overflow: auto;
+  resize: vertical;
+  tab-size: 2;
+  box-shadow: none;
+  caret-color: var(--palette-accent);
+}
+
+.profile-json-editor:focus {
+  outline: none;
+}
+
 button {
   cursor: pointer;
 }
@@ -499,25 +697,21 @@ select {
   outline: none;
 }
 
-#greet-input {
-  margin-right: 5px;
+main[data-theme="light"] input,
+main[data-theme="light"] select,
+main[data-theme="light"] textarea {
+  background-color: #ffffff;
+  color: #0c1729;
+  border-color: rgba(12, 23, 41, 0.18);
+  box-shadow: 0 3px 10px rgba(12, 23, 41, 0.12);
+  color-scheme: light;
+}
 
-  main[data-theme="light"] input,
-  main[data-theme="light"] select,
-  main[data-theme="light"] textarea {
-    background-color: #ffffff;
-    color: #0c1729;
-    border-color: rgba(12, 23, 41, 0.18);
-    box-shadow: 0 3px 10px rgba(12, 23, 41, 0.12);
-    color-scheme: light;
-  }
-
-  main[data-theme="dark"] input,
-  main[data-theme="dark"] select,
-  main[data-theme="dark"] textarea,
-  main[data-theme="dark"] button {
-    color-scheme: dark;
-  }
+main[data-theme="dark"] input,
+main[data-theme="dark"] select,
+main[data-theme="dark"] textarea,
+main[data-theme="dark"] button {
+  color-scheme: dark;
 }
 
 /* system theme is the default via prefers-color-scheme, overridden by data-theme when chosen */

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type JSX } from "react";
 import reactLogo from "./assets/react.svg";
 import "./App.css";
 import { ProfileSelector } from "./components/ProfileSelector";
@@ -15,6 +15,7 @@ import logo from "../doc/img/logo.png";
 import { useEffectOnce } from "./hooks/useEffectOnce";
 import { registerBuiltins } from "./plugins/builtins";
 import { isDesktopEnvironment } from "./utils/runtime";
+import { AcceleratingNumberInput } from "./components/AcceleratingNumberInput";
 
 const THEME_STORAGE_KEY = "loopautoma.theme";
 const PALETTE_STORAGE_KEY = "loopautoma.palette";
@@ -218,16 +219,28 @@ export function App() {
     }
   }, []);
 
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const root = document.documentElement;
+    if (theme === "system") {
+      root.removeAttribute("data-theme");
+    } else {
+      root.setAttribute("data-theme", theme);
+    }
+  }, [theme]);
+
   const themeAttr = theme === "system" ? undefined : theme;
 
   return (
     <main className="container" data-theme={themeAttr} data-palette={palette}>
       <header className="brand">
         <div className="brand-left">
-          <img src={logo} alt="Loop Automa" className="brand-logo" />
+          <div className="brand-logo-wrap">
+            <img src={logo} alt="Loop Automa" className="brand-logo" />
+          </div>
           <div className="brand-title">
             <h1 title="Compose automations to keep your agent moving">Loop Automa</h1>
-            <p className="muted">Modern guardrails and automation authoring in one playful canvas.</p>
+            <p className="muted">Guardrail-first automation studio that watches regions and keeps your agent moving.</p>
           </div>
         </div>
         <div className="top-right">
@@ -340,15 +353,14 @@ export function App() {
               </div>
               <label>
                 Cooldown (s)
-                <input
-                  type="number"
-                  step="0.1"
-                  value={selectedProfile.guardrails?.cooldown_ms !== undefined ? selectedProfile.guardrails.cooldown_ms / 1000 : 0}
-                  onChange={async (e) => {
-                    const seconds = Number(e.target.value || 0);
+                <AcceleratingNumberInput
+                  min={0}
+                  value={selectedProfile.guardrails?.cooldown_ms !== undefined ? selectedProfile.guardrails.cooldown_ms / 1000 : ""}
+                  onValueChange={async (seconds) => {
+                    const safeSeconds = seconds === "" ? 0 : Number(seconds);
                     const next = {
                       ...(selectedProfile.guardrails ?? { cooldown_ms: 0 }),
-                      cooldown_ms: Math.max(0, seconds * 1000),
+                      cooldown_ms: Math.max(0, safeSeconds * 1000),
                     };
                     await updateProfile({ ...selectedProfile, guardrails: next });
                   }}
@@ -356,18 +368,17 @@ export function App() {
               </label>
               <label>
                 Max runtime (s)
-                <input
-                  type="number"
-                  step="1"
+                <AcceleratingNumberInput
+                  min={0}
                   value={selectedProfile.guardrails?.max_runtime_ms !== undefined ? selectedProfile.guardrails.max_runtime_ms / 1000 : ""}
-                  onChange={async (e) => {
-                    const seconds = e.target.value === "" ? undefined : Number(e.target.value);
+                  onValueChange={async (seconds) => {
+                    const parsed = seconds === "" ? undefined : Number(seconds);
                     let next = { ...(selectedProfile.guardrails ?? { cooldown_ms: 0 }) } as Profile["guardrails"] & { max_runtime_ms?: number };
-                    if (seconds === undefined) {
+                    if (parsed === undefined) {
                       const { max_runtime_ms, ...rest } = next ?? {};
                       next = rest as typeof next;
                     } else {
-                      next = { ...next, max_runtime_ms: Math.max(0, seconds * 1000) };
+                      next = { ...next, max_runtime_ms: Math.max(0, parsed * 1000) };
                     }
                     await updateProfile({ ...selectedProfile, guardrails: next });
                   }}
@@ -376,14 +387,14 @@ export function App() {
               </label>
               <label>
                 Max activations/hour
-                <input
-                  type="number"
+                <AcceleratingNumberInput
+                  min={0}
                   value={selectedProfile.guardrails?.max_activations_per_hour ?? ""}
-                  onChange={async (e) => {
-                    const v = e.target.value === "" ? undefined : Number(e.target.value);
+                  onValueChange={async (nextValue) => {
+                    const parsed = nextValue === "" ? undefined : Number(nextValue);
                     await updateProfile({
                       ...selectedProfile,
-                      guardrails: { ...(selectedProfile.guardrails ?? { cooldown_ms: 0 }), max_activations_per_hour: v },
+                      guardrails: { ...(selectedProfile.guardrails ?? { cooldown_ms: 0 }), max_activations_per_hour: parsed },
                     });
                   }}
                   placeholder="unset"

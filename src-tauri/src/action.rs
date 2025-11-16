@@ -9,7 +9,11 @@ impl Action for MoveCursor {
     fn name(&self) -> &'static str {
         "MoveCursor"
     }
-    fn execute(&self, automation: &dyn Automation, _context: &mut ActionContext) -> Result<(), String> {
+    fn execute(
+        &self,
+        automation: &dyn Automation,
+        _context: &mut ActionContext,
+    ) -> Result<(), String> {
         automation.move_cursor(self.x, self.y)
     }
 }
@@ -21,7 +25,11 @@ impl Action for Click {
     fn name(&self) -> &'static str {
         "Click"
     }
-    fn execute(&self, automation: &dyn Automation, _context: &mut ActionContext) -> Result<(), String> {
+    fn execute(
+        &self,
+        automation: &dyn Automation,
+        _context: &mut ActionContext,
+    ) -> Result<(), String> {
         automation.click(self.button)
     }
 }
@@ -33,7 +41,11 @@ impl Action for TypeText {
     fn name(&self) -> &'static str {
         "Type"
     }
-    fn execute(&self, automation: &dyn Automation, context: &mut ActionContext) -> Result<(), String> {
+    fn execute(
+        &self,
+        automation: &dyn Automation,
+        context: &mut ActionContext,
+    ) -> Result<(), String> {
         // Expand variables like $prompt
         let expanded = context.expand(&self.text);
         automation.type_text(&expanded)
@@ -47,7 +59,11 @@ impl Action for Key {
     fn name(&self) -> &'static str {
         "Key"
     }
-    fn execute(&self, automation: &dyn Automation, _context: &mut ActionContext) -> Result<(), String> {
+    fn execute(
+        &self,
+        automation: &dyn Automation,
+        _context: &mut ActionContext,
+    ) -> Result<(), String> {
         automation.key(&self.key)
     }
 }
@@ -68,7 +84,11 @@ impl Action for LLMPromptGenerationAction {
         "LLMPromptGeneration"
     }
 
-    fn execute(&self, _automation: &dyn Automation, context: &mut ActionContext) -> Result<(), String> {
+    fn execute(
+        &self,
+        _automation: &dyn Automation,
+        context: &mut ActionContext,
+    ) -> Result<(), String> {
         // 1. Validate region_ids and collect regions
         let mut captured_regions = Vec::new();
         for region_id in &self.region_ids {

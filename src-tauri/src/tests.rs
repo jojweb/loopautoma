@@ -861,7 +861,11 @@ mod tests {
             fn name(&self) -> &'static str {
                 "Fail"
             }
-            fn execute(&self, _: &dyn Automation, _context: &mut crate::domain::ActionContext) -> Result<(), String> {
+            fn execute(
+                &self,
+                _: &dyn Automation,
+                _context: &mut crate::domain::ActionContext,
+            ) -> Result<(), String> {
                 Err("intentional failure".into())
             }
         }
@@ -1080,16 +1084,16 @@ mod tests {
         fn start_input_recording_rejects_fake_backend_env() {
             // Set LOOPAUTOMA_BACKEND=fake to simulate fake backend mode
             env::set_var("LOOPAUTOMA_BACKEND", "fake");
-            
+
             // In fake backend mode, start_input_recording should refuse to start
             // Verify the error message guides users to remove the env var override
             // Note: This test verifies the environment check logic that occurs before
             // the InputCapture backend is even attempted. The actual Tauri command
             // start_input_recording checks this condition and returns an error.
-            
+
             let backend = env::var("LOOPAUTOMA_BACKEND").ok();
             assert_eq!(backend.as_deref(), Some("fake"));
-            
+
             // Cleanup
             env::remove_var("LOOPAUTOMA_BACKEND");
         }
@@ -1103,7 +1107,7 @@ mod tests {
             // This test verifies the expected idempotent behavior contract.
             assert!(true); // Placeholder demonstrating expected behavior
         }
-        
+
         #[test]
         fn input_recording_requires_os_linux_input_feature() {
             // When compiled without --features os-linux-input, start_input_recording
@@ -1173,18 +1177,16 @@ mod tests {
         #[test]
         fn llm_action_sets_prompt_variable_on_success() {
             let auto = FakeAuto::new();
-            let regions = vec![
-                Region {
-                    id: "r1".to_string(),
-                    rect: Rect {
-                        x: 0,
-                        y: 0,
-                        width: 100,
-                        height: 100,
-                    },
-                    name: Some("Test Region".to_string()),
+            let regions = vec![Region {
+                id: "r1".to_string(),
+                rect: Rect {
+                    x: 0,
+                    y: 0,
+                    width: 100,
+                    height: 100,
                 },
-            ];
+                name: Some("Test Region".to_string()),
+            }];
 
             let action = LLMPromptGenerationAction {
                 region_ids: vec!["r1".to_string()],
@@ -1210,18 +1212,16 @@ mod tests {
         #[test]
         fn llm_action_fails_on_missing_region() {
             let auto = FakeAuto::new();
-            let regions = vec![
-                Region {
-                    id: "r1".to_string(),
-                    rect: Rect {
-                        x: 0,
-                        y: 0,
-                        width: 100,
-                        height: 100,
-                    },
-                    name: None,
+            let regions = vec![Region {
+                id: "r1".to_string(),
+                rect: Rect {
+                    x: 0,
+                    y: 0,
+                    width: 100,
+                    height: 100,
                 },
-            ];
+                name: None,
+            }];
 
             let action = LLMPromptGenerationAction {
                 region_ids: vec!["nonexistent".to_string()],
@@ -1243,18 +1243,16 @@ mod tests {
         #[test]
         fn llm_action_respects_risk_threshold() {
             let auto = FakeAuto::new();
-            let regions = vec![
-                Region {
-                    id: "r1".to_string(),
-                    rect: Rect {
-                        x: 0,
-                        y: 0,
-                        width: 100,
-                        height: 100,
-                    },
-                    name: None,
+            let regions = vec![Region {
+                id: "r1".to_string(),
+                rect: Rect {
+                    x: 0,
+                    y: 0,
+                    width: 100,
+                    height: 100,
                 },
-            ];
+                name: None,
+            }];
 
             // Test with high-risk LLM response
             let high_risk_client = Arc::new(MockLLMClient::with_response(
@@ -1318,7 +1316,7 @@ mod tests {
         #[test]
         fn action_context_stores_and_retrieves_variables() {
             let mut context = ActionContext::new();
-            
+
             context.set("prompt", "test prompt");
             context.set("risk", "0.5");
 
@@ -1338,18 +1336,16 @@ mod tests {
         #[test]
         fn llm_action_with_custom_variable_name() {
             let auto = FakeAuto::new();
-            let regions = vec![
-                Region {
-                    id: "r1".to_string(),
-                    rect: Rect {
-                        x: 0,
-                        y: 0,
-                        width: 100,
-                        height: 100,
-                    },
-                    name: None,
+            let regions = vec![Region {
+                id: "r1".to_string(),
+                rect: Rect {
+                    x: 0,
+                    y: 0,
+                    width: 100,
+                    height: 100,
                 },
-            ];
+                name: None,
+            }];
 
             let action = LLMPromptGenerationAction {
                 region_ids: vec!["r1".to_string()],
@@ -1377,7 +1373,7 @@ mod tests {
             let guardrails = Guardrails::default();
 
             let mut mon = Monitor::new(trig, cond, seq, guardrails);
-            
+
             // Set a variable before starting
             mon.context.set("test", "value");
             assert_eq!(mon.context.get("test"), Some("value"));
@@ -1385,8 +1381,12 @@ mod tests {
             // Start should reset context
             let mut events = vec![];
             mon.start(&mut events);
-            
-            assert_eq!(mon.context.get("test"), None, "Context should be reset on start");
+
+            assert_eq!(
+                mon.context.get("test"),
+                None,
+                "Context should be reset on start"
+            );
         }
 
         #[test]
@@ -1394,18 +1394,16 @@ mod tests {
             let profile = Profile {
                 id: "test-llm".to_string(),
                 name: "LLM Test Profile".to_string(),
-                regions: vec![
-                    Region {
-                        id: "r1".to_string(),
-                        rect: Rect {
-                            x: 100,
-                            y: 100,
-                            width: 200,
-                            height: 200,
-                        },
-                        name: Some("Chat Area".to_string()),
+                regions: vec![Region {
+                    id: "r1".to_string(),
+                    rect: Rect {
+                        x: 100,
+                        y: 100,
+                        width: 200,
+                        height: 200,
                     },
-                ],
+                    name: Some("Chat Area".to_string()),
+                }],
                 trigger: TriggerConfig {
                     r#type: "IntervalTrigger".to_string(),
                     check_interval_sec: 60.0,
@@ -1437,7 +1435,7 @@ mod tests {
             };
 
             let (monitor, regions) = build_monitor_from_profile(&profile);
-            
+
             assert_eq!(regions.len(), 1);
             assert_eq!(monitor.actions.actions.len(), 3);
         }

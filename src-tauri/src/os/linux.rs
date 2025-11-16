@@ -16,6 +16,8 @@ use std::hash::{Hash, Hasher};
 #[cfg(feature = "os-linux-input")]
 use std::io::ErrorKind;
 #[cfg(feature = "os-linux-input")]
+use std::sync::mpsc::{sync_channel, SyncSender};
+#[cfg(feature = "os-linux-input")]
 use std::sync::{
     atomic::{AtomicBool, Ordering},
     Arc, Mutex,
@@ -402,13 +404,31 @@ impl InputCapture for LinuxInputCapture {
         }
         let running = self.running.clone();
         let cb = callback.clone();
+        let (ready_tx, ready_rx) = sync_channel(1);
         let handle = thread::spawn(move || {
-            if let Err(err) = run_input_loop(cb, running.clone()) {
+            if let Err(err) = run_input_loop(cb, running.clone(), Some(ready_tx)) {
                 eprintln!("linux input capture error: {}", err);
             }
         });
-        self.handle = Some(handle);
-        Ok(())
+        match ready_rx.recv_timeout(Duration::from_secs(2)) {
+            Ok(Ok(())) => {
+                self.handle = Some(handle);
+                Ok(())
+            }
+            Ok(Err(err)) => {
+                self.running.store(false, Ordering::SeqCst);
+                let _ = handle.join();
+                Err(err)
+            }
+            Err(_) => {
+                self.running.store(false, Ordering::SeqCst);
+                let _ = handle.join();
+                Err(BackendError::new(
+                    "input_init_timeout",
+                    "Timed out while starting input recording. Ensure you are running an X11 session (not Wayland) and that the required X11/XInput packages are installed.",
+                ))
+            }
+        }
     }
 
     fn stop(&mut self) -> Result<(), BackendError> {
@@ -575,16 +595,40 @@ fn core_keyboard_device_id(conn: &XCBConnection) -> Result<i32, BackendError> {
 fn run_input_loop(
     callback: InputEventCallback,
     running: Arc<AtomicBool>,
+    mut ready: Option<SyncSender<Result<(), BackendError>>>,
 ) -> Result<(), BackendError> {
-    let (conn, screen_idx) = open_xcb_connection()?;
+    let notify = |result: Result<(), BackendError>,
+                  ready: &mut Option<SyncSender<Result<(), BackendError>>>| {
+        if let Some(tx) = ready.take() {
+            let _ = tx.send(result);
+        }
+    };
+
+    let (conn, screen_idx) = match open_xcb_connection() {
+        Ok(value) => value,
+        Err(err) => {
+            notify(Err(err.clone()), &mut ready);
+            return Err(err);
+        }
+    };
     let screen = conn
         .setup()
         .roots
         .get(screen_idx)
         .ok_or_else(|| BackendError::new("x11_screen_missing", "unable to read X11 screen"))?
         .clone();
-    select_xinput(&conn, screen.root)?;
-    let mut xkb = XkbStateBundle::new(&conn)?;
+    if let Err(err) = select_xinput(&conn, screen.root) {
+        notify(Err(err.clone()), &mut ready);
+        return Err(err);
+    }
+    let mut xkb = match XkbStateBundle::new(&conn) {
+        Ok(bundle) => bundle,
+        Err(err) => {
+            notify(Err(err.clone()), &mut ready);
+            return Err(err);
+        }
+    };
+    notify(Ok(()), &mut ready);
     while running.load(Ordering::Relaxed) {
         match conn.poll_for_event() {
             Ok(Some(event)) => handle_xinput_event(&conn, screen.root, &mut xkb, &callback, event),

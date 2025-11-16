@@ -144,7 +144,11 @@ impl ActionContext {
 
 pub trait Action {
     fn name(&self) -> &'static str;
-    fn execute(&self, automation: &dyn Automation, context: &mut ActionContext) -> Result<(), String>;
+    fn execute(
+        &self,
+        automation: &dyn Automation,
+        context: &mut ActionContext,
+    ) -> Result<(), String>;
 }
 
 pub struct ActionSequence {
@@ -156,7 +160,12 @@ impl ActionSequence {
         Self { actions }
     }
 
-    pub fn run(&self, automation: &dyn Automation, context: &mut ActionContext, events: &mut Vec<Event>) -> bool {
+    pub fn run(
+        &self,
+        automation: &dyn Automation,
+        context: &mut ActionContext,
+        events: &mut Vec<Event>,
+    ) -> bool {
         for a in &self.actions {
             events.push(Event::ActionStarted {
                 action: a.name().to_string(),
@@ -234,10 +243,19 @@ pub struct ConditionConfig {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type")]
 pub enum ActionConfig {
-    MoveCursor { x: u32, y: u32 },
-    Click { button: MouseButton },
-    Type { text: String },
-    Key { key: String },
+    MoveCursor {
+        x: u32,
+        y: u32,
+    },
+    Click {
+        button: MouseButton,
+    },
+    Type {
+        text: String,
+    },
+    Key {
+        key: String,
+    },
     LLMPromptGeneration {
         /// Region IDs to capture and send to LLM
         region_ids: Vec<String>,

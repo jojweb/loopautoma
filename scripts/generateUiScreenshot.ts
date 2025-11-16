@@ -85,9 +85,15 @@ async function captureScreenshot(baseUrl: string) {
         await darkButton.click();
     } else {
         await page.evaluate(() => {
-            document.querySelector("main.container")?.setAttribute("data-theme", "dark");
+            const main = document.querySelector("main.container");
+            main?.setAttribute("data-theme", "dark");
+            document.documentElement.setAttribute("data-theme", "dark");
         });
     }
+
+    await page.evaluate(() => {
+        document.documentElement.setAttribute("data-theme", "dark");
+    });
 
     // Ensure monitor controls settle with the preset loaded
     await page.waitForTimeout(500);

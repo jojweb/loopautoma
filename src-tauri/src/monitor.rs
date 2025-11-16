@@ -1,7 +1,9 @@
 use std::collections::VecDeque;
 use std::time::{Duration, Instant};
 
-use crate::domain::{ActionContext, ActionSequence, Condition, Event, Guardrails, MonitorState, Trigger};
+use crate::domain::{
+    ActionContext, ActionSequence, Condition, Event, Guardrails, MonitorState, Trigger,
+};
 
 pub struct Monitor<'a> {
     pub trigger: Box<dyn Trigger + Send + 'a>,
