@@ -143,8 +143,8 @@ To prevent uncontrolled growth of this file:
 - [x] 9. Remove Key action type (keep Type for keyboard input) — Removed; Type now handles special keys with {Key:X} inline syntax
 - [x] 10. Update tests for simplified action types — All 35 UI tests and 39 Rust tests passing
 - [x] 11. Run full test suite and verify build
-- [ ] 12. Manual smoke test all fixes
-- [ ] 13. Commit and push changes
+- [ ] 12. Manual smoke test all fixes — Requires user testing in desktop environment
+- [x] 13. Commit and push changes — Committed 7f78047, pushed to main
 
 **Progress log**
 - 2025-11-16 — Task created with 13 steps covering all critical UX issues
@@ -158,6 +158,7 @@ To prevent uncontrolled growth of this file:
   - ✅ Updated all tests (35 UI + 39 Rust) to match new action schema
   - ⏸️ Thumbnail refresh window minimize deferred (requires Tauri window API changes)
   - ℹ️ Input recording and overlay issues: no code defects found; likely runtime/permission issue on user's system
+- 2025-11-16 — Task completed and pushed (commit 7f78047). All automated tests passing.
 
 **Assumptions and open questions**
 - Assumption: Input recording issue is permissions-related or event listener not properly initialized
@@ -166,9 +167,12 @@ To prevent uncontrolled growth of this file:
 - Open question: Should Type action support inline key syntax like `text{Key:Enter}` or remove that feature?
 
 **Follow‑ups / future work**
+- Investigate input recording issues reported by user (may be X11 permissions or system-specific)
+- Implement thumbnail window minimize (requires changes to Rust side to hide main window before capture)
 - Consider adding visual feedback during region capture (crosshair cursor)
 - Add keyboard shortcuts for common actions (Ctrl+S to save config, etc.)
 - Implement undo/redo for JSON config editor
+- Test Type action inline key syntax parsing in real OS automation backend
 
 ## Completed tasks (archived)
 
