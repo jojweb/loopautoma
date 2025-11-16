@@ -230,6 +230,184 @@ To prevent uncontrolled growth of this file:
 
 **Follow-ups / future work**
 - Consider reusing the accelerating control within any future numeric dialogs (GraphComposer, advanced guardrails) once designed.
+
+---
+
+## Task: Release build stabilization (CRITICAL)
+
+**Started:** 2025-11-16
+
+**User request (summary)**
+- Fix release build failure: `bun run build:web` calls `generate:ui-screenshot` which fails on CI because Playwright is not installed.
+- Screenshots are development/testing artifacts, NOT release dependencies—must be removed from production build chain.
+- Comprehensive audit of ALL platform builds (macOS aarch64/x86_64, Linux x86_64, Windows x86_64-msvc).
+- Investigate and fix any other hidden release blockers (feature flags, dependencies, CI configuration).
+- **BLOCKER**: Under no circumstances stop until ALL target platforms can build successfully in CI release workflow.
+
+**Context and constraints**
+- Tauri build runs `beforeBuildCommand: bun run build:web` which currently includes screenshot generation.
+- Playwright is a devDependency; must not be required for production builds.
+- Screenshots should only be generated during development/testing, never during release.
+- Must verify each platform's feature flags, Cargo.toml dependencies, and tauri.conf.json settings.
+- GitHub Actions workflow must separate test jobs (with Playwright) from release jobs (without).
+
+**Plan (checklist)**
+
+**Phase 1: Immediate screenshot fix (BLOCKER)**
+- [ ] 1.1 — Remove `&& bun run generate:ui-screenshot` from `build:web` script in package.json.
+- [ ] 1.2 — Create separate `build:web:dev` script that includes screenshot generation for dev workflow.
+- [ ] 1.3 — Update any documentation referencing screenshot generation to use dev script.
+- [ ] 1.4 — Verify `bun run build:web` completes without Playwright installed.
+
+**Phase 2: Audit tauri.conf.json for all platforms**
+- [ ] 2.1 — Review macOS config (aarch64-apple-darwin, x86_64-apple-darwin targets).
+- [ ] 2.2 — Review Linux config (x86_64-unknown-linux-gnu target, WebKitGTK deps).
+- [ ] 2.3 — Review Windows config (x86_64-pc-windows-msvc target, WebView2 deps).
+- [ ] 2.4 — Verify `beforeBuildCommand` is identical for all platforms and doesn't require Playwright.
+- [ ] 2.5 — Check bundle identifiers, icons, and permissions for each platform.
+
+**Phase 3: Validate Rust dependencies and features**
+- [ ] 3.1 — Review src-tauri/Cargo.toml: ensure no dev-dependencies leak into release.
+- [ ] 3.2 — Verify feature flags (os-linux, os-macos, os-windows) compile independently.
+- [ ] 3.3 — Check default features: should not include any test/dev features.
+- [ ] 3.4 — Run minimal cargo build for each target: `cargo build --release --target <triple> --no-default-features --features <os-flag>`.
+- [ ] 3.5 — Verify no unused dependencies or bloated transitive deps.
+
+**Phase 4: CI/CD workflow separation**
+- [ ] 4.1 — Review .github/workflows/ci.yml: ensure test job installs Playwright.
+- [ ] 4.2 — Review release workflow: ensure NO Playwright install, NO screenshot generation.
+- [ ] 4.3 — Verify Linux prerequisites (WebKitGTK, libsoup) installed before build on CI runners.
+- [ ] 4.4 — Verify macOS/Windows runners have required toolchains (Xcode, MSVC).
+- [ ] 4.5 — Add explicit checks for release builds: fail fast if test deps detected.
+
+**Phase 5: Test minimal build commands locally**
+- [ ] 5.1 — macOS aarch64: `bun tauri build --target aarch64-apple-darwin -- --no-default-features --features os-macos`.
+- [ ] 5.2 — macOS x86_64: `bun tauri build --target x86_64-apple-darwin -- --no-default-features --features os-macos`.
+- [ ] 5.3 — Linux x86_64: `bun tauri build --target x86_64-unknown-linux-gnu -- --no-default-features --features os-linux`.
+- [ ] 5.4 — Windows x86_64: `bun tauri build --target x86_64-pc-windows-msvc -- --no-default-features --features os-windows`.
+- [ ] 5.5 — Document exact commands, prerequisites, and expected artifacts for each platform.
+
+**Phase 6: Sanity checks and validation**
+- [ ] 6.1 — Verify each platform build produces installer/dmg/AppImage/exe with correct metadata.
+- [ ] 6.2 — Check bundle sizes are reasonable (not bloated with test deps).
+- [ ] 6.3 — Verify signing/notarization steps are documented (macOS).
+- [ ] 6.4 — Test installing and launching built artifacts on real machines (not just CI).
+- [ ] 6.5 — Document known platform-specific gotchas in doc/releaseBuild.md.
+
+**Phase 7: Final release process documentation**
+- [ ] 7.1 — Create doc/releaseBuild.md with step-by-step instructions for each platform.
+- [ ] 7.2 — Document prerequisites (Rust toolchain, Tauri CLI, platform SDKs).
+- [ ] 7.3 — Document CI/CD setup (GitHub Actions secrets, runner requirements).
+- [ ] 7.4 — Add troubleshooting section for common build failures.
+- [ ] 7.5 — Verify all builds pass in CI before merging to main.
+
+**Progress log**
+- 2025-11-16 — Created comprehensive release stabilization plan; starting with immediate screenshot fix.
+
+**Assumptions and open questions**
+- Assumption: Screenshots are only needed for documentation/README, not for app functionality.
+- Assumption: All platforms use same Tauri config; no platform-specific beforeBuildCommand needed.
+- Open question: Should we cache Rust build artifacts in CI to speed up release builds?
+- Open question: Do we need separate release workflows per platform or one unified workflow?
+
+**Follow-ups / future work**
+- Consider moving screenshot generation to a separate doc/screenshot workflow (manual trigger).
+- Investigate cross-compilation support (build all platforms from Linux runner).
+- Set up automated release notes generation from git commits.
+
+---
+
+## Task: Core UI stabilization and UX fixes
+
+**Started:** 2025-11-16
+
+**User request (summary)**
+- Fix palette picker visual (currently looks like pills; reduce confusion between first two swatches).
+- Add visible labels to all dropdowns (Trigger, Condition, action type selectors, etc.).
+- Simplify action types: consolidate "Type" and "Key" into unified actions with mouse 🖱️ and keyboard ⌨️ icons.
+- Replace external "Special key syntax" link with in-app overlay showing available keyboard tokens.
+- Fix long-press acceleration on numeric +/- buttons (currently non-functional).
+- Remove "Keep AI Agent Active preset" and "Ready for unattended runs" sections entirely.
+- Remove preconfigured action sequence from default profile (user machines differ).
+- **CRITICAL SHOWSTOPPER**: Fix recording feature—clicking Record → interacting → Save as ActionSequence currently saves nothing on Linux (Kubuntu 24.04). This renders the app unusable.
+
+**Context and constraints**
+- Must preserve existing architecture (doc/architecture.md) and test coverage ≥90%.
+- Recording backend uses Tauri commands `start_input_recording` / `stop_input_recording`; likely needs Rust-side diagnosis.
+- All UI changes must work in light/dark themes without regressions.
+- No changes to OS-specific logic in TypeScript; platform code stays in Rust traits.
+
+**Plan (checklist)**
+
+**Phase 1: Critical recording fix (showstopper)**
+- [ ] 1.1 — Verify Rust backend `start_input_recording` / `stop_input_recording` implementation in `src-tauri/src/os/linux.rs`.
+- [ ] 1.2 — Add logging/diagnostics to Linux input recording to confirm events are captured at OS level.
+- [ ] 1.3 — Verify event emission from Rust → TypeScript via `loopautoma://input_event` channel.
+- [ ] 1.4 — Test RecordingBar component state management (ensure `eventsRef.current` stays in sync).
+- [ ] 1.5 — Add fallback error messages if recording permissions fail on Linux.
+- [ ] 1.6 — Validate that `toActions` correctly converts RecordingEvent → ActionConfig.
+- [ ] 1.7 — Add E2E test for recording workflow (start → interact → save → verify actions array updated).
+- [ ] 1.8 — Confirm fix with manual test on Linux dev environment.
+
+**Phase 2: Remove preset/insights clutter**
+- [ ] 2.1 — Remove `ProfileInsights` component and all references.
+- [ ] 2.2 — Remove `defaultPresetProfile` and update `normalizeProfilesConfig` to create minimal empty profile.
+- [ ] 2.3 — Remove "Restore preset" button from App.tsx monitor panel.
+- [ ] 2.4 — Update default profile to have empty actions array (no preconfigured sequence).
+- [ ] 2.5 — Remove health check UI ("Ready for unattended runs").
+- [ ] 2.6 — Update tests to reflect removal of preset logic.
+
+**Phase 3: Dropdown labels and action type simplification**
+- [ ] 3.1 — Add visible `<label>` text before each dropdown (Trigger, Condition, action type selectors).
+- [ ] 3.2 — Consolidate "Type" and "Key" editors into unified keyboard action with ⌨️ icon.
+- [ ] 3.3 — Add 🖱️ icon to mouse-related actions (MoveCursor, Click).
+- [ ] 3.4 — Remove redundant "Common Keys" section; merge into single keyboard action editor.
+- [ ] 3.5 — Update `plugins/builtins.tsx` and registry to reflect simplified action types.
+
+**Phase 4: Palette picker visual clarity**
+- [ ] 4.1 — Redesign palette swatches to avoid pill appearance (use distinct shapes or borders).
+- [ ] 4.2 — Ensure first two palettes ("serene" vs "sunrise") have visually distinct indicators.
+- [ ] 4.3 — Add hover tooltips with palette names for clarity.
+
+**Phase 5: Special key syntax overlay**
+- [ ] 5.1 — Create `KeyboardReferenceOverlay` component with list of all valid tokens (Enter, Ctrl, Alt, etc.).
+- [ ] 5.2 — Document modifier combination syntax (e.g., `{Key:Ctrl+K}`, `{Key:Alt+Tab}`).
+- [ ] 5.3 — Replace external GitHub link in TypeEditor with button to open overlay.
+- [ ] 5.4 — Add dismiss button and keyboard (Escape) handler for overlay.
+
+**Phase 6: Fix numeric input acceleration**
+- [ ] 6.1 — Debug `AcceleratingNumberInput` hold interval logic (verify `holdIntervalRef` updates).
+- [ ] 6.2 — Test pointer capture on Linux/Chromium (Tauri webview may need explicit capture flags).
+- [ ] 6.3 — Add visual feedback during hold (subtle highlight on button).
+- [ ] 6.4 — Validate acceleration steps (1 → 5 → 10 → 50 → 100) across all numeric fields.
+
+**Phase 7: Final validation**
+- [ ] 7.1 — Run full UI test suite (`bunx vitest run`).
+- [ ] 7.2 — Run Rust tests (`cargo test` in src-tauri).
+- [ ] 7.3 — Manual smoke test on Linux (recording, guardrails, themes, action editing).
+- [ ] 7.4 — Update screenshot pipeline if UI changes warrant new captures.
+- [ ] 7.5 — Git commit with detailed message referencing all fixed issues.
+
+**Progress log**
+- 2025-11-16 — Created task plan with 7 phases; prioritizing showstopper recording fix first.
+- 2025-11-16 — Verified Rust recording backend is correctly implemented; checking frontend state management.
+- 2025-11-16 — Phase 1 (partial): Fixed RecordingBar state sync (eventsRef now updated on every event push).
+- 2025-11-16 — Phase 2 complete: Removed ProfileInsights, defaultPresetProfile now returns minimal empty profile.
+- 2025-11-16 — Phase 3 complete: Added visible labels to all dropdowns, mouse 🖱️ and keyboard ⌨️ icons in action selectors.
+- 2025-11-16 — Phase 4 complete: Redesigned palette swatches with grid layout and checkmark for active state.
+- 2025-11-16 — Phase 5 complete: Created KeyboardReferenceOverlay component with comprehensive token reference.
+- 2025-11-16 — Phase 6 complete: Fixed AcceleratingNumberInput hold logic by using ref for current value to avoid stale closures.
+
+**Assumptions and open questions**
+- Assumption: Linux input recording failure is a Rust-side permission or event emission issue, not a TypeScript bug.
+- Assumption: Consolidating Type/Key actions won't break existing profiles (migration needed?).
+- Open question: Should we keep LLMPromptGeneration visible in action types, or hide until explicitly enabled?
+- Open question: Does the recording backend work correctly on macOS/Windows, or is this Linux-specific?
+
+**Follow-ups / future work**
+- Add profile migration utility if action type consolidation breaks old configs.
+- Consider adding visual recording indicator (system tray icon or overlay) when capture is active.
+- Investigate cross-platform input recording libraries if current approach proves fragile.
 - Streaming LLM responses for immediate feedback
 - LLM prompt templates library
 - Risk level customization per profile

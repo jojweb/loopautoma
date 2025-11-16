@@ -77,15 +77,20 @@ export function AcceleratingNumberInput({
         [min, max],
     );
 
+    const currentValueRef = useRef(value);
+    useEffect(() => {
+        currentValueRef.current = value;
+    }, [value]);
+
     const applyDelta = useCallback(
         (direction: Direction, useHoldStep: boolean) => {
-            const current = typeof value === "number" ? value : 0;
+            const current = typeof currentValueRef.current === "number" ? currentValueRef.current : 0;
             const elapsed = holdStartedRef.current ? Date.now() - holdStartedRef.current : 0;
             const step = useHoldStep ? resolveStep(elapsed) : 1;
             const next = clampValue(current + direction * step);
             onValueChange(next);
         },
-        [clampValue, onValueChange, value],
+        [clampValue, onValueChange],
     );
 
     const handlePointerDown = useCallback(

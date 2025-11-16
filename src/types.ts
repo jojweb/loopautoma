@@ -102,21 +102,13 @@ export type ScreenFrame = {
 };
 
 export const defaultPresetProfile = (): Profile => ({
-  id: "keep-agent-001",
-  name: "Keep AI Agent Active",
-  regions: [
-    { id: "chat-out", rect: { x: 80, y: 120, width: 1200, height: 600 }, name: "Agent Output" },
-    { id: "progress", rect: { x: 80, y: 740, width: 1200, height: 200 }, name: "Progress Area" },
-  ],
+  id: "profile-" + Date.now().toString(36),
+  name: "New Profile",
+  regions: [],
   trigger: { type: "IntervalTrigger", check_interval_sec: 60 },
   condition: { type: "RegionCondition", stable_ms: 8000, downscale: 4 },
-  actions: [
-    { type: "MoveCursor", x: 960, y: 980 },
-    { type: "Click", button: "Left" },
-    { type: "Type", text: "continue" },
-    { type: "Key", key: "Enter" },
-  ],
-  guardrails: { max_runtime_ms: 3 * 60 * 60 * 1000, max_activations_per_hour: 120, cooldown_ms: 5000 },
+  actions: [],
+  guardrails: { cooldown_ms: 5000 },
 });
 
 export const defaultProfilesConfig = (): ProfilesConfig => ({

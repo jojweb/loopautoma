@@ -7,9 +7,9 @@ import { ProfileEditor } from "./components/ProfileEditor";
 import { RecordingBar, toActions } from "./components/RecordingBar";
 import { RegionAuthoringPanel } from "./components/RegionAuthoringPanel";
 import { GraphComposer } from "./components/GraphComposer";
-import { ProfileInsights } from "./components/ProfileInsights";
+
 import { useEventStream, useProfiles, useRunState } from "./store";
-import { defaultPresetProfile, normalizeProfilesConfig, Profile, ProfilesConfig } from "./types";
+import { normalizeProfilesConfig, Profile, ProfilesConfig } from "./types";
 import { monitorStart, monitorStop, profilesLoad, profilesSave, appQuit } from "./tauriBridge";
 import logo from "../doc/img/logo.png";
 import { useEffectOnce } from "./hooks/useEffectOnce";
@@ -185,16 +185,7 @@ export function App() {
   const selectedProfile = useMemo(() => profiles.find((p) => p.id === selectedId) ?? null, [profiles, selectedId]);
   const isRunning = Boolean(runningProfileId);
 
-  const restorePreset = useCallback(async () => {
-    const preset = defaultPresetProfile();
-    const remaining = profiles.filter((p) => p.id !== preset.id);
-    const next: ProfilesConfig = {
-      version: config?.version ?? 1,
-      profiles: [preset, ...remaining],
-    };
-    await applyConfig(next);
-    setSelectedId(preset.id);
-  }, [applyConfig, config?.version, profiles]);
+
 
   const updateProfile = useCallback(async (updated: Profile) => {
     if (!config) return;
@@ -339,9 +330,7 @@ export function App() {
                 </span>
                 {isRunning ? "Stop" : "Start"}
               </button>
-              <button className="ghost" onClick={() => void restorePreset()} title="Restore the default preset">
-                Restore preset
-              </button>
+
             </div>
           </div>
 
@@ -403,9 +392,7 @@ export function App() {
             </div>
           )}
 
-          <div className="panel-subsection">
-            <ProfileInsights profile={selectedProfile} onRestorePreset={() => { void restorePreset(); }} />
-          </div>
+
         </article>
 
         <article className="panel card events-panel" aria-label="Event log">

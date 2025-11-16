@@ -2,6 +2,7 @@ import { useState } from "react";
 import { ActionConfig, MouseButton } from "../types";
 import { SPECIAL_KEYS, formatInlineKeyToken } from "../utils/specialKeys";
 import { AcceleratingNumberInput } from "../components/AcceleratingNumberInput";
+import { KeyboardReferenceOverlay } from "../components/KeyboardReferenceOverlay";
 import {
   ActionEditorProps,
   ConditionEditorProps,
@@ -123,6 +124,7 @@ function ClickEditor({ value, onChange }: ActionEditorProps) {
 function TypeEditor({ value, onChange }: ActionEditorProps) {
   const v = value as Extract<ActionConfig, { type: "Type" }>;
   const [pendingInsert, setPendingInsert] = useState("");
+  const [showKeyRef, setShowKeyRef] = useState(false);
   const appendSpecialKey = (key: string) => {
     const token = formatInlineKeyToken(key);
     const prefix = v.text ?? "";
@@ -131,45 +133,48 @@ function TypeEditor({ value, onChange }: ActionEditorProps) {
     onChange({ type: "Type", text: nextText });
   };
   return (
-    <div className="type-editor" title="Type literal text; use {Key:Enter} inline markers for special keys">
-      <label>
-        Text
-        <textarea
-          value={v.text}
-          onChange={(e) => onChange({ type: "Type", text: e.target.value })}
-          style={{ width: 260, minHeight: 48, marginLeft: 6 }}
-        />
-      </label>
-      <div className="type-editor__helpers">
+    <>
+      <div className="type-editor" title="Type literal text; use {Key:Enter} inline markers for special keys">
         <label>
-          Insert special key
-          <select
-            value={pendingInsert}
-            onChange={(e) => {
-              const next = e.target.value;
-              if (!next) return;
-              appendSpecialKey(next);
-              setPendingInsert("");
-            }}
-          >
-            <option value="">Choose…</option>
-            {SPECIAL_KEYS.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
+          Text
+          <textarea
+            value={v.text}
+            onChange={(e) => onChange({ type: "Type", text: e.target.value })}
+            style={{ width: 260, minHeight: 48, marginLeft: 6 }}
+          />
         </label>
-        <a
-          href="https://github.com/chrisgleissner/loopautoma/blob/main/doc/userManual.md#special-key-shortcuts"
-          target="_blank"
-          rel="noreferrer"
-          className="type-editor__helper-link"
-        >
-          Special key syntax ↗
-        </a>
+        <div className="type-editor__helpers">
+          <label>
+            Insert special key
+            <select
+              value={pendingInsert}
+              onChange={(e) => {
+                const next = e.target.value;
+                if (!next) return;
+                appendSpecialKey(next);
+                setPendingInsert("");
+              }}
+            >
+              <option value="">Choose…</option>
+              {SPECIAL_KEYS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button
+            type="button"
+            className="ghost"
+            onClick={() => setShowKeyRef(true)}
+            title="View all available keyboard tokens"
+          >
+            ⌨️ Key reference
+          </button>
+        </div>
       </div>
-    </div>
+      {showKeyRef && <KeyboardReferenceOverlay onClose={() => setShowKeyRef(false)} />}
+    </>
   );
 }
 

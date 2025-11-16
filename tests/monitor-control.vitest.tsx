@@ -67,8 +67,9 @@ describe("Monitor control", () => {
         expect.objectContaining({
           profiles: expect.arrayContaining([
             expect.objectContaining({
-              id: "keep-agent-001",
-              name: "Keep AI Agent Active",
+              name: "New Profile",
+              regions: [],
+              actions: [],
             }),
           ]),
         })

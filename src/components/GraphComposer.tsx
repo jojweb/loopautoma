@@ -42,16 +42,18 @@ export function GraphComposer({ profile, onChange }: { profile: Profile | null; 
   return (
     <div style={{ display: "grid", gap: 12 }}>
       <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
-        <strong title="When the loop checks the condition">Trigger</strong>
-        <select
-          value={profile.trigger.type}
-          onChange={(e) => onChange({ ...profile, trigger: { ...profile.trigger, type: e.target.value } })}
-          title="Choose how often to tick (IntervalTrigger recommended for MVP)"
-        >
-          {triggerTypes.map((t) => (
-            <option key={t} value={t}>{t}</option>
-          ))}
-        </select>
+        <label style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <strong title="When the loop checks the condition">Trigger</strong>
+          <select
+            value={profile.trigger.type}
+            onChange={(e) => onChange({ ...profile, trigger: { ...profile.trigger, type: e.target.value } })}
+            title="Choose how often to tick (IntervalTrigger recommended for MVP)"
+          >
+            {triggerTypes.map((t) => (
+              <option key={t} value={t}>{t}</option>
+            ))}
+          </select>
+        </label>
         {TrigEditor && (
           <span>
             <TrigEditor value={profile.trigger} onChange={(next) => onChange({ ...profile, trigger: next })} />
@@ -60,16 +62,18 @@ export function GraphComposer({ profile, onChange }: { profile: Profile | null; 
       </div>
 
       <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
-        <strong title="What must be true before actions run">Condition</strong>
-        <select
-          value={profile.condition.type}
-          onChange={(e) => onChange({ ...profile, condition: { ...profile.condition, type: e.target.value } })}
-          title="RegionCondition detects no visual change for a duration"
-        >
-          {conditionTypes.map((t) => (
-            <option key={t} value={t}>{t}</option>
-          ))}
-        </select>
+        <label style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <strong title="What must be true before actions run">Condition</strong>
+          <select
+            value={profile.condition.type}
+            onChange={(e) => onChange({ ...profile, condition: { ...profile.condition, type: e.target.value } })}
+            title="RegionCondition detects no visual change for a duration"
+          >
+            {conditionTypes.map((t) => (
+              <option key={t} value={t}>{t}</option>
+            ))}
+          </select>
+        </label>
         {CondEditor && (
           <span>
             <CondEditor
@@ -154,29 +158,36 @@ export function GraphComposer({ profile, onChange }: { profile: Profile | null; 
                   )}
                 </div>
                 <div className="action-row-editor">
-                  <select
-                    value={a.type}
-                    onChange={(e) => {
-                      const t = e.target.value;
-                      const def: ActionConfig = t === "MoveCursor"
-                        ? { type: "MoveCursor", x: 0, y: 0 }
-                        : t === "Type"
-                          ? { type: "Type", text: "" }
-                          : t === "Key"
-                            ? { type: "Key", key: "Enter" }
-                            : t === "LLMPromptGeneration"
-                              ? { type: "LLMPromptGeneration", region_ids: [], risk_threshold: 0.5 }
-                              : { type: "Click", button: "Left" };
-                      const next = [...profile.actions];
-                      next[i] = def;
-                      onChange({ ...profile, actions: next });
-                    }}
-                    title="Change the action type"
-                  >
-                    {actionTypes.map((t) => (
-                      <option key={t} value={t}>{t}</option>
-                    ))}
-                  </select>
+                  <label style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                    <span title="Action type">
+                      {(a.type === "MoveCursor" || a.type === "Click") && "🖱️"}
+                      {(a.type === "Type" || a.type === "Key") && "⌨️"}
+                      {a.type === "LLMPromptGeneration" && "🤖"}
+                    </span>
+                    <select
+                      value={a.type}
+                      onChange={(e) => {
+                        const t = e.target.value;
+                        const def: ActionConfig = t === "MoveCursor"
+                          ? { type: "MoveCursor", x: 0, y: 0 }
+                          : t === "Type"
+                            ? { type: "Type", text: "" }
+                            : t === "Key"
+                              ? { type: "Key", key: "Enter" }
+                              : t === "LLMPromptGeneration"
+                                ? { type: "LLMPromptGeneration", region_ids: [], risk_threshold: 0.5 }
+                                : { type: "Click", button: "Left" };
+                        const next = [...profile.actions];
+                        next[i] = def;
+                        onChange({ ...profile, actions: next });
+                      }}
+                      title="Change the action type"
+                    >
+                      {actionTypes.map((t) => (
+                        <option key={t} value={t}>{t}</option>
+                      ))}
+                    </select>
+                  </label>
                   {Editor && (
                     <span>
                       <Editor

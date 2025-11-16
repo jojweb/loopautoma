@@ -29,18 +29,33 @@ export function RecordingBar(props: {
     if (!typeBuffer.current) return;
     const text = typeBuffer.current;
     typeBuffer.current = "";
-    setEvents((prev) => [...prev, { t: "type", text }]);
+    const newEvent = { t: "type" as const, text };
+    setEvents((prev) => {
+      const next = [...prev, newEvent];
+      eventsRef.current = next;
+      return next;
+    });
     setTimeline((prev) => [...prev.slice(-19), `type "${text}"`]);
   }, []);
 
   const pushClick = useCallback((button: "Left" | "Right" | "Middle", x: number, y: number) => {
-    setEvents((prev) => [...prev, { t: "click", button, x: Math.round(x), y: Math.round(y) }]);
+    const newEvent = { t: "click" as const, button, x: Math.round(x), y: Math.round(y) };
+    setEvents((prev) => {
+      const next = [...prev, newEvent];
+      eventsRef.current = next;
+      return next;
+    });
     setTimeline((prev) => [...prev.slice(-19), `${button} click @ ${Math.round(x)},${Math.round(y)}`]);
   }, []);
 
   const pushKey = useCallback((key: string) => {
     flushTypeBuffer();
-    setEvents((prev) => [...prev, { t: "key", key }]);
+    const newEvent = { t: "key" as const, key };
+    setEvents((prev) => {
+      const next = [...prev, newEvent];
+      eventsRef.current = next;
+      return next;
+    });
     setTimeline((prev) => [...prev.slice(-19), `key ${key}`]);
   }, [flushTypeBuffer]);
 
@@ -111,6 +126,7 @@ export function RecordingBar(props: {
     if (!recording) {
       setError(null);
       setEvents([]);
+      eventsRef.current = [];
       setTimeline([]);
       typeBuffer.current = "";
       try {

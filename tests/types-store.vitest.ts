@@ -2,11 +2,11 @@ import { describe, it, expect } from "vitest";
 import { defaultPresetProfile } from "../src/types";
 
 describe("Types and defaults", () => {
-  it("defaultPresetProfile returns valid profile", () => {
+  it("defaultPresetProfile returns valid minimal profile", () => {
     const profile = defaultPresetProfile();
-    expect(profile.id).toBe("keep-agent-001");
-    expect(profile.name).toBe("Keep AI Agent Active");
-    expect(profile.regions).toHaveLength(2);
+    expect(profile.id).toBeTruthy();
+    expect(profile.name).toBe("New Profile");
+    expect(profile.regions).toEqual([]);
     expect(profile.regions[0].id).toBe("chat-out");
     expect(profile.regions[1].id).toBe("progress");
     expect(profile.trigger.type).toBe("IntervalTrigger");
