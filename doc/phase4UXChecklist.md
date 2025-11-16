@@ -17,6 +17,7 @@ This document outlines the expected UX flows for LoopAutoma in web-only dev mode
 **Goal**: User can define regions, record actions, configure triggers/conditions/guardrails
 
 ### Region Authoring
+
 - [ ] "Define watch region" button visible in RegionAuthoringPanel
 - [ ] Button disabled when no profile selected (with appropriate disabled state styling)
 - [ ] Clicking button launches region picker (overlay or returns error in web-only without Tauri)
@@ -26,6 +27,7 @@ This document outlines the expected UX flows for LoopAutoma in web-only dev mode
 - [ ] Remove button deletes region from profile and calls profilesSave
 
 ### Action Authoring (Recording)
+
 - [ ] RecordingBar visible with "Record actions" button
 - [ ] Clicking Record starts input recording (or shows error in fake backend mode)
 - [ ] Recording status changes: "Record actions" → "Stop recording" with red indicator
@@ -36,13 +38,15 @@ This document outlines the expected UX flows for LoopAutoma in web-only dev mode
 - [ ] Clear button resets timeline
 
 ### Trigger/Condition Configuration
+
 - [ ] GraphComposer displays trigger type selector (IntervalTrigger only in MVP)
 - [ ] Check interval slider adjusts from 1-60s
 - [ ] Condition type selector shows RegionCondition
-- [ ] Stable duration input accepts milliseconds (default 1000ms)
+- [ ] Stable duration input accepts seconds (default 1s) and persists as `stable_ms`
 - [ ] Downscale factor slider adjusts 1-8x
 
 ### Guardrails Configuration
+
 - [ ] Guardrails section shows: Cooldown, Max runtime, Max activations/hour
 - [ ] Each field updates profile immediately on change
 - [ ] Invalid values (negative cooldown) rejected inline with error message
@@ -68,7 +72,7 @@ This document outlines the expected UX flows for LoopAutoma in web-only dev mode
 - [ ] Region picker error (in fake backend): clear message displayed in RegionAuthoringPanel
 - [ ] Input recording error (LOOPAUTOMA_BACKEND=fake): error alert with guidance to remove env var
 - [ ] Thumbnail capture failure: console warning, placeholder shown
-- [ ] Profile validation errors: inline messages in ProfileEditor with specific issue (e.g., "Cooldown must be ≥ 0 ms")
+- [ ] Profile validation errors: inline messages in ProfileEditor with specific issue (e.g., "Cooldown must be ≥ 0 seconds")
 - [ ] Monitor start failure: error message displayed, Start button re-enabled
 
 ## Persistence

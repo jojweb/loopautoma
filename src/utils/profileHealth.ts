@@ -8,6 +8,8 @@ export type ProfileHealth = {
 const MIN_CHECK_INTERVAL_SEC = 0.1;
 const MIN_STABLE_MS = 500;
 const MIN_COOLDOWN_MS = 500;
+const MIN_STABLE_SEC = MIN_STABLE_MS / 1000;
+const MIN_COOLDOWN_SEC = MIN_COOLDOWN_MS / 1000;
 
 export function auditProfile(profile: Profile | null): ProfileHealth {
   if (!profile) {
@@ -45,7 +47,7 @@ export function auditProfile(profile: Profile | null): ProfileHealth {
       errors.push("Condition downscale must be ≥ 1.");
     }
     if (profile.condition.stable_ms < MIN_STABLE_MS) {
-      warnings.push(`Stable duration is low (< ${MIN_STABLE_MS} ms); monitor may flap.`);
+      warnings.push(`Stable duration is low (< ${MIN_STABLE_SEC}s); monitor may flap.`);
     }
   }
 
@@ -57,9 +59,9 @@ export function auditProfile(profile: Profile | null): ProfileHealth {
     warnings.push("Guardrails missing: configure cooldown, runtime and activations/hour limits.");
   } else {
     if (profile.guardrails.cooldown_ms !== undefined && profile.guardrails.cooldown_ms < 0) {
-      errors.push("Cooldown must be ≥ 0 ms.");
+      errors.push("Cooldown must be ≥ 0 seconds.");
     } else if ((profile.guardrails.cooldown_ms ?? 0) < MIN_COOLDOWN_MS) {
-      warnings.push("Cooldown below 500 ms may trigger actions too frequently.");
+      warnings.push(`Cooldown below ${MIN_COOLDOWN_SEC}s may trigger actions too frequently.`);
     }
     if (!profile.guardrails.max_runtime_ms) {
       warnings.push("Max runtime is unset; monitor could run indefinitely.");

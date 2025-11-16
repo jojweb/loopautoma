@@ -36,11 +36,19 @@ function RegionConditionEditor({ value, onChange }: ConditionEditorProps) {
   return (
     <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
       <label title="Minimum time the regions must be unchanged">
-        Stable (ms)
+        Stable (s)
         <input
           type="number"
-          value={value.stable_ms}
-          onChange={(e) => onChange({ ...value, type: "RegionCondition", stable_ms: Number(e.target.value || 0) })}
+          min="0"
+          step="0.1"
+          value={value.stable_ms / 1000}
+          onChange={(e) =>
+            onChange({
+              ...value,
+              type: "RegionCondition",
+              stable_ms: Math.max(0, Number(e.target.value || 0) * 1000),
+            })
+          }
           style={{ width: 120, marginLeft: 6 }}
         />
       </label>

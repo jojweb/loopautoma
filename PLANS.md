@@ -399,7 +399,45 @@ Successfully implemented LLM Prompt Generation action with risk-based guardrails
 
 **Step 7: Integration and cross-workflow tests**
 - [x] 7.1 — Test: Full workflow (capture region → record actions → start monitor → verify execution)
+
+### Task: Seconds-based Guardrails & Release Build Recovery
+
+**Started:** 2025-11-16
+
+**User request (summary)**
+- Update the UI so every duration input/editing flow works in seconds instead of milliseconds and align docs/tests accordingly.
+- Ensure the JSON editor clearly communicates it edits the entire configuration document and the save control reads “Save Config.”
+- Investigate the latest multi-platform release build failures (Linux, macOS, Windows), pull logs, and implement fixes or TODOs per environment.
+
+**Context and constraints**
+- Guardrail fields (`cooldown_ms`, `max_runtime_ms`, `stable_ms`) remain millisecond-based in persisted JSON/contracts (per doc/architecture.md); conversions must happen only in the UI.
+- Documentation rules: new/updated references must live under `doc/` with camelCase naming.
+- Release workflows run via GitHub Actions matrix (Linux/macOS/Windows); fixes must keep CI green and respect Ubuntu 24.04 requirement for Linux builds.
+
+**Plan (checklist)**
+- [x] Convert guardrail inputs in `App.tsx` from ms to seconds (display & entry) while persisting ms; update ProfileInsights text if needed.
+- [x] Convert RegionCondition editor (`plugins/builtins.tsx`) to show/edit `stable_ms` in seconds; update validation/help text and affected tests/docs.
+- [x] Refresh UI tests (`tests/guardrails-ui.vitest.tsx`, others) and docs (README, doc/userManual.md, etc.) to mention seconds-based editing and the updated JSON editor heading.
+- [x] Verify the JSON editor’s header/body/button messaging fully match the requirement; update any remaining copy/tests referencing “Profile JSON.”
+- [ ] Retrieve the most recent release workflow logs for Linux/macOS/Windows, summarize failures, and implement fixes or add TODO notes per platform.
+- [x] Re-run affected unit/UI tests (bun test) and targeted builds as needed to validate changes.
+
+**Progress log**
+- 2025-11-16 — Reviewed guardrail inputs and RegionCondition editor; started converting cooldown/max runtime/stable inputs to seconds and renamed JSON editor section title in `App.tsx`.
+- 2025-11-16 — Completed guardrail + RegionCondition UI conversions (seconds-based), updated supporting docs/tests, and ensured JSON editor copy/button read “Save Config.”
+- 2025-11-16 — Adjusted Vitest suites for new desktop detection and reran `bun run test:ui:cov` for full coverage; release log triage still pending.
+- 2025-11-16 — Queried the latest Release workflow run (19406366982) and enumerated all job annotations, but downloading the full log archive requires admin rights (GitHub API returned 403). Linux build command reproduced locally with `bun tauri build -- --no-default-features --features os-linux-input,os-linux-capture-xcap` (success); macOS/Windows failures still need raw logs or on-host repro.
+
+**Assumptions and open questions**
+- Assumption: Persisted data stays in milliseconds; only UI/UX copy changes to seconds.
+- Assumption: Existing tests can be updated without introducing new dependencies.
+- Open question: Do release failures require touching external infrastructure (codesign, certificates)? (Pending log review.)
+
+**Follow-ups / future work**
+- If additional duration fields exist in docs or backend CLIs (e.g., soak tools), schedule follow-up alignment.
+- Depending on release analysis, may need platform-specific action items (e.g., macOS notarization, Windows signing) tracked separately.
 - [x] 7.2 — Test: Region capture while monitor running (should work independently) — web-mode graceful failure validated
+- Obtain either admin access or manual log exports for Release workflow runs so macOS/Windows failures can be diagnosed beyond generic “exit code 1” annotations.
 
 ---
 

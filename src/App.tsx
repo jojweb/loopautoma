@@ -45,18 +45,42 @@ function App() {
   );
 
   useEffect(() => {
-    profilesLoad()
-      .then((cfg) => {
+    let cancelled = false;
+    const countProfiles = (input: unknown): number => {
+      if (!input) return 0;
+      if (Array.isArray((input as ProfilesConfig).profiles)) {
+        return ((input as ProfilesConfig).profiles ?? []).length;
+      }
+      if (Array.isArray(input)) {
+        return input.length;
+      }
+      return 0;
+    };
+
+    (async () => {
+      try {
+        const cfg = await profilesLoad();
+        if (cancelled) return;
         const normalized = normalizeProfilesConfig(cfg);
+        if (countProfiles(cfg) === 0) {
+          if (!cancelled) {
+            await applyConfig(normalized);
+          }
+          return;
+        }
         setConfig(normalized);
         setSelectedId(normalized.profiles[0]?.id ?? null);
-      })
-      .catch(() => {
+      } catch {
+        if (cancelled) return;
         const fallback = normalizeProfilesConfig(undefined);
-        setConfig(fallback);
-        setSelectedId(fallback.profiles[0]?.id ?? null);
-      });
-  }, [setConfig]);
+        await applyConfig(fallback);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [applyConfig, setConfig]);
 
   const start = async () => {
     if (!selectedId) return;
@@ -212,25 +236,46 @@ function App() {
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
             <strong>Guardrails:</strong>
             <label>
-              Cooldown (ms)
+              Cooldown (s)
               <input
                 type="number"
-                value={selectedProfile.guardrails?.cooldown_ms ?? 0}
+                step="0.1"
+                value={
+                  selectedProfile.guardrails?.cooldown_ms !== undefined
+                    ? selectedProfile.guardrails.cooldown_ms / 1000
+                    : 0
+                }
                 onChange={async (e) => {
-                  const v = Number(e.target.value || 0);
-                  await updateProfile({ ...selectedProfile, guardrails: { ...(selectedProfile.guardrails ?? { cooldown_ms: 0 }), cooldown_ms: v } });
+                  const seconds = Number(e.target.value || 0);
+                  const next = {
+                    ...(selectedProfile.guardrails ?? { cooldown_ms: 0 }),
+                    cooldown_ms: Math.max(0, seconds * 1000),
+                  };
+                  await updateProfile({ ...selectedProfile, guardrails: next });
                 }}
                 style={{ width: 120, marginLeft: 6 }}
               />
             </label>
             <label>
-              Max runtime (ms)
+              Max runtime (s)
               <input
                 type="number"
-                value={selectedProfile.guardrails?.max_runtime_ms ?? ""}
+                step="1"
+                value={
+                  selectedProfile.guardrails?.max_runtime_ms !== undefined
+                    ? selectedProfile.guardrails.max_runtime_ms / 1000
+                    : ""
+                }
                 onChange={async (e) => {
-                  const v = e.target.value === "" ? undefined : Number(e.target.value);
-                  await updateProfile({ ...selectedProfile, guardrails: { ...(selectedProfile.guardrails ?? { cooldown_ms: 0 }), max_runtime_ms: v } });
+                  const seconds = e.target.value === "" ? undefined : Number(e.target.value);
+                  let next = { ...(selectedProfile.guardrails ?? { cooldown_ms: 0 }) };
+                  if (seconds === undefined) {
+                    const { max_runtime_ms, ...rest } = next as typeof next & { max_runtime_ms?: number };
+                    next = rest;
+                  } else {
+                    next = { ...next, max_runtime_ms: Math.max(0, seconds * 1000) };
+                  }
+                  await updateProfile({ ...selectedProfile, guardrails: next });
                 }}
                 placeholder="unset"
                 style={{ width: 140, marginLeft: 6 }}
@@ -319,7 +364,7 @@ function App() {
         </div>
 
         <div>
-          <h3 style={{ margin: 0 }} title="Advanced: edit the underlying profile configuration directly as JSON">Profile JSON</h3>
+          <h3 style={{ margin: 0 }} title="Advanced: edit the entire configuration (all profiles) as JSON">Configuration JSON</h3>
           <ProfileEditor config={config} onChange={applyConfig} />
         </div>
       </section>

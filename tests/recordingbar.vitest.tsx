@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { RecordingBar, toActions } from "../src/components/RecordingBar";
 import type { InputEvent } from "../src/types";
+import { emitTestEvent } from "../src/eventBridge";
 
 const tauriBridgeMocks = vi.hoisted(() => ({
   startInputRecording: vi.fn(),
@@ -15,23 +16,17 @@ vi.mock("../src/tauriBridge", () => tauriBridgeMocks);
 const mockStartInputRecording = tauriBridgeMocks.startInputRecording;
 const mockStopInputRecording = tauriBridgeMocks.stopInputRecording;
 
-const inputListeners: Array<(payload: { payload: InputEvent }) => void> = [];
+const nextTick = () => new Promise((resolve) => setTimeout(resolve, 0));
 
-vi.mock("@tauri-apps/api/event", () => ({
-  listen: vi.fn().mockImplementation((_name, handler) => {
-    inputListeners.push(handler);
-    return Promise.resolve(() => {});
-  }),
-}));
-
-const emitInputEvent = (event: InputEvent) => {
-  inputListeners.forEach((cb) => cb({ payload: event }));
+const emitInputEvent = async (event: InputEvent) => {
+  await nextTick();
+  emitTestEvent("loopautoma://input_event", event);
 };
 
 const baseModifiers = { shift: false, control: false, alt: false, meta: false };
 
-const emitMouseDown = (button: "Left" | "Right" | "Middle", x: number, y: number) => {
-  emitInputEvent({
+const emitMouseDown = async (button: "Left" | "Right" | "Middle", x: number, y: number) => {
+  await emitInputEvent({
     kind: "mouse",
     mouse: {
       event_type: { button_down: button },
@@ -43,8 +38,8 @@ const emitMouseDown = (button: "Left" | "Right" | "Middle", x: number, y: number
   });
 };
 
-const emitMouseUp = (button: "Left" | "Right" | "Middle") => {
-  emitInputEvent({
+const emitMouseUp = async (button: "Left" | "Right" | "Middle") => {
+  await emitInputEvent({
     kind: "mouse",
     mouse: {
       event_type: { button_up: button },
@@ -56,8 +51,8 @@ const emitMouseUp = (button: "Left" | "Right" | "Middle") => {
   });
 };
 
-const emitMouseMove = () => {
-  emitInputEvent({
+const emitMouseMove = async () => {
+  await emitInputEvent({
     kind: "mouse",
     mouse: {
       event_type: "move",
@@ -69,8 +64,8 @@ const emitMouseMove = () => {
   });
 };
 
-const emitKeyEvent = (state: "down" | "up", key: string, text?: string | null) => {
-  emitInputEvent({
+const emitKeyEvent = async (state: "down" | "up", key: string, text?: string | null) => {
+  await emitInputEvent({
     kind: "keyboard",
     keyboard: {
       state,
@@ -83,8 +78,8 @@ const emitKeyEvent = (state: "down" | "up", key: string, text?: string | null) =
   });
 };
 
-const emitScrollEvent = (deltaX: number, deltaY: number) => {
-  emitInputEvent({
+const emitScrollEvent = async (deltaX: number, deltaY: number) => {
+  await emitInputEvent({
     kind: "scroll",
     scroll: {
       delta_x: deltaX,
@@ -101,7 +96,6 @@ beforeEach(() => {
   mockStopInputRecording.mockReset();
   mockStartInputRecording.mockResolvedValue(undefined);
   mockStopInputRecording.mockResolvedValue(undefined);
-  inputListeners.length = 0;
 });
 
 describe("RecordingBar", () => {
@@ -115,9 +109,9 @@ describe("RecordingBar", () => {
     await waitFor(() => expect(mockStartInputRecording).toHaveBeenCalled());
     await screen.findByText(/Recording/i);
 
-    emitMouseDown("Left", 5, 7);
-    emitKeyEvent("down", "a", "a");
-    emitKeyEvent("down", "Enter", null);
+    await emitMouseDown("Left", 5, 7);
+    await emitKeyEvent("down", "a", "a");
+    await emitKeyEvent("down", "Enter", null);
 
     const stopBtn = await screen.findByRole("button", { name: /Stop/i });
     fireEvent.click(stopBtn);
@@ -143,11 +137,11 @@ describe("RecordingBar", () => {
     fireEvent.click(recordBtn);
     await waitFor(() => expect(mockStartInputRecording).toHaveBeenCalled());
 
-    emitMouseMove();
-    emitMouseUp("Left");
-    emitScrollEvent(5, -3);
-    emitKeyEvent("down", "a", "a");
-    emitKeyEvent("up", "a", "a");
+    await emitMouseMove();
+    await emitMouseUp("Left");
+    await emitScrollEvent(5, -3);
+    await emitKeyEvent("down", "a", "a");
+    await emitKeyEvent("up", "a", "a");
 
     await screen.findByText(/Left release/);
     await screen.findByText(/scroll Δ5,-3/);

@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { RecordingBar, toActions } from "../src/components/RecordingBar";
 import type { InputEvent } from "../src/types";
+import { emitTestEvent } from "../src/eventBridge";
 
 const tauriBridgeMocks = vi.hoisted(() => ({
   startInputRecording: vi.fn(),
@@ -15,23 +16,17 @@ vi.mock("../src/tauriBridge", () => tauriBridgeMocks);
 const mockStartInputRecording = tauriBridgeMocks.startInputRecording;
 const mockStopInputRecording = tauriBridgeMocks.stopInputRecording;
 
-const inputListeners: Array<(payload: { payload: InputEvent }) => void> = [];
+const nextTick = () => new Promise((resolve) => setTimeout(resolve, 0));
 
-vi.mock("@tauri-apps/api/event", () => ({
-  listen: vi.fn().mockImplementation((_name, handler) => {
-    inputListeners.push(handler);
-    return Promise.resolve(() => {});
-  }),
-}));
-
-const emitInputEvent = (event: InputEvent) => {
-  inputListeners.forEach((cb) => cb({ payload: event }));
+const emitInputEvent = async (event: InputEvent) => {
+  await nextTick();
+  emitTestEvent("loopautoma://input_event", event);
 };
 
 const baseModifiers = { shift: false, control: false, alt: false, meta: false };
 
-const emitKeyEvent = (state: "down" | "up", key: string, text?: string | null) => {
-  emitInputEvent({
+const emitKeyEvent = async (state: "down" | "up", key: string, text?: string | null) => {
+  await emitInputEvent({
     kind: "keyboard",
     keyboard: {
       state,
@@ -50,7 +45,6 @@ beforeEach(() => {
   mockStopInputRecording.mockReset();
   mockStartInputRecording.mockResolvedValue(undefined);
   mockStopInputRecording.mockResolvedValue(undefined);
-  inputListeners.length = 0;
 });
 
 describe("RecordingBar buffer", () => {
@@ -62,8 +56,8 @@ describe("RecordingBar buffer", () => {
     await waitFor(() => expect(mockStartInputRecording).toHaveBeenCalled());
     await screen.findByText(/Recording/i);
 
-    emitKeyEvent("down", "h", "h");
-    emitKeyEvent("down", "i", "i");
+    await emitKeyEvent("down", "h", "h");
+    await emitKeyEvent("down", "i", "i");
 
     const stopBtn = await screen.findByRole("button", { name: /Stop/i });
     fireEvent.click(stopBtn);

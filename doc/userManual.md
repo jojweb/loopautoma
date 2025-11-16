@@ -31,11 +31,11 @@ The main window is organized left‑to‑right:
 - **Guardrail summary**: Hover to see cooldown, max runtime, and activation limits. Click the pencil icon to edit.
 - **Panic Stop**: Immediately terminates the monitor and resets guardrail counters. Use this if the automation misbehaves — it is idempotent and always available.
 
-Guardrail settings live with each profile:
+Guardrail settings live with each profile. The UI now edits these values in **seconds**, while the underlying profile JSON still stores milliseconds (`cooldown_ms`, `max_runtime_ms`).
 
-- **cooldownMs** — enforced between successful action sequences
-- **maxActivationsPerHour** — stops the monitor if exceeded
-- **maxRuntimeMs** — shutdown timer for unattended safety
+- **Cooldown (seconds)** — enforced between successful action sequences
+- **Max activations per hour** — stops the monitor if exceeded
+- **Max runtime (seconds)** — shutdown timer for unattended safety
 
 ## 4. Profile selector & insights panel
 
@@ -74,14 +74,14 @@ Notes:
 ## 7. Graph Composer
 
 - Provides a node-based view of the Trigger → Condition → Actions pipeline.
-- Click a node to edit its configuration: interval (Trigger), stableMs/downscale/hash (Condition), or the ordered list of actions.
+- Click a node to edit its configuration: interval (Trigger), stable duration in seconds + downscale/hash (Condition), or the ordered list of actions.
 - Drag actions to reorder. Add new actions via the “+ Action” button (MoveCursor, Click, Type, Key, LLMPromptGeneration, etc.).
 - Validation errors are displayed inline (missing coordinates, empty text, invalid region references).
 
 ## 8. JSON editor
 
 - The JSON tab now shows the entire workspace config (`{"version": 1, "profiles": [...]}`) that the backend persists. It mirrors the schema from `doc/architecture.md`.
-- Saving validates every profile in the array; invalid JSON or schema errors surface inline and block persistence until fixed.
+- Click **Save Config** to validate every profile in the array; invalid JSON or schema errors surface inline and block persistence until fixed.
 - Use this editor for batch changes (renaming multiple regions, duplicating action sequences, or editing metadata across profiles) or for features not yet exposed in the visual UI.
 
 ## 9. Event Log and insights

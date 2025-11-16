@@ -63,6 +63,6 @@ describe("ProfileEditor", () => {
     fireEvent.change(ta, { target: { value: JSON.stringify(invalid) } });
     fireEvent.click(screen.getByText(/Save Config/));
     expect(onChange).not.toHaveBeenCalled();
-    expect(screen.getByText(/Cooldown must be ≥ 0 ms/)).toBeTruthy();
+    expect(screen.getByText(/Cooldown must be ≥ 0 seconds/)).toBeTruthy();
   });
 });

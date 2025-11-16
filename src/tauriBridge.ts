@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import { Profile, ProfilesConfig, Rect, defaultProfilesConfig, normalizeProfilesConfig } from "./types";
+import { ProfilesConfig, Rect, defaultProfilesConfig, normalizeProfilesConfig } from "./types";
 import { BLANK_PNG_BASE64 } from "./testConstants";
 import { getTestHarness, isDesktopEnvironment } from "./utils/runtime";
 

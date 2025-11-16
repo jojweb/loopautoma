@@ -33,7 +33,7 @@ const mockCaptureRegionThumbnail = tauriBridgeMocks.captureRegionThumbnail;
 
 // Mock Tauri event listener
 vi.mock("@tauri-apps/api/event", () => ({
-  listen: vi.fn().mockResolvedValue(() => {}),
+  listen: vi.fn().mockResolvedValue(() => { }),
 }));
 
 describe("Monitor control", () => {
@@ -61,15 +61,17 @@ describe("Monitor control", () => {
   it("creates default profile when none exist", async () => {
     mockProfilesLoad.mockResolvedValue([]);
     render(<App />);
-    
+
     await waitFor(() => {
       expect(mockProfilesSave).toHaveBeenCalledWith(
-        expect.arrayContaining([
-          expect.objectContaining({
-            id: "keep-agent-001",
-            name: "Keep AI Agent Active",
-          }),
-        ])
+        expect.objectContaining({
+          profiles: expect.arrayContaining([
+            expect.objectContaining({
+              id: "keep-agent-001",
+              name: "Keep AI Agent Active",
+            }),
+          ]),
+        })
       );
     });
   });
@@ -77,7 +79,7 @@ describe("Monitor control", () => {
   it("Start button is disabled when no profile selected", async () => {
     mockProfilesLoad.mockResolvedValue([]);
     render(<App />);
-    
+
     await waitFor(() => {
       const startBtn = screen.queryByRole("button", { name: /^Start$/i }) as HTMLButtonElement | null;
       // Start button may not exist or be disabled initially
@@ -97,16 +99,16 @@ describe("Monitor control", () => {
       actions: [],
     };
     mockProfilesLoad.mockResolvedValue([testProfile]);
-    
+
     render(<App />);
-    
+
     await waitFor(() => {
       expect(screen.getByText("Test")).toBeTruthy();
     });
-    
+
     const startBtn = screen.getByRole("button", { name: /^Start$/i });
     fireEvent.click(startBtn);
-    
+
     await waitFor(() => {
       expect(mockMonitorStart).toHaveBeenCalledWith("test-1");
     });
@@ -122,9 +124,9 @@ describe("Monitor control", () => {
       actions: [],
     };
     mockProfilesLoad.mockResolvedValue([testProfile]);
-    
+
     render(<App />);
-    
+
     const startBtn = await screen.findByRole("button", { name: /^Start$/i });
     fireEvent.click(startBtn);
 
@@ -132,7 +134,7 @@ describe("Monitor control", () => {
 
     const stopBtn = await screen.findByRole("button", { name: /^Stop$/i });
     fireEvent.click(stopBtn);
-    
+
     await waitFor(() => {
       expect(mockMonitorStop).toHaveBeenCalled();
     });
@@ -148,9 +150,9 @@ describe("Monitor control", () => {
       actions: [],
     };
     mockProfilesLoad.mockResolvedValue([testProfile]);
-    
+
     render(<App />);
-    
+
     const startBtn = await screen.findByRole("button", { name: /^Start$/i });
     fireEvent.click(startBtn);
 
@@ -162,7 +164,7 @@ describe("Monitor control", () => {
   });
 
   it("invokes appQuit when Quit button is clicked", async () => {
-    const infoSpy = vi.spyOn(console, "info").mockImplementation(() => {});
+    const infoSpy = vi.spyOn(console, "info").mockImplementation(() => { });
     mockProfilesLoad.mockResolvedValue([]);
     render(<App />);
     const quitBtn = await screen.findByRole("button", { name: /Quit/i });

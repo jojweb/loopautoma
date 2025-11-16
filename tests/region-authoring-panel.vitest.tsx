@@ -3,6 +3,12 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { RegionAuthoringPanel } from "../src/components/RegionAuthoringPanel";
 import * as tauriBridge from "../src/tauriBridge";
 import { Region } from "../src/types";
+import { emitTestEvent } from "../src/eventBridge";
+
+const emitRegionPick = async (payload: { rect: Region["rect"]; thumbnail_png_base64?: string | null }) => {
+  await Promise.resolve();
+  emitTestEvent("loopautoma://region_pick_complete", payload);
+};
 
 // Mock tauriBridge functions
 vi.mock("../src/tauriBridge", async () => {
@@ -14,14 +20,6 @@ vi.mock("../src/tauriBridge", async () => {
   };
 });
 
-// Mock Tauri event listener
-vi.mock("@tauri-apps/api/event", () => ({
-  listen: vi.fn(async (_eventName: string, callback: (event: any) => void) => {
-    // Store callback for manual triggering in tests
-    (global as any).__regionPickCallback = callback;
-    return () => {};
-  }),
-}));
 
 describe("RegionAuthoringPanel", () => {
   const mockOnRegionAdd = vi.fn();
@@ -29,7 +27,6 @@ describe("RegionAuthoringPanel", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    delete (global as any).__regionPickCallback;
     vi.spyOn(tauriBridge, "regionPickerShow").mockResolvedValue(undefined);
     vi.spyOn(tauriBridge, "captureRegionThumbnail").mockResolvedValue("mock-thumbnail-base64");
   });
@@ -48,7 +45,7 @@ describe("RegionAuthoringPanel", () => {
   it("button is disabled when disabled prop is true and doesn't call regionPickerShow", async () => {
     render(<RegionAuthoringPanel disabled={true} onRegionAdd={mockOnRegionAdd} />);
     const button = screen.getByText("Define watch region") as HTMLButtonElement;
-    
+
     // Button should be disabled, so clicking does nothing
     expect(button.disabled).toBe(true);
     fireEvent.click(button);
@@ -96,18 +93,9 @@ describe("RegionAuthoringPanel", () => {
   it("displays pending region after region_pick_complete event", async () => {
     const { rerender } = render(<RegionAuthoringPanel regions={[]} onRegionAdd={mockOnRegionAdd} />);
 
-    // Wait for listen to be called
-    await waitFor(() => {
-      expect((global as any).__regionPickCallback).toBeDefined();
-    });
-
-    // Simulate region_pick_complete event
-    const callback = (global as any).__regionPickCallback;
-    callback({
-      payload: {
-        rect: { x: 10, y: 20, width: 100, height: 80 },
-        thumbnail_png_base64: "thumbnail-data",
-      },
+    await emitRegionPick({
+      rect: { x: 10, y: 20, width: 100, height: 80 },
+      thumbnail_png_base64: "thumbnail-data",
     });
 
     rerender(<RegionAuthoringPanel regions={[]} onRegionAdd={mockOnRegionAdd} />);
@@ -120,16 +108,7 @@ describe("RegionAuthoringPanel", () => {
   it("allows editing region ID and name in pending draft", async () => {
     const { rerender } = render(<RegionAuthoringPanel regions={[]} onRegionAdd={mockOnRegionAdd} />);
 
-    await waitFor(() => {
-      expect((global as any).__regionPickCallback).toBeDefined();
-    });
-
-    const callback = (global as any).__regionPickCallback;
-    callback({
-      payload: {
-        rect: { x: 10, y: 20, width: 100, height: 80 },
-      },
-    });
+    await emitRegionPick({ rect: { x: 10, y: 20, width: 100, height: 80 } });
 
     rerender(<RegionAuthoringPanel regions={[]} onRegionAdd={mockOnRegionAdd} />);
 
@@ -150,16 +129,7 @@ describe("RegionAuthoringPanel", () => {
   it("calls onRegionAdd with correct data when Add button clicked", async () => {
     const { rerender } = render(<RegionAuthoringPanel regions={[]} onRegionAdd={mockOnRegionAdd} />);
 
-    await waitFor(() => {
-      expect((global as any).__regionPickCallback).toBeDefined();
-    });
-
-    const callback = (global as any).__regionPickCallback;
-    callback({
-      payload: {
-        rect: { x: 10, y: 20, width: 100, height: 80 },
-      },
-    });
+    await emitRegionPick({ rect: { x: 10, y: 20, width: 100, height: 80 } });
 
     rerender(<RegionAuthoringPanel regions={[]} onRegionAdd={mockOnRegionAdd} />);
 
@@ -185,16 +155,7 @@ describe("RegionAuthoringPanel", () => {
   it("clears pending draft when Discard button clicked", async () => {
     const { rerender } = render(<RegionAuthoringPanel regions={[]} onRegionAdd={mockOnRegionAdd} />);
 
-    await waitFor(() => {
-      expect((global as any).__regionPickCallback).toBeDefined();
-    });
-
-    const callback = (global as any).__regionPickCallback;
-    callback({
-      payload: {
-        rect: { x: 10, y: 20, width: 100, height: 80 },
-      },
-    });
+    await emitRegionPick({ rect: { x: 10, y: 20, width: 100, height: 80 } });
 
     rerender(<RegionAuthoringPanel regions={[]} onRegionAdd={mockOnRegionAdd} />);
 
@@ -305,7 +266,7 @@ describe("RegionAuthoringPanel", () => {
       { id: "region-1", rect: { x: 10, y: 20, width: 100, height: 80 } },
     ];
 
-    const consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => { });
     vi.spyOn(tauriBridge, "captureRegionThumbnail").mockRejectedValue(new Error("Capture failed"));
 
     render(<RegionAuthoringPanel regions={regions} />);
@@ -335,16 +296,7 @@ describe("RegionAuthoringPanel", () => {
 
     const { rerender } = render(<RegionAuthoringPanel regions={[]} onRegionAdd={mockOnRegionAdd} />);
 
-    await waitFor(() => {
-      expect((global as any).__regionPickCallback).toBeDefined();
-    });
-
-    const callback = (global as any).__regionPickCallback;
-    callback({
-      payload: {
-        rect: { x: 10, y: 20, width: 100, height: 80 },
-      },
-    });
+    await emitRegionPick({ rect: { x: 10, y: 20, width: 100, height: 80 } });
 
     rerender(<RegionAuthoringPanel regions={[]} onRegionAdd={mockOnRegionAdd} />);
 
