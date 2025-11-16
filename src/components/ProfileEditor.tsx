@@ -11,6 +11,7 @@ export function ProfileEditor({ config, onChange }: Props) {
   const [text, setText] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
   const [validationIssues, setValidationIssues] = useState<string[]>([]);
+  const [fullscreen, setFullscreen] = useState(false);
 
   useEffect(() => {
     if (config) {
@@ -49,19 +50,29 @@ export function ProfileEditor({ config, onChange }: Props) {
   if (!config) return <div style={{ opacity: 0.7 }}>Configuration is still loading…</div>;
 
   return (
-    <div>
-      <div style={{ fontSize: 12, opacity: 0.8, marginBottom: 6 }}>
-        Entire workspace config (all profiles) lives in this JSON. Changes here stay in sync with the editors above.
+    <div style={{ position: fullscreen ? "fixed" : "relative", top: fullscreen ? 0 : "auto", left: fullscreen ? 0 : "auto", right: fullscreen ? 0 : "auto", bottom: fullscreen ? 0 : "auto", zIndex: fullscreen ? 9999 : "auto", background: fullscreen ? "var(--background)" : "transparent", padding: fullscreen ? 24 : 0 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+        <div style={{ fontSize: 12, opacity: 0.8 }}>
+          Entire workspace config (all profiles) lives in this JSON. Changes here stay in sync with the editors above.
+        </div>
+        <button
+          onClick={() => setFullscreen(!fullscreen)}
+          title={fullscreen ? "Exit fullscreen" : "Expand to fullscreen"}
+          style={{ fontSize: 20, padding: "4px 12px" }}
+        >
+          {fullscreen ? "↙" : "↗"}
+        </button>
       </div>
-      <div className="profile-json-editor__shell">
+      <div className="profile-json-editor__shell" style={{ height: fullscreen ? "calc(100vh - 140px)" : "auto" }}>
         <textarea
           className="profile-json-editor"
           aria-label="Profiles JSON editor"
           value={text}
           onChange={(e) => setText(e.target.value)}
+          style={{ height: fullscreen ? "100%" : "auto" }}
         />
       </div>
-      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+      <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 8 }}>
         <button onClick={save}>Save Config</button>
         {error && <span style={{ color: "#e33" }}>{error}</span>}
       </div>

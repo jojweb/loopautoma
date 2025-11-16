@@ -115,8 +115,8 @@ fn build_profile(config: &SoakConfig) -> Profile {
             ActionConfig::Type {
                 text: "continue".into(),
             },
-            ActionConfig::Key {
-                key: "Enter".into(),
+            ActionConfig::Type {
+                text: "{Key:Enter}".into(),
             },
         ],
         guardrails: Some(GuardrailsConfig {

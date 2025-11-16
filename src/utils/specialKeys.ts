@@ -55,7 +55,8 @@ export function formatInlineKeyToken(key: string): string {
 }
 
 /**
- * Parses inline special key syntax (e.g., "Hello {Key:Enter}") into a list of Type/Key actions.
+ * Parses inline special key syntax (e.g., "Hello {Key:Enter}") into a list of Type actions.
+ * Each {Key:X} marker is converted into a separate Type action containing "{Key:X}".
  * A plain Type action is returned unchanged if no inline markers are present.
  */
 export function splitInlineKeySyntax(text: string): ActionConfig[] {
@@ -74,7 +75,7 @@ export function splitInlineKeySyntax(text: string): ActionConfig[] {
       actions.push({ type: "Type", text: preceding });
     }
     const keyValue = normalizeSpecialKey(rawKey);
-    actions.push({ type: "Key", key: keyValue });
+    actions.push({ type: "Type", text: formatInlineKeyToken(keyValue) });
     lastIndex = match.index + token.length;
   }
   const tail = normalizedText.slice(lastIndex);

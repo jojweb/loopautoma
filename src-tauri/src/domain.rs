@@ -243,18 +243,13 @@ pub struct ConditionConfig {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type")]
 pub enum ActionConfig {
-    MoveCursor {
+    Click {
         x: u32,
         y: u32,
-    },
-    Click {
         button: MouseButton,
     },
     Type {
         text: String,
-    },
-    Key {
-        key: String,
     },
     LLMPromptGeneration {
         /// Region IDs to capture and send to LLM

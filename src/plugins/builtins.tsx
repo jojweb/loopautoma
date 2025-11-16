@@ -78,16 +78,16 @@ function RegionConditionEditor({ value, onChange }: ConditionEditorProps) {
   );
 }
 
-// Actions: MoveCursor, Click, Type, Key
-function MoveCursorEditor({ value, onChange }: ActionEditorProps) {
-  const v = value as Extract<ActionConfig, { type: "MoveCursor" }>;
+// Actions: Click (x,y,button), Type
+function ClickEditor({ value, onChange }: ActionEditorProps) {
+  const v = value as Extract<ActionConfig, { type: "Click" }>;
   return (
     <>
       <label title="Cursor X coordinate in screen pixels" style={{ display: "flex", alignItems: "center", gap: 6 }}>
         <span>X</span>
         <AcceleratingNumberInput
           value={v.x}
-          onValueChange={(next) => onChange({ type: "MoveCursor", x: next === "" ? 0 : Number(next), y: v.y })}
+          onValueChange={(next) => onChange({ type: "Click", x: next === "" ? 0 : Number(next), y: v.y, button: v.button })}
           containerStyle={{ width: 110 }}
         />
       </label>
@@ -95,29 +95,23 @@ function MoveCursorEditor({ value, onChange }: ActionEditorProps) {
         <span>Y</span>
         <AcceleratingNumberInput
           value={v.y}
-          onValueChange={(next) => onChange({ type: "MoveCursor", x: v.x, y: next === "" ? 0 : Number(next) })}
+          onValueChange={(next) => onChange({ type: "Click", x: v.x, y: next === "" ? 0 : Number(next), button: v.button })}
           containerStyle={{ width: 110 }}
         />
       </label>
+      <label title="Mouse button to click">
+        Button
+        <select
+          value={v.button}
+          onChange={(e) => onChange({ type: "Click", x: v.x, y: v.y, button: e.target.value as MouseButton })}
+          style={{ marginLeft: 6 }}
+        >
+          <option value="Left">Left</option>
+          <option value="Right">Right</option>
+          <option value="Middle">Middle</option>
+        </select>
+      </label>
     </>
-  );
-}
-
-function ClickEditor({ value, onChange }: ActionEditorProps) {
-  const v = value as Extract<ActionConfig, { type: "Click" }>;
-  return (
-    <label title="Mouse button to click">
-      Button
-      <select
-        value={v.button}
-        onChange={(e) => onChange({ type: "Click", button: e.target.value as MouseButton })}
-        style={{ marginLeft: 6 }}
-      >
-        <option value="Left">Left</option>
-        <option value="Right">Right</option>
-        <option value="Middle">Middle</option>
-      </select>
-    </label>
   );
 }
 
@@ -175,43 +169,6 @@ function TypeEditor({ value, onChange }: ActionEditorProps) {
       </div>
       {showKeyRef && <KeyboardReferenceOverlay onClose={() => setShowKeyRef(false)} />}
     </>
-  );
-}
-
-function KeyEditor({ value, onChange }: ActionEditorProps) {
-  const v = value as Extract<ActionConfig, { type: "Key" }>;
-  const isPreset = SPECIAL_KEYS.some((opt) => opt.value === v.key);
-  return (
-    <div className="key-editor" title="Select a special key or enter a custom value">
-      <label>
-        Common keys
-        <select
-          value={isPreset ? v.key : ""}
-          onChange={(e) => {
-            if (!e.target.value) return;
-            onChange({ type: "Key", key: e.target.value });
-          }}
-          style={{ marginLeft: 6 }}
-        >
-          <option value="">Custom…</option>
-          {SPECIAL_KEYS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label>
-        Custom key
-        <input
-          type="text"
-          value={isPreset ? "" : v.key}
-          onChange={(e) => onChange({ type: "Key", key: e.target.value })}
-          placeholder="Enter, Ctrl+K"
-          style={{ width: 160, marginLeft: 6 }}
-        />
-      </label>
-    </div>
   );
 }
 
@@ -282,9 +239,7 @@ function LLMPromptGenerationEditor({ value, onChange }: ActionEditorProps) {
 export function registerBuiltins() {
   registerTriggerEditor("IntervalTrigger", IntervalTriggerEditor);
   registerConditionEditor("RegionCondition", RegionConditionEditor);
-  registerActionEditor("MoveCursor", MoveCursorEditor);
   registerActionEditor("Click", ClickEditor);
   registerActionEditor("Type", TypeEditor);
-  registerActionEditor("Key", KeyEditor);
   registerActionEditor("LLMPromptGeneration", LLMPromptGenerationEditor);
 }

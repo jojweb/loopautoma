@@ -8,10 +8,8 @@ export type ConditionConfig = { type: string; stable_ms: number; downscale: numb
 export type MouseButton = "Left" | "Right" | "Middle";
 export type Modifiers = { shift: boolean; control: boolean; alt: boolean; meta: boolean };
 export type ActionConfig =
-  | { type: "MoveCursor"; x: number; y: number }
-  | { type: "Click"; button: MouseButton }
+  | { type: "Click"; x: number; y: number; button: MouseButton }
   | { type: "Type"; text: string }
-  | { type: "Key"; key: string }
   | {
     type: "LLMPromptGeneration";
     region_ids: string[];

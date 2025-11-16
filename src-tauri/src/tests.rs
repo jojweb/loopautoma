@@ -2,7 +2,7 @@
 mod tests {
     use std::time::{Duration, Instant};
 
-    use crate::action::{Click, Key, MoveCursor, TypeText};
+    use crate::action::{Click, MoveCursor, TypeText};
     use crate::build_monitor_from_profile;
     use crate::condition::RegionCondition;
     use crate::domain::{
@@ -106,6 +106,7 @@ mod tests {
     #[test]
     fn action_sequence_runs_all_actions() {
         let auto = FakeAuto::new();
+        // Click action now includes x,y,button; Type handles special keys with inline syntax
         let seq = ActionSequence::new(vec![
             Box::new(MoveCursor { x: 10, y: 20 }) as Box<dyn Action + Send + Sync>,
             Box::new(Click {
@@ -114,8 +115,8 @@ mod tests {
             Box::new(TypeText {
                 text: "continue".into(),
             }),
-            Box::new(Key {
-                key: "Enter".into(),
+            Box::new(TypeText {
+                text: "{Key:Enter}".into(),
             }),
         ]);
         let mut events = vec![];
@@ -123,6 +124,7 @@ mod tests {
         let ok = seq.run(&auto, &mut context, &mut events);
         assert!(ok);
         let calls = auto.calls.lock().unwrap().clone();
+        // TypeText with inline syntax {Key:Enter} is converted to automation.key("Enter")
         assert_eq!(
             calls,
             vec!["move:10,20", "click:Left", "type:continue", "key:Enter"]
@@ -163,8 +165,8 @@ mod tests {
                 Box::new(TypeText {
                     text: "continue".into(),
                 }) as Box<dyn Action + Send + Sync>,
-                Box::new(Key {
-                    key: "Enter".into(),
+                Box::new(TypeText {
+                    text: "{Key:Enter}".into(),
                 }),
             ]),
             Guardrails {
@@ -239,8 +241,8 @@ mod tests {
                 ActionConfig::Type {
                     text: "continue".into(),
                 },
-                ActionConfig::Key {
-                    key: "Enter".into(),
+                ActionConfig::Type {
+                    text: "{Key:Enter}".into(),
                 },
             ],
             guardrails: Some(GuardrailsConfig {
@@ -591,8 +593,8 @@ mod tests {
                 ActionConfig::Type {
                     text: "continue".into(),
                 },
-                ActionConfig::Key {
-                    key: "Enter".into(),
+                ActionConfig::Type {
+                    text: "{Key:Enter}".into(),
                 },
             ],
             guardrails: Some(GuardrailsConfig {
@@ -1423,8 +1425,8 @@ mod tests {
                     ActionConfig::Type {
                         text: "$prompt".to_string(),
                     },
-                    ActionConfig::Key {
-                        key: "Enter".to_string(),
+                    ActionConfig::Type {
+                        text: "{Key:Enter}".to_string(),
                     },
                 ],
                 guardrails: Some(GuardrailsConfig {

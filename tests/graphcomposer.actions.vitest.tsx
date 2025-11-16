@@ -19,24 +19,19 @@ describe("GraphComposer actions", () => {
     };
     render(<Wrapper />);
 
-    // Add action (defaults to MoveCursor)
+    // Add action (defaults to Click with x,y,button)
     fireEvent.click(screen.getByLabelText(/Add action/i));
-    // Change X and Y inside first action list item
+    // Change X, Y, and Button inside first action list item
     const firstLi = screen.getAllByRole("listitem")[0];
     const scope = within(firstLi);
     const inputs = scope.getAllByRole("spinbutton") as HTMLInputElement[];
     fireEvent.change(inputs[0], { target: { value: "123" } });
     fireEvent.change(inputs[1], { target: { value: "456" } });
-    // Can't access p directly; rely on UI staying in sync; save changes then switch type and check editor presence
-
-    // Change type to Click and adjust button
-    const typeSelect = screen.getAllByTitle("Change the action type")[0] as HTMLSelectElement;
-    fireEvent.change(typeSelect, { target: { value: "Click" } });
-    const buttonSelect = screen.getByLabelText(/Button/) as HTMLSelectElement;
+    // Adjust button to Right
+    const buttonSelect = scope.getByLabelText(/Button/) as HTMLSelectElement;
     fireEvent.change(buttonSelect, { target: { value: "Right" } });
     // Verify button select reflects Right
-    const buttonSelectAfter = screen.getByLabelText(/Button/);
-    expect((buttonSelectAfter as HTMLSelectElement).value).toBe("Right");
+    expect(buttonSelect.value).toBe("Right");
 
     // Add another action and remove it
     fireEvent.click(screen.getByLabelText(/Add action/i));
@@ -49,7 +44,7 @@ describe("GraphComposer actions", () => {
     expect(itemsAfterRemove.length).toBe(1);
   });
 
-  it("splits inline special key syntax into discrete actions", () => {
+  it("splits inline special key syntax into discrete Type actions", () => {
     const Wrapper = () => {
       const [p, setP] = useState(() => {
         const d = defaultPresetProfile();
@@ -69,7 +64,8 @@ describe("GraphComposer actions", () => {
 
     const firstType = within(items[0]).getByLabelText(/Text/i) as HTMLTextAreaElement;
     expect(firstType.value.trim()).toBe("Hello");
-    const keySelect = within(items[1]).getByLabelText(/Common keys/i) as HTMLSelectElement;
-    expect(keySelect.value).toBe("Enter");
+    // Second action is now also a Type action with {Key:Enter}
+    const secondType = within(items[1]).getByLabelText(/Text/i) as HTMLTextAreaElement;
+    expect(secondType.value.trim()).toBe("{Key:Enter}");
   });
 });

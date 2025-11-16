@@ -48,6 +48,13 @@ impl Action for TypeText {
     ) -> Result<(), String> {
         // Expand variables like $prompt
         let expanded = context.expand(&self.text);
+        
+        // Check for inline key syntax like {Key:Enter}
+        if expanded.starts_with("{Key:") && expanded.ends_with("}") {
+            let key = expanded[5..expanded.len()-1].to_string();
+            return automation.key(&key);
+        }
+        
         automation.type_text(&expanded)
     }
 }

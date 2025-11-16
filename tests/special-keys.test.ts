@@ -11,7 +11,7 @@ describe("special key helpers", () => {
     const actions = splitInlineKeySyntax("Hello {Key:Enter} world");
     expect(actions.length).toBe(3);
     expect(actions[0]).toEqual({ type: "Type", text: "Hello " });
-    expect(actions[1]).toEqual({ type: "Key", key: "Enter" });
+    expect(actions[1]).toEqual({ type: "Type", text: "{Key:Enter}" });
     expect(actions[2]).toEqual({ type: "Type", text: " world" });
   });
 });

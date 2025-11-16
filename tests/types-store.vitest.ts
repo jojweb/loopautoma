@@ -46,19 +46,14 @@ describe("Types and defaults", () => {
     for (const action of profile.actions) {
       expect(action.type).toBeTruthy();
       // Verify action has expected structure based on type
-      if (action.type === "MoveCursor") {
+      if (action.type === "Click") {
         const a = action as any;
         expect(a.x).toBeGreaterThanOrEqual(0);
         expect(a.y).toBeGreaterThanOrEqual(0);
-      } else if (action.type === "Click") {
-        const a = action as any;
         expect(["Left", "Right", "Middle"]).toContain(a.button);
       } else if (action.type === "Type") {
         const a = action as any;
         expect(typeof a.text).toBe("string");
-      } else if (action.type === "Key") {
-        const a = action as any;
-        expect(typeof a.key).toBe("string");
       }
     }
   });

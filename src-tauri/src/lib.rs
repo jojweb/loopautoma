@@ -86,15 +86,16 @@ fn default_profile() -> Profile {
             downscale: 4,
         },
         actions: vec![
-            ActionConfig::MoveCursor { x: 960, y: 980 },
             ActionConfig::Click {
+                x: 960,
+                y: 980,
                 button: MouseButton::Left,
             },
             ActionConfig::Type {
                 text: "continue".into(),
             },
-            ActionConfig::Key {
-                key: "Enter".into(),
+            ActionConfig::Type {
+                text: "{Key:Enter}".into(),
             },
         ],
         guardrails: Some(GuardrailsConfig {
@@ -196,16 +197,13 @@ pub fn build_monitor_from_profile<'a>(p: &Profile) -> (monitor::Monitor<'a>, Vec
 
     for a in &p.actions {
         match a {
-            ActionConfig::MoveCursor { x, y } => {
-                acts.push(Box::new(action::MoveCursor { x: *x, y: *y }))
-            }
-            ActionConfig::Click { button } => {
-                acts.push(Box::new(action::Click { button: *button }))
+            ActionConfig::Click { x, y, button } => {
+                acts.push(Box::new(action::MoveCursor { x: *x, y: *y }));
+                acts.push(Box::new(action::Click { button: *button }));
             }
             ActionConfig::Type { text } => {
                 acts.push(Box::new(action::TypeText { text: text.clone() }))
             }
-            ActionConfig::Key { key } => acts.push(Box::new(action::Key { key: key.clone() })),
             ActionConfig::LLMPromptGeneration {
                 region_ids,
                 risk_threshold,

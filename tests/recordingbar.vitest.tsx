@@ -125,10 +125,9 @@ describe("RecordingBar", () => {
     const events = onSave.mock.calls[0][0];
     const actions = toActions(events);
 
-    // Expect a MoveCursor to (5, 7) and a Click Left, plus a Key Enter
-    expect(actions.find(a => (a as any).type === "MoveCursor" && (a as any).x === 5 && (a as any).y === 7)).toBeTruthy();
-    expect(actions.find(a => (a as any).type === "Click" && (a as any).button === "Left")).toBeTruthy();
-    expect(actions.find(a => (a as any).type === "Key" && (a as any).key === "Enter")).toBeTruthy();
+    // Expect a Click at (5, 7) with Left button, plus a Type action for Enter key
+    expect(actions.find(a => (a as any).type === "Click" && (a as any).x === 5 && (a as any).y === 7 && (a as any).button === "Left")).toBeTruthy();
+    expect(actions.find(a => (a as any).type === "Type" && (a as any).text === "{Key:Enter}")).toBeTruthy();
   });
 
   it("handles timeline events, buffer flush, scroll, and clear", async () => {

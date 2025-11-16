@@ -193,18 +193,18 @@ export function RecordingBar(props: {
 export function toActions(events: RecordingEvent[]) {
   type MouseButton = "Left" | "Right" | "Middle";
   const actions: Array<
-    | { type: "MoveCursor"; x: number; y: number }
-    | { type: "Click"; button: MouseButton }
+    | { type: "Click"; x: number; y: number; button: MouseButton }
     | { type: "Type"; text: string }
-    | { type: "Key"; key: string }
   > = [];
   for (const ev of events) {
     if (ev.t === "click") {
-      actions.push({ type: "MoveCursor", x: ev.x, y: ev.y });
-      actions.push({ type: "Click", button: ev.button });
+      actions.push({ type: "Click", x: ev.x, y: ev.y, button: ev.button });
     }
     else if (ev.t === "type") actions.push({ type: "Type", text: ev.text });
-    else if (ev.t === "key") actions.push({ type: "Key", key: ev.key });
+    else if (ev.t === "key") {
+      // Convert special keys into Type action with inline key syntax
+      actions.push({ type: "Type", text: `{Key:${ev.key}}` });
+    }
   }
   return actions;
 }

@@ -7,13 +7,13 @@ import type {
     ChangeEvent,
 } from "react";
 
-const HOLD_INTERVAL_MS = 160;
+const HOLD_INTERVAL_MS = 120;
 const STEP_STAGES: Array<{ after: number; step: number }> = [
     { after: 0, step: 1 },
-    { after: 2000, step: 5 },
-    { after: 4000, step: 10 },
-    { after: 6000, step: 50 },
-    { after: 8000, step: 100 },
+    { after: 800, step: 5 },
+    { after: 1600, step: 10 },
+    { after: 2400, step: 50 },
+    { after: 3200, step: 100 },
 ];
 
 type Direction = 1 | -1;
