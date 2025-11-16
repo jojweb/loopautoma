@@ -12,7 +12,7 @@ function getTextarea() {
 
 describe("ProfileEditor", () => {
   it("renders loading state", () => {
-    render(<ProfileEditor config={null} onChange={() => {}} />);
+    render(<ProfileEditor config={null} onChange={() => { }} />);
     expect(screen.getByText(/Configuration is still loading/)).toBeTruthy();
   });
 

@@ -13,12 +13,12 @@ export type ActionConfig =
   | { type: "Type"; text: string }
   | { type: "Key"; key: string }
   | {
-      type: "LLMPromptGeneration";
-      region_ids: string[];
-      risk_threshold: number;
-      system_prompt?: string;
-      variable_name?: string;
-    };
+    type: "LLMPromptGeneration";
+    region_ids: string[];
+    risk_threshold: number;
+    system_prompt?: string;
+    variable_name?: string;
+  };
 
 export type GuardrailsConfig = {
   max_runtime_ms?: number;

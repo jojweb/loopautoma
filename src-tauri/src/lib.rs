@@ -193,7 +193,7 @@ pub fn build_monitor_from_profile<'a>(p: &Profile) -> (monitor::Monitor<'a>, Vec
         eprintln!("Warning: Failed to create LLM client: {}", e);
         Arc::new(llm::MockLLMClient::new())
     });
-    
+
     for a in &p.actions {
         match a {
             ActionConfig::MoveCursor { x, y } => {
@@ -211,17 +211,17 @@ pub fn build_monitor_from_profile<'a>(p: &Profile) -> (monitor::Monitor<'a>, Vec
                 risk_threshold,
                 system_prompt,
                 variable_name,
-            } => {
-                acts.push(Box::new(action::LLMPromptGenerationAction {
-                    region_ids: region_ids.clone(),
-                    risk_threshold: *risk_threshold,
-                    system_prompt: system_prompt.clone(),
-                    variable_name: variable_name.clone().unwrap_or_else(|| "prompt".to_string()),
-                    all_regions: p.regions.clone(),
-                    capture: capture.clone(),
-                    llm_client: llm_client.clone(),
-                }))
-            }
+            } => acts.push(Box::new(action::LLMPromptGenerationAction {
+                region_ids: region_ids.clone(),
+                risk_threshold: *risk_threshold,
+                system_prompt: system_prompt.clone(),
+                variable_name: variable_name
+                    .clone()
+                    .unwrap_or_else(|| "prompt".to_string()),
+                all_regions: p.regions.clone(),
+                capture: capture.clone(),
+                llm_client: llm_client.clone(),
+            })),
         }
     }
     let seq = ActionSequence::new(acts);

@@ -41,20 +41,20 @@ describe("Store hooks", () => {
 
     it("clears events when clear is called", () => {
       const { result } = renderHook(() => useEventStream());
-      
+
       // Manually add an event to test clearing
       act(() => {
         result.current.clear();
       });
-      
+
       expect(result.current.events).toEqual([]);
     });
 
     it("appends events from Tauri listener", async () => {
       const { result } = renderHook(() => useEventStream());
-      
+
       const testEvent: Event = { type: "TriggerFired" };
-      
+
       await waitFor(() => {
         act(() => {
           dispatchRuntimeEvent(testEvent);
@@ -65,7 +65,7 @@ describe("Store hooks", () => {
 
     it("limits events to 500 items", async () => {
       const { result } = renderHook(() => useEventStream());
-      
+
       // Simulate adding 501 events
       for (let i = 0; i < 501; i++) {
         act(() => {
@@ -87,23 +87,23 @@ describe("Store hooks", () => {
 
     it("allows setting runningProfileId", () => {
       const { result } = renderHook(() => useRunState());
-      
+
       act(() => {
         result.current.setRunningProfileId("test-profile-id");
       });
-      
+
       expect(result.current.runningProfileId).toBe("test-profile-id");
     });
 
     it("clears runningProfileId on MonitorStateChanged to non-Running", async () => {
       const { result } = renderHook(() => useRunState());
-      
+
       act(() => {
         result.current.setRunningProfileId("test-id");
       });
-      
+
       expect(result.current.runningProfileId).toBe("test-id");
-      
+
       act(() => {
         dispatchRuntimeEvent({ type: "MonitorStateChanged", state: "Stopped" } as Event);
       });
@@ -115,11 +115,11 @@ describe("Store hooks", () => {
 
     it("keeps runningProfileId on MonitorStateChanged to Running", async () => {
       const { result } = renderHook(() => useRunState());
-      
+
       act(() => {
         result.current.setRunningProfileId("test-id");
       });
-      
+
       act(() => {
         dispatchRuntimeEvent({ type: "MonitorStateChanged", state: "Running" } as Event);
       });

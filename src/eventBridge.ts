@@ -37,7 +37,7 @@ export async function subscribeEvent<T = unknown>(channel: string, handler: Hand
     };
   }
 
-  return () => {};
+  return () => { };
 }
 
 export function emitTestEvent<T = unknown>(channel: string, payload: T) {

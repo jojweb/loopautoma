@@ -19,7 +19,7 @@ export function useEventStream() {
     return () => {
       try {
         dispose?.();
-      } catch {}
+      } catch { }
     };
   }, []);
 
@@ -39,7 +39,7 @@ export function useRunState() {
     return () => {
       try {
         dispose?.();
-      } catch {}
+      } catch { }
     };
   }, []);
   return { runningProfileId, setRunningProfileId };

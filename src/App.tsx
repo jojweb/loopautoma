@@ -320,7 +320,7 @@ function App() {
 
         <div>
           <h3 style={{ margin: 0 }} title="Advanced: edit the underlying profile configuration directly as JSON">Profile JSON</h3>
-            <ProfileEditor config={config} onChange={applyConfig} />
+          <ProfileEditor config={config} onChange={applyConfig} />
         </div>
       </section>
     </main>

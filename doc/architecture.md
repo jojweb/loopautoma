@@ -206,7 +206,6 @@ Windows 11 (post‑MVP):
 
 All backends are hidden behind ScreenCapture, Automation, and InputCapture traits; selected via cfg(target_os) and feature flags.
 
-
 ## Authoring helpers: regions and input recorder
 
 Authoring flows are supported by two helpers that expose extra context to the UI while keeping runtime logic OS-agnostic:

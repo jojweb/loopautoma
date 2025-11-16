@@ -13,7 +13,7 @@ import { BLANK_PNG_BASE64, STATE_SETTLE_TIMEOUT_MS } from '../../src/testConstan
 export async function waitForAppReady(page: Page) {
   // Wait for main container to be visible
   await expect(page.locator('main.container')).toBeVisible({ timeout: 10000 });
-  
+
   // Wait for profile selector to be visible (by title or generic select)
   const selectorByTitle = page.locator('select[title*="Choose the automation profile"]');
   const genericSelect = page.locator('select');
@@ -22,7 +22,7 @@ export async function waitForAppReady(page: Page) {
   } else {
     await expect(genericSelect).toBeVisible({ timeout: 5000 });
   }
-  
+
   // Wait for React to be fully hydrated (check for brand logo)
   await expect(page.locator('.brand-logo')).toBeVisible();
 }
@@ -62,7 +62,7 @@ export async function startMonitor(page: Page) {
   const startButton = page.getByRole('button', { name: /start/i });
   await expect(startButton).toBeEnabled();
   await startButton.click();
-  
+
   // Wait for Running chip to appear
   await expect(page.locator('.running-chip')).toBeVisible({ timeout: 3000 });
 }
@@ -74,7 +74,7 @@ export async function stopMonitor(page: Page) {
   const stopButton = page.getByRole('button', { name: /stop/i });
   await expect(stopButton).toBeEnabled();
   await stopButton.click();
-  
+
   // Wait for Running chip to disappear
   await expect(page.locator('.running-chip')).not.toBeVisible({ timeout: 3000 });
 }
@@ -144,7 +144,7 @@ export async function startRecording(page: Page) {
   const recordButton = page.getByRole('button', { name: /^record$/i });
   await expect(recordButton).toBeEnabled();
   await recordButton.click();
-  
+
   // Wait for Recording chip to appear
   await expect(page.locator('.running-chip', { hasText: 'Recording' })).toBeVisible({ timeout: 3000 });
 }
@@ -156,7 +156,7 @@ export async function stopRecording(page: Page) {
   const stopButton = page.getByRole('button', { name: /^stop$/i });
   await expect(stopButton).toBeEnabled();
   await stopButton.click();
-  
+
   // Wait for Recording chip to disappear
   await expect(page.locator('.running-chip', { hasText: 'Recording' })).not.toBeVisible({ timeout: 3000 });
 }
@@ -226,10 +226,10 @@ export async function waitForConsoleMessage(page: Page, messagePattern: string |
 
     page.on('console', (msg) => {
       const text = msg.text();
-      const matches = typeof messagePattern === 'string' 
+      const matches = typeof messagePattern === 'string'
         ? text.includes(messagePattern)
         : messagePattern.test(text);
-      
+
       if (matches) {
         clearTimeout(timer);
         resolve(text);
@@ -283,9 +283,9 @@ export type FakeDesktopOptions = {
 export async function setupFakeDesktopMode(page: Page, options?: FakeDesktopOptions) {
   const initialConfig = normalizeProfilesConfig(
     options?.config ??
-      (options?.profiles
-        ? { profiles: options.profiles, version: 1 }
-        : undefined),
+    (options?.profiles
+      ? { profiles: options.profiles, version: 1 }
+      : undefined),
   );
   await page.addInitScript(({ initialConfig, blank }) => {
     const state: any = {
