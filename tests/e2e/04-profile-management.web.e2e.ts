@@ -51,11 +51,11 @@ test.describe('Profile Management', () => {
   });
 
   test('5.3 - Profile editor displays selected profile', async ({ page }) => {
-    // ProfileEditor or ProfileInsights component should be visible
-    const editor = page.locator('.profile-editor, .profile-insights, .profile-section');
+    // Graphical composer should be visible (removed ProfileInsights as part of UI stabilization)
+    const composer = page.locator('article:has-text("Graphical Composer")');
     
-    // Should be visible somewhere on page
-    const isVisible = await editor.first().isVisible().catch(() => false);
+    // Should be visible on page
+    const isVisible = await composer.first().isVisible().catch(() => false);
     expect(isVisible).toBe(true);
   });
 
@@ -68,20 +68,20 @@ test.describe('Profile Management', () => {
     expect(found).toBe(true);
   });
 
-  test('5.7 - Restore preset button visible', async ({ page }) => {
-    let count = await page.getByRole('button', { name: /restore\s*preset|preset\s*loaded|reset\s*default/i }).count();
-    if (count === 0) {
-      count = await page.locator('.preset-card__meta button').count();
-    }
+  test('5.7 - Action sequence controls visible', async ({ page }) => {
+    // Verify action sequence controls exist (replaced preset button test as part of UI stabilization)
+    const addActionButton = page.getByRole('button', { name: /add action/i });
+    const count = await addActionButton.count();
     expect(count).toBeGreaterThan(0);
   });
 
-  test('5.7 - Restore preset button is keyboard accessible', async ({ page }) => {
-    const restoreButton = page.getByRole('button', { name: /restore.*preset|reset.*default/i }).first();
+  test('5.7 - Add action button is keyboard accessible', async ({ page }) => {
+    // Verify Add action button is keyboard accessible (replaced preset test as part of UI stabilization)
+    const addActionButton = page.getByRole('button', { name: /add action/i }).first();
     
-    if (await restoreButton.isVisible()) {
-      await restoreButton.focus();
-      await expect(restoreButton).toBeFocused();
+    if (await addActionButton.isVisible()) {
+      await addActionButton.focus();
+      await expect(addActionButton).toBeFocused();
     }
   });
 
