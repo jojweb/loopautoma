@@ -13,9 +13,9 @@ describe("GraphComposer", () => {
     const onChange = (next: any) => { p = next; };
     render(<GraphComposer profile={p} onChange={onChange} />);
     // presence checks via query
-  expect(screen.getAllByText(/Trigger/).length >= 1).toBe(true);
-  expect(screen.getAllByText(/Condition/).length >= 1).toBe(true);
-  expect(screen.getAllByText(/Action Sequence/).length >= 1).toBe(true);
+    expect(screen.getAllByText(/Trigger/).length >= 1).toBe(true);
+    expect(screen.getAllByText(/Condition/).length >= 1).toBe(true);
+    expect(screen.getAllByText(/Action Sequence/).length >= 1).toBe(true);
 
     const addBtn = screen.getByLabelText(/Add action/i);
     fireEvent.click(addBtn);
