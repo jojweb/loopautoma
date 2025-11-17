@@ -98,15 +98,17 @@ echo "✓ PASS: XKEYBOARD extension available"
 echo ""
 
 # Run integration tests if available
-if [ -d "src-tauri" ] && command -v cargo >/dev/null 2>&1; then
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(dirname "$SCRIPT_DIR")"
+if [ -d "$REPO_ROOT/src-tauri" ] && command -v cargo >/dev/null 2>&1; then
     echo "7. Running integration tests..."
-    cd src-tauri
+    cd "$REPO_ROOT/src-tauri" || exit 1
     if cargo test --test integration_x11 -- --test-threads=1 --nocapture 2>&1 | grep -q "test result: ok"; then
         echo "✓ PASS: Integration tests passed"
     else
         echo "⚠ WARNING: Some integration tests failed (may be expected in some environments)"
     fi
-    cd - > /dev/null
+    cd "$SCRIPT_DIR" || exit 1
     echo ""
 fi
 

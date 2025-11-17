@@ -227,6 +227,13 @@ Create integration tests that can run in CI (Xvfb) + comprehensive manual verifi
 - ✅ Manual verification guide provides step-by-step tests
 - ✅ Documentation explains prerequisites clearly
 
+**Assumptions and open questions**
+- Assumption: Xvfb environment is sufficient for CI-based integration testing
+- Assumption: Most user issues stem from Wayland vs X11 session type mismatch
+- Assumption: Diagnostic script covers all common environmental issues
+- Open question: Should we add automated prerequisite check on app startup?
+- Open question: Would a video tutorial significantly reduce support requests?
+
 **Follow-ups / future work**
 
 - Add prerequisite check to app startup (show modal if fails)
