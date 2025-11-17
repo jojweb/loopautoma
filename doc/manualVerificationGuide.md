@@ -350,10 +350,10 @@ If you've followed this guide and features still don't work:
    ```bash
    echo "=== System Info ===" > sysinfo.txt
    uname -a >> sysinfo.txt
-   echo "\n=== Display Info ===" >> sysinfo.txt
+   echo -e "\n=== Display Info ===" >> sysinfo.txt
    echo "DISPLAY=$DISPLAY" >> sysinfo.txt
    echo "XDG_SESSION_TYPE=$XDG_SESSION_TYPE" >> sysinfo.txt
-   echo "\n=== X11 Info ===" >> sysinfo.txt
+   echo -e "\n=== X11 Info ===" >> sysinfo.txt
    xdpyinfo | head -n 30 >> sysinfo.txt
    ```
 
