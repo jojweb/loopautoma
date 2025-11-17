@@ -32,14 +32,27 @@ fn main() -> Result<(), Box<dyn Error>> {
         }
     }))?;
 
-    prompt("Recording... press Enter to stop.");
+    println!("Recording... move mouse, type keys, click. Press Enter to stop.");
     wait_for_enter()?;
     capture.stop()?;
+    
+    // Give the capture thread time to flush any pending events
+    thread::sleep(Duration::from_millis(100));
 
     let snapshot = {
         let guard = events.lock().expect("event buffer poisoned");
         guard.clone()
     };
+    if snapshot.is_empty() {
+        println!("\n⚠️  Captured 0 events!");
+        println!("\nPossible issues:");
+        println!("  • Did you interact with the system BEFORE pressing Enter?");
+        println!("  • Are you running on an X11 session? (Check: echo $XDG_SESSION_TYPE)");
+        println!("  • Is LOOPAUTOMA_BACKEND=fake set? (Should be unset)");
+        println!("  • Do you have the required X11 packages installed?");
+        return Ok(());
+    }
+    
     println!(
         "Captured {} events. Replaying to stdout in 5 seconds...",
         snapshot.len()

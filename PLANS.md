@@ -446,6 +446,7 @@ Phase 6: Documentation and cleanup
 - 2025-11-17 — Wrapped `start_input_recording` internals in feature blocks and referenced unused parameters so mac builds stay clean.
 - 2025-11-17 — Added `input_recorder` bin that records keyboard/mouse events via `LinuxInputCapture` and prints summaries after a 5s delay.
 - 2025-11-17 — Documented helper instructions in `doc/inputRecorderHelper.md` and verified `cargo check` succeeds with default features.
+- 2025-11-17 — Enhanced helper with better UX messaging (clear instructions to move/type/click before stopping) and diagnostic output when zero events captured.
 
 **Assumptions and open questions**
 - Assumption: macOS release build only needs the warning cleanup; actual cross-compilation remains blocked by missing Apple toolchain (tracked separately).
