@@ -37,7 +37,11 @@ mod x11_tests {
             eprintln!("  - XInput2 extension not available");
             eprintln!("  - Missing packages: libxi-dev, libxtst-dev, libxkbcommon-x11-dev");
         }
-        assert!(result.is_ok(), "Failed to start input capture: {:?}", result);
+        assert!(
+            result.is_ok(),
+            "Failed to start input capture: {:?}",
+            result
+        );
 
         // Let it run for a short time
         thread::sleep(Duration::from_millis(500));

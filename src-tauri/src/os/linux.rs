@@ -850,7 +850,8 @@ pub fn check_prerequisites() -> PrerequisiteCheck {
         if backend.to_lowercase() == "fake" {
             check.backend_not_fake = false;
             check.error_details.push(
-                "LOOPAUTOMA_BACKEND=fake is set. Unset it to enable real input recording.".to_string()
+                "LOOPAUTOMA_BACKEND=fake is set. Unset it to enable real input recording."
+                    .to_string(),
             );
         }
     }
@@ -859,28 +860,30 @@ pub fn check_prerequisites() -> PrerequisiteCheck {
     match XCBConnection::connect(None) {
         Ok((conn, _screen_num)) => {
             check.x11_connection = true;
-            
+
             // Check XInput extension
             match conn.xinput_xi_query_version(2, 0) {
-                Ok(cookie) => {
-                    match cookie.reply() {
-                        Ok(reply) => {
-                            if reply.major_version >= 2 {
-                                check.xinput_available = true;
-                            } else {
-                                check.error_details.push(format!(
-                                    "XInput version too old: {}.{}. Need 2.0+",
-                                    reply.major_version, reply.minor_version
-                                ));
-                            }
-                        }
-                        Err(e) => {
-                            check.error_details.push(format!("XInput query failed: {}", e));
+                Ok(cookie) => match cookie.reply() {
+                    Ok(reply) => {
+                        if reply.major_version >= 2 {
+                            check.xinput_available = true;
+                        } else {
+                            check.error_details.push(format!(
+                                "XInput version too old: {}.{}. Need 2.0+",
+                                reply.major_version, reply.minor_version
+                            ));
                         }
                     }
-                }
+                    Err(e) => {
+                        check
+                            .error_details
+                            .push(format!("XInput query failed: {}", e));
+                    }
+                },
                 Err(e) => {
-                    check.error_details.push(format!("XInput not available: {}", e));
+                    check
+                        .error_details
+                        .push(format!("XInput not available: {}", e));
                 }
             }
 
@@ -889,7 +892,9 @@ pub fn check_prerequisites() -> PrerequisiteCheck {
             if conn.extension_information("XTEST").ok().flatten().is_some() {
                 check.xtest_available = true;
             } else {
-                check.error_details.push("XTest extension not available".to_string());
+                check
+                    .error_details
+                    .push("XTest extension not available".to_string());
             }
         }
         Err(e) => {
@@ -902,4 +907,3 @@ pub fn check_prerequisites() -> PrerequisiteCheck {
 
     check
 }
-

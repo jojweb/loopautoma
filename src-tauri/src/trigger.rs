@@ -48,4 +48,3 @@ impl Trigger for IntervalTrigger {
         }
     }
 }
-

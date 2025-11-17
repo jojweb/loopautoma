@@ -46,15 +46,28 @@ pub struct ScreenFrame {
 #[serde(tag = "type")]
 pub enum Event {
     TriggerFired,
-    ConditionEvaluated { result: bool },
-    ActionStarted { action: String },
-    ActionCompleted { action: String, success: bool },
-    MonitorStateChanged { state: MonitorState },
-    WatchdogTripped { reason: String },
-    Error { message: String },
+    ConditionEvaluated {
+        result: bool,
+    },
+    ActionStarted {
+        action: String,
+    },
+    ActionCompleted {
+        action: String,
+        success: bool,
+    },
+    MonitorStateChanged {
+        state: MonitorState,
+    },
+    WatchdogTripped {
+        reason: String,
+    },
+    Error {
+        message: String,
+    },
     /// Emitted on each tick with timing information
-    MonitorTick { 
-        next_check_ms: u64, 
+    MonitorTick {
+        next_check_ms: u64,
         cooldown_remaining_ms: u64,
         condition_met: bool,
     },

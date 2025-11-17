@@ -476,22 +476,31 @@ fn start_input_recording(
     }
     #[cfg(not(feature = "os-linux-input"))]
     {
+        let _ = window;
+        let _ = state;
         return Err("This build was compiled without the os-linux-input backend. Rebuild with --features os-linux-input (see doc/developer.md) or keep LOOPAUTOMA_BACKEND=fake for UI-only authoring.".into());
     }
-    let mut guard = state.authoring.input_capture.lock().unwrap();
-    if guard.is_some() {
+    #[cfg(feature = "os-linux-input")]
+    {
+        let mut guard = state.authoring.input_capture.lock().unwrap();
+        if guard.is_some() {
+            return Ok(());
+        }
+        let mut capture = make_input_capture().ok_or_else(|| {
+            "Input capture backend is missing. On Ubuntu 24.04 install the X11 dev packages listed in doc/developer.md (libx11-dev, libxext-dev, libxi-dev, libxtst-dev, libxkbcommon-x11-dev, etc.) and rebuild.".to_string()
+        })?;
+        let win = window.clone();
+        let callback = Arc::new(move |event: InputEvent| {
+            let _ = win.emit("loopautoma://input_event", &event);
+        });
+        capture.start(callback).map_err(|e| format!("{e}. Make sure the X11/XKB libraries are installed (see doc/developer.md) and that the app is running in an X11 session."))?;
+        *guard = Some(capture);
         return Ok(());
     }
-    let mut capture = make_input_capture().ok_or_else(|| {
-        "Input capture backend is missing. On Ubuntu 24.04 install the X11 dev packages listed in doc/developer.md (libx11-dev, libxext-dev, libxi-dev, libxtst-dev, libxkbcommon-x11-dev, etc.) and rebuild.".to_string()
-    })?;
-    let win = window.clone();
-    let callback = Arc::new(move |event: InputEvent| {
-        let _ = win.emit("loopautoma://input_event", &event);
-    });
-    capture.start(callback).map_err(|e| format!("{e}. Make sure the X11/XKB libraries are installed (see doc/developer.md) and that the app is running in an X11 session."))?;
-    *guard = Some(capture);
-    Ok(())
+    #[cfg(not(feature = "os-linux-input"))]
+    {
+        unreachable!("checked above");
+    }
 }
 
 #[tauri::command]

@@ -26,6 +26,7 @@ Any LLM agent (Copilot, Cursor, Codex, etc.) working in this repo must:
   - [Active tasks](#active-tasks)
     - [Task: Critical showstoppers - Input recording, playback, window minimize, and countdown timers](#task-critical-showstoppers---input-recording-playback-window-minimize-and-countdown-timers)
     - [Task: Release build unblock - EventLog monitor tick](#task-release-build-unblock---eventlog-monitor-tick)
+    - [Task: Release warning cleanup and input recorder helper](#task-release-warning-cleanup-and-input-recorder-helper)
   - [Completed tasks (archived)](#completed-tasks-archived)
 
 <!-- /TOC -->
@@ -422,6 +423,37 @@ Phase 6: Documentation and cleanup
 
 **Follow‑ups / future work**
 - Consider richer display (icons/colors) for `MonitorTick` lines in the log if users need more telemetry detail.
+
+### Task: Release warning cleanup and input recorder helper
+
+**User request (summary)**
+- Eliminate macOS release warnings (unused imports/variables and unreachable code) cited by CI.
+- Provide a standalone CLI helper that records keyboard/mouse events using the same backend as the desktop app, then prints them five seconds after recording.
+
+**Context and constraints**
+- Fixes must not break non-Linux builds; feature flags guard OS-specific code.
+- Helper should live inside `src-tauri` (uses Rust backend) and require the `os-linux-input` feature.
+- Output format should match the user’s example (`keyboard: ...`, `mouse: ...`).
+
+**Plan (checklist)**
+- [x] Gate `serde`/`env` imports in `src-tauri/src/llm.rs` behind the `llm-integration` feature to avoid unused warnings in mac builds.
+- [x] Refactor `start_input_recording` in `src-tauri/src/lib.rs` so non-Linux feature builds don’t warn about unused parameters or unreachable code.
+- [x] Create `src-tauri/src/bin/input_recorder.rs`, reusing `LinuxInputCapture` to capture events and print a summary five seconds after recording stops.
+- [x] Document helper usage (new `doc/inputRecorderHelper.md`) and run `cargo check` to confirm warning-free compilation.
+
+**Progress log**
+- 2025-11-17 — Scoped LLM imports to `llm-integration` feature to resolve unused warnings on macOS builds.
+- 2025-11-17 — Wrapped `start_input_recording` internals in feature blocks and referenced unused parameters so mac builds stay clean.
+- 2025-11-17 — Added `input_recorder` bin that records keyboard/mouse events via `LinuxInputCapture` and prints summaries after a 5s delay.
+- 2025-11-17 — Documented helper instructions in `doc/inputRecorderHelper.md` and verified `cargo check` succeeds with default features.
+
+**Assumptions and open questions**
+- Assumption: macOS release build only needs the warning cleanup; actual cross-compilation remains blocked by missing Apple toolchain (tracked separately).
+- Question: Should the helper also emit scroll events? (Deferred; requirement only mentioned keyboard + mouse.)
+
+**Follow‑ups / future work**
+- Consider wiring the helper into automated smoke tests once CI can access an X11 environment.
+- Extend the helper to save/load recordings for regression tests if needed.
 
 ## Completed tasks (archived)
 

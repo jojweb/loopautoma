@@ -1,7 +1,5 @@
 /// LLM client for generating prompts based on screen regions
 use crate::domain::{LLMPromptResponse, Region, ScreenCapture};
-use serde::{Deserialize, Serialize};
-use std::env;
 use std::sync::Arc;
 
 /// Trait for LLM clients to enable testing with mocks
@@ -53,6 +51,8 @@ impl LLMClient for MockLLMClient {
 #[cfg(feature = "llm-integration")]
 mod real_client {
     use super::*;
+    use serde::{Deserialize, Serialize};
+    use std::env;
 
     /// OpenAI GPT-4 Vision client
     pub struct OpenAIClient {
