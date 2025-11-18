@@ -41,6 +41,7 @@ export function RecordingBar(props: {
 
   const pushClick = useCallback((button: "Left" | "Right" | "Middle", x: number, y: number) => {
     const newEvent = { t: "click" as const, button, x: Math.round(x), y: Math.round(y) };
+    console.log("[RecordingBar] pushClick:", newEvent);
     setEvents((prev) => {
       const next = [...prev, newEvent];
       eventsRef.current = next;
@@ -96,6 +97,7 @@ export function RecordingBar(props: {
   useEffect(() => {
     let dispose: (() => void) | undefined;
     subscribeEvent<InputEvent>("loopautoma://input_event", (data) => {
+      console.log("[RecordingBar] Received input event:", data, "recording:", recordingRef.current);
       if (!recordingRef.current) return;
       if (!data) return;
       if (data.kind === "mouse" && data.mouse) {
@@ -120,6 +122,7 @@ export function RecordingBar(props: {
     }
     flushTypeBuffer();
     setRecording(false);
+    console.log("[RecordingBar] Stopping recording with", eventsRef.current.length, "events:", eventsRef.current);
     props.onStop?.(eventsRef.current);
   }, [flushTypeBuffer, props]);
 

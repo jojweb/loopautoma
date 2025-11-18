@@ -1173,7 +1173,7 @@ button.ghost:hover {
 .region-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.35);
+  /* background removed - screenshot will be set via inline style */
   cursor: crosshair;
   color: #fff;
 }

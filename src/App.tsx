@@ -426,13 +426,23 @@ export function App() {
           </div>
           <RecordingBar
             onStop={async (evts) => {
-              if (!selectedProfile) return;
-              if (evts.length === 0) return;
+              console.log("[App] onStop called with", evts.length, "events:", evts);
+              console.log("[App] selectedProfile:", selectedProfile?.id);
+              if (!selectedProfile) {
+                console.warn("[App] No selected profile, skipping action save");
+                return;
+              }
+              if (evts.length === 0) {
+                console.warn("[App] No events to save");
+                return;
+              }
               const newActions = toActions(evts);
+              console.log("[App] Transformed to actions:", newActions);
               await updateProfile({
                 ...selectedProfile,
                 actions: [...selectedProfile.actions, ...newActions],
               });
+              console.log("[App] Profile updated with new actions");
             }}
           />
         </article>

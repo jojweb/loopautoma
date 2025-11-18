@@ -23,11 +23,19 @@ export function RegionOverlay() {
   const [current, setCurrent] = useState<Point | null>(null);
   const [status, setStatus] = useState<string>("Click upper-left corner");
   const [error, setError] = useState<string | null>(null);
+  const [screenshot, setScreenshot] = useState<string | null>(null);
   const monitorRef = useRef<MonitorInfo>({ position: { x: 0, y: 0 }, scaleFactor: 1 });
   const rootRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     let mounted = true;
+
+    // Get screenshot from initialization script
+    const screenshotUrl = (window as any).__REGION_OVERLAY_SCREENSHOT__;
+    if (screenshotUrl) {
+      setScreenshot(screenshotUrl);
+    }
+
     (async () => {
       try {
         const outer = await pickerWindow.outerPosition();
@@ -110,8 +118,8 @@ export function RegionOverlay() {
     const endPoint = { x: event.clientX, y: event.clientY };
     setCurrent(endPoint);
     try {
-  await regionPickerComplete(toGlobal(start), toGlobal(endPoint));
-  await pickerWindow.close();
+      await regionPickerComplete(toGlobal(start), toGlobal(endPoint));
+      await pickerWindow.close();
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       setError(msg || "Unable to record region");
@@ -124,6 +132,12 @@ export function RegionOverlay() {
     <div
       ref={rootRef}
       className="region-overlay"
+      style={screenshot ? {
+        backgroundImage: `url(${screenshot})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+      } : undefined}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}

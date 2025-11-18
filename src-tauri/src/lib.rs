@@ -608,9 +608,20 @@ fn region_picker_show(app: tauri::AppHandle) -> Result<(), String> {
         let _ = win.set_focus();
         return Ok(());
     }
+    
+    // Hide main window first
     if let Some(main) = app.get_webview_window("main") {
         let _ = main.hide();
     }
+    
+    // Give time for window to minimize and desktop to redraw
+    std::thread::sleep(std::time::Duration::from_millis(200));
+    
+    // Capture full screen screenshot
+    let screenshot_base64 = capture_full_screen().map_err(|e| e.to_string())?;
+    
+    // Build overlay window with screenshot URL
+    let screenshot_url = format!("data:image/png;base64,{}", screenshot_base64);
     tauri::WebviewWindowBuilder::new(
         &app,
         "region-overlay",
@@ -622,8 +633,13 @@ fn region_picker_show(app: tauri::AppHandle) -> Result<(), String> {
     .always_on_top(true)
     .resizable(false)
     .skip_taskbar(true)
+    .initialization_script(&format!(
+        r#"window.__REGION_OVERLAY_SCREENSHOT__ = "{}";"#,
+        screenshot_url
+    ))
     .build()
     .map_err(|e| e.to_string())?;
+    
     Ok(())
 }
 
@@ -702,6 +718,49 @@ pub(crate) fn normalize_rect(start: &PickPoint, end: &PickPoint) -> Option<Rect>
         width,
         height,
     })
+}
+
+fn capture_full_screen() -> Result<String, BackendError> {
+    let capture = make_capture();
+    
+    // Get primary display info
+    let displays = capture.displays()?;
+    let primary = displays.iter()
+        .find(|d| d.is_primary)
+        .or_else(|| displays.first())
+        .ok_or_else(|| BackendError::new("capture", "No displays found"))?;
+    
+    // Create a region covering the entire primary display
+    let rect = Rect {
+        x: primary.x.max(0) as u32,
+        y: primary.y.max(0) as u32,
+        width: primary.width,
+        height: primary.height,
+    };
+    
+    let region = Region {
+        id: "fullscreen".into(),
+        rect,
+        name: None,
+    };
+    
+    let frame = capture.capture_region(&region)?;
+    
+    // Encode as full-size PNG (no thumbnail downscaling)
+    if frame.width == 0 || frame.height == 0 || frame.bytes.is_empty() {
+        return Err(BackendError::new("capture", "Empty screenshot"));
+    }
+    
+    let image = RgbaImage::from_vec(frame.width, frame.height, frame.bytes.clone())
+        .ok_or_else(|| BackendError::new("capture", "Failed to create image"))?;
+    
+    let dynamic = DynamicImage::ImageRgba8(image);
+    let mut buffer = Vec::new();
+    dynamic
+        .write_to(&mut Cursor::new(&mut buffer), ImageOutputFormat::Png)
+        .map_err(|e| BackendError::new("capture", format!("PNG encoding failed: {}", e)))?;
+    
+    Ok(Base64Standard.encode(buffer))
 }
 
 fn capture_thumbnail(rect: &Rect) -> Result<Option<String>, BackendError> {
