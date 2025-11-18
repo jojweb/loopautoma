@@ -31,6 +31,7 @@ Any LLM agent (Copilot, Cursor, Codex, etc.) working in this repo must:
     - [Task: Release build unblock - EventLog monitor tick](#task-release-build-unblock---eventlog-monitor-tick)
     - [Task: Release warning cleanup and input recorder helper](#task-release-warning-cleanup-and-input-recorder-helper)
     - [Task: Action Recorder - UI-level Input Capture (Simplified Recording) ✅ COMPLETE](#task-action-recorder---ui-level-input-capture-simplified-recording--complete)
+    - [Task: Action Recorder - Separate Window Architecture (Refactoring)](#task-action-recorder---separate-window-architecture-refactoring)
   - [Completed tasks (archived)](#completed-tasks-archived)
 
 <!-- /TOC -->
@@ -1038,6 +1039,25 @@ Phase 8: Extreme compaction and dark mode fixes (COMPLETED)
   - [x] 34b. Log complete updated profile object for inspection
   - [x] 34c. Log "Profile update called successfully" to confirm updateProfile was invoked
 
+Phase 9: CRITICAL FIX - Replace actions and system theme (COMPLETED)
+- [x] 35. Fix recorded actions not appearing in GraphComposer
+  - [x] 35a. Research how actions are stored in Profile type (actions: ActionConfig[])
+  - [x] 35b. Research how GraphComposer displays actions (maps profile.actions)
+  - [x] 35c. Identified root cause: code was APPENDING [...currentProfile.actions, ...newActions]
+  - [x] 35d. User explicitly requested REPLACE behavior (not append)
+  - [x] 35e. Changed to: actions: newActions (complete replacement)
+  - [x] 35f. Updated console logging to say "REPLACING action sequence"
+  - [x] 35g. Made updateProfile call async/await for reliability
+  - [x] 35h. Added final log: "Profile update completed. New actions should now be visible in GraphComposer"
+- [x] 36. Fix system theme mode white-on-white inputs
+  - [x] 36a. Researched issue: system theme uses prefers-color-scheme media query
+  - [x] 36b. Previous fix only covered [data-theme="dark"], not system theme
+  - [x] 36c. Added @media (prefers-color-scheme: light) for main:not([data-theme])
+  - [x] 36d. Added @media (prefers-color-scheme: dark) for main:not([data-theme])
+  - [x] 36e. Light mode: white background (#ffffff), dark text (#0c1729)
+  - [x] 36f. Dark mode: dark background (var(--brand-surface)), white text (var(--brand-text))
+  - [x] 36g. System theme now correctly inherits OS preference
+
 **Progress log**
 
 - 2025-11-18 — Task created after user reported app disappearing bug
@@ -1067,6 +1087,20 @@ Phase 8: Extreme compaction and dark mode fixes (COMPLETED)
   - Removed dropdown artifact by hiding controls in live text buffer
   - Enhanced action save logging: tracks before/after action counts and full profile
   - Build successful: bun run build:web passed ✅
+- 2025-01-18 — Phase 9 CRITICAL FIX: Actions now REPLACE (not append) and system theme fixed
+  - **BREAKING CHANGE**: Recorded actions now REPLACE entire action sequence (as user requested)
+  - Previous bug: was appending `[...currentProfile.actions, ...newActions]`
+  - New behavior: `actions: newActions` - complete replacement
+  - Fixed system theme inputs: added @media queries for prefers-color-scheme
+  - System theme light mode: white background, dark text (#0c1729)
+  - System theme dark mode: dark background (var(--brand-surface)), white text
+  - Made updateProfile async/await for better reliability
+  - Commit: 23e0636 ✅
+- 2025-01-18 — Phase 9 hotfix: Fixed babel parse error
+  - Added `async` keyword to event listener callback
+  - Error was: "Unexpected token (234:43)" when using await inside non-async function
+  - Fixed: `listen<RecordedAction[]>("...", async (event) => { await updateProfile(...) })`
+  - Commit: 5879c1d ✅
 
 **Assumptions and open questions**
 - Assumption: 80% screenshot scale is correct for action recorder

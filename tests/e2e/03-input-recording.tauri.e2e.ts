@@ -22,6 +22,7 @@ test.describe('Action Recorder Workflow - Desktop Mode', () => {
     const initialState = await getFakeDesktopState(page);
     const initialActions = initialState?.config?.profiles?.[0]?.actions ?? [];
     const initialActionCount = initialActions.length;
+    console.log('[Test] Initial action count:', initialActionCount);
 
     // Click "Record Actions" button
     const recordButton = page.getByRole('button', { name: /record actions/i });
@@ -71,23 +72,39 @@ test.describe('Action Recorder Workflow - Desktop Mode', () => {
     // Click "Done" button
     const doneButton = page.getByRole('button', { name: /done/i });
     await doneButton.click();
-    await page.waitForTimeout(500);
+    
+    // Wait for actions to be saved (with longer timeout for async processing)
+    await page.waitForTimeout(1500);
 
     // Verify Action Recorder is closed
     await expect(actionRecorder).not.toBeVisible();
 
-    // Verify actions were added to the profile
+    // Verify actions were REPLACED (not appended) in the profile
     const finalState = await getFakeDesktopState(page);
     const finalActions = finalState?.config?.profiles?.[0]?.actions ?? [];
-    expect(finalActions.length).toBeGreaterThan(initialActionCount);
+    console.log('[Test] Final action count:', finalActions.length);
+    console.log('[Test] Final actions:', JSON.stringify(finalActions, null, 2));
 
-    // Verify the new actions contain expected types
-    const newActions = finalActions.slice(initialActionCount);
-    const hasClickAction = newActions.some((a: any) => a.type === 'Click');
-    const hasTypeAction = newActions.some((a: any) => a.type === 'Type' && a.text?.includes('hello'));
+    // Actions should be REPLACED, so we expect exactly 2 actions (click + type)
+    expect(finalActions.length).toBe(2);
+
+    // Verify the actions contain expected types
+    const hasClickAction = finalActions.some((a: any) => a.type === 'Click');
+    const hasTypeAction = finalActions.some((a: any) => a.type === 'Type' && a.text?.includes('hello'));
 
     expect(hasClickAction).toBe(true);
     expect(hasTypeAction).toBe(true);
+
+    // CRITICAL: Verify actions are visible in GraphComposer
+    // Navigate to the action sequence section
+    const graphComposer = page.locator('.graph-composer, [role="region"]').first();
+    await expect(graphComposer).toBeVisible();
+    
+    // Look for action items in the graph
+    const actionItems = page.locator('.action-card, .action-item, [data-testid="action"]');
+    const actionCount = await actionItems.count();
+    console.log('[Test] Visible actions in GraphComposer:', actionCount);
+    expect(actionCount).toBeGreaterThanOrEqual(2);
   });
 
   test('4.2 - Action Recorder opens with screenshot displayed', async ({ page }) => {

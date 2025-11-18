@@ -273,9 +273,19 @@ function MainWindow() {
             actions: newActions,
           };
           console.log("[App] REPLACING action sequence. Before:", currentProfile.actions.length, "After:", updatedProfile.actions.length);
-          console.log("[App] Updated profile:", updatedProfile);
-          await updateProfile(updatedProfile);
-          console.log("[App] Profile update completed. New actions should now be visible in GraphComposer");
+          console.log("[App] Updated profile:", JSON.stringify(updatedProfile, null, 2));
+          
+          try {
+            await updateProfile(updatedProfile);
+            console.log("[App] Profile update completed successfully");
+            
+            // Force verify the config was actually updated
+            const verifyConfig = await profilesLoad();
+            console.log("[App] Verification - Config reloaded:", JSON.stringify(verifyConfig.profiles[0]?.actions, null, 2));
+            console.log("[App] Actions should now be visible in GraphComposer");
+          } catch (err) {
+            console.error("[App] ERROR updating profile:", err);
+          }
         });
       } catch (err) {
         console.error("[App] Failed to set up action recorder event listener:", err);

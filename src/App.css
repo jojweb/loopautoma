@@ -867,34 +867,27 @@ select {
   padding: 2px 6px;
 }
 
-/* Base styling for all inputs/selects */
-input,
-textarea,
-select {
-  background-color: var(--brand-surface);
-  color: var(--brand-text);
-  border: 1px solid var(--brand-border);
-}
+/* Base styling for all inputs/selects - system theme inherits from prefers-color-scheme */
 
 /* System theme: light mode */
 @media (prefers-color-scheme: light) {
-  main:not([data-theme]) input,
-  main:not([data-theme]) select,
-  main:not([data-theme]) textarea {
-    background-color: #ffffff;
-    color: #0c1729;
-    border-color: rgba(12, 23, 41, 0.18);
+  input,
+  textarea,
+  select {
+    background-color: #ffffff !important;
+    color: #0c1729 !important;
+    border-color: rgba(12, 23, 41, 0.18) !important;
   }
 }
 
 /* System theme: dark mode */
 @media (prefers-color-scheme: dark) {
-  main:not([data-theme]) input,
-  main:not([data-theme]) select,
-  main:not([data-theme]) textarea {
-    background-color: var(--brand-surface);
-    color: var(--brand-text);
-    border-color: var(--brand-border);
+  input,
+  textarea,
+  select {
+    background-color: var(--brand-surface) !important;
+    color: var(--brand-text) !important;
+    border-color: var(--brand-border) !important;
   }
 }
 
@@ -1744,8 +1737,15 @@ button.ghost:hover {
 }
 
 @keyframes pulse-live {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.7; }
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.7;
+  }
 }
 
 .action-item-controls {
