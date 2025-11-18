@@ -111,7 +111,7 @@ function MainWindow() {
   const [palette, setPalette] = useState<PaletteChoice>("serene");
   const [fontSize, setFontSize] = useState(13);
   const profiles = config?.profiles ?? [];
-  
+
   // Use ref to ensure we always have latest profile in event listener
   const selectedProfileRef = useRef<Profile | null>(null);
 
@@ -209,7 +209,7 @@ function MainWindow() {
 
   const selectedProfile = useMemo(() => profiles.find((p) => p.id === selectedId) ?? null, [profiles, selectedId]);
   const isRunning = Boolean(runningProfileId);
-  
+
   // Keep ref in sync with selectedProfile
   useEffect(() => {
     selectedProfileRef.current = selectedProfile;
@@ -227,14 +227,14 @@ function MainWindow() {
   // Subscribe to action recorder complete events
   useEffect(() => {
     if (!isDesktopEnvironment()) return;
-    
+
     const unlisten = (async () => {
       try {
         const { listen } = await import("@tauri-apps/api/event");
-        return await listen<RecordedAction[]>("loopautoma://action_recorder_complete", (event) => {
+        return await listen<RecordedAction[]>("loopautoma://action_recorder_complete", async (event) => {
           const actions = event.payload;
           const currentProfile = selectedProfileRef.current;
-          
+
           if (!currentProfile) {
             console.warn("[App] No selected profile, skipping action save");
             return;
