@@ -18,46 +18,138 @@ test.describe('Input Recording Workflow - Desktop Mode', () => {
     await waitForAppReady(page);
   });
 
-  test('4.1 - Happy path (click Record → perform actions → Stop → Save)', async ({ page }) => {
+  test('4.1 - Happy path: Record → perform actions → Stop auto-transforms to actions', async ({ page }) => {
+    // Get initial profile state
+    const initialState = await getFakeDesktopState(page);
+    const initialActions = initialState?.config?.profiles?.[0]?.actions ?? [];
+    const initialActionCount = initialActions.length;
+
     // Click Record
     const recordButton = page.getByRole('button', { name: /^record$/i });
     await recordButton.click();
-    
+
     // Verify recording started
     let state = await getFakeDesktopState(page);
     expect(state?.recording).toBe(true);
-    
-    // Simulate some input events
-    await emitInputEvent(page, { type: 'MouseMove', x: 100, y: 200 });
-    await emitInputEvent(page, { type: 'MouseButtonPress', button: 'Left' });
-    await emitInputEvent(page, { type: 'MouseButtonRelease', button: 'Left' });
-    
-    // Stop recording
+
+    // Simulate input events: mouse click + keyboard typing
+    await emitInputEvent(page, {
+      kind: 'mouse',
+      mouse: {
+        event_type: { button_down: 'Left' },
+        x: 100,
+        y: 200,
+        modifiers: { shift: false, control: false, alt: false, meta: false },
+        timestamp_ms: Date.now(),
+      },
+    });
+    await emitInputEvent(page, {
+      kind: 'mouse',
+      mouse: {
+        event_type: { button_up: 'Left' },
+        x: 100,
+        y: 200,
+        modifiers: { shift: false, control: false, alt: false, meta: false },
+        timestamp_ms: Date.now(),
+      },
+    });
+
+    // Type some text
+    await emitInputEvent(page, {
+      kind: 'keyboard',
+      keyboard: {
+        state: 'down',
+        key: 'c',
+        code: 67,
+        text: 'c',
+        modifiers: { shift: false, control: false, alt: false, meta: false },
+        timestamp_ms: Date.now(),
+      },
+    });
+    await emitInputEvent(page, {
+      kind: 'keyboard',
+      keyboard: {
+        state: 'down',
+        key: 'o',
+        code: 79,
+        text: 'o',
+        modifiers: { shift: false, control: false, alt: false, meta: false },
+        timestamp_ms: Date.now(),
+      },
+    });
+    await emitInputEvent(page, {
+      kind: 'keyboard',
+      keyboard: {
+        state: 'down',
+        key: 'n',
+        code: 78,
+        text: 'n',
+        modifiers: { shift: false, control: false, alt: false, meta: false },
+        timestamp_ms: Date.now(),
+      },
+    });
+    // Emit key-up to flush buffer
+    await emitInputEvent(page, {
+      kind: 'keyboard',
+      keyboard: {
+        state: 'up',
+        key: 'n',
+        code: 78,
+        text: null,
+        modifiers: { shift: false, control: false, alt: false, meta: false },
+        timestamp_ms: Date.now(),
+      },
+    });
+
+    // Wait for events to be processed
+    await page.waitForTimeout(300);
+
+    // Verify event counter shows events captured
+    const counter = page.locator('text=/\\d+ recorded step/i');
+    await expect(counter).toBeVisible();
+    const counterText = await counter.textContent();
+    expect(counterText).toMatch(/[1-9]/); // At least 1 event
+
+    // Stop recording - should automatically transform events into actions
     const stopButton = page.getByRole('button', { name: /^stop$/i });
     await stopButton.click();
-    
+
     state = await getFakeDesktopState(page);
     expect(state?.recording).toBe(false);
-    
-    // Save as ActionSequence
-    const saveButton = page.getByRole('button', { name: /save as actionsequence/i });
-    if (await saveButton.count() > 0 && await saveButton.isEnabled()) {
-      await saveButton.click();
-      // Verify actions were added (wait for UI update)
-      await page.waitForTimeout(500);
-    }
+
+    // Wait for transformation to complete
+    await page.waitForTimeout(500);
+
+    // Verify actions were automatically added to the profile
+    const finalState = await getFakeDesktopState(page);
+    const finalActions = finalState?.config?.profiles?.[0]?.actions ?? [];
+    expect(finalActions.length).toBeGreaterThan(initialActionCount);
+
+    // Verify the added actions contain expected types
+    const newActions = finalActions.slice(initialActionCount);
+    const hasClickAction = newActions.some((a: any) => a.type === 'Click');
+    const hasTypeAction = newActions.some((a: any) => a.type === 'Type');
+
+    expect(hasClickAction).toBe(true);
+    expect(hasTypeAction).toBe(true);
+
+    // Verify the Type action contains our text (may have duplicates due to fake harness)
+    const typeAction = newActions.find((a: any) => a.type === 'Type');
+    expect(typeAction).toBeDefined();
+    // Check for 'c', 'o', 'n' characters (may be duplicated)
+    expect(typeAction?.text).toMatch(/[con]+/);
   });
 
   test('4.2 - Recording starts, chip appears, timeline updates', async ({ page }) => {
     const recordButton = page.getByRole('button', { name: /^record$/i });
     await recordButton.click();
-    
+
     // Verify "Recording" chip appears
     await expect(page.locator('.running-chip', { hasText: /recording/i })).toBeVisible({ timeout: 3000 });
-    
+
     // Emit an event and verify timeline updates
     await emitInputEvent(page, { type: 'MouseMove', x: 150, y: 250 });
-    
+
     // Check for timeline element
     const timeline = page.locator('.timeline-list, .event-log-list, [data-testid="recording-timeline"]');
     await expect(timeline).toBeVisible({ timeout: 3000 });
@@ -66,14 +158,14 @@ test.describe('Input Recording Workflow - Desktop Mode', () => {
   test('4.3 - Mouse clicks captured with coordinates', async ({ page }) => {
     const recordButton = page.getByRole('button', { name: /^record$/i });
     await recordButton.click();
-    
+
     // Emit mouse button events
     await emitInputEvent(page, { type: 'MouseMove', x: 300, y: 400 });
     await emitInputEvent(page, { type: 'MouseButtonPress', button: 'Left' });
     await emitInputEvent(page, { type: 'MouseButtonRelease', button: 'Left' });
-    
+
     await page.waitForTimeout(500);
-    
+
     // Check timeline contains mouse event info (or at least exists)
     const timeline = page.locator('.timeline-list, .event-log-list');
     expect(await timeline.count()).toBeGreaterThan(0);
@@ -82,16 +174,16 @@ test.describe('Input Recording Workflow - Desktop Mode', () => {
   test('4.4 - Text typing buffered into single type events', async ({ page }) => {
     const recordButton = page.getByRole('button', { name: /^record$/i });
     await recordButton.click();
-    
+
     // Emit multiple key press events simulating typing
     await emitInputEvent(page, { type: 'KeyPress', key: 'H', code: 'KeyH' });
     await emitInputEvent(page, { type: 'KeyPress', key: 'e', code: 'KeyE' });
     await emitInputEvent(page, { type: 'KeyPress', key: 'l', code: 'KeyL' });
     await emitInputEvent(page, { type: 'KeyPress', key: 'l', code: 'KeyL' });
     await emitInputEvent(page, { type: 'KeyPress', key: 'o', code: 'KeyO' });
-    
+
     await page.waitForTimeout(500);
-    
+
     // Verify events are shown (buffering logic is internal)
     const timeline = page.locator('.timeline-list, .event-log-list');
     expect(await timeline.isVisible()).toBe(true);
@@ -100,14 +192,14 @@ test.describe('Input Recording Workflow - Desktop Mode', () => {
   test('4.5 - Special keys (Enter, Escape, Tab) captured correctly', async ({ page }) => {
     const recordButton = page.getByRole('button', { name: /^record$/i });
     await recordButton.click();
-    
+
     // Emit special keys
     await emitInputEvent(page, { type: 'KeyPress', key: 'Enter', code: 'Enter' });
     await emitInputEvent(page, { type: 'KeyPress', key: 'Escape', code: 'Escape' });
     await emitInputEvent(page, { type: 'KeyPress', key: 'Tab', code: 'Tab' });
-    
+
     await page.waitForTimeout(500);
-    
+
     const timeline = page.locator('.timeline-list, .event-log-list');
     expect(await timeline.isVisible()).toBe(true);
   });
@@ -115,7 +207,7 @@ test.describe('Input Recording Workflow - Desktop Mode', () => {
   test('4.6 - Modifier combinations (Ctrl+C, Alt+Tab) captured', async ({ page }) => {
     const recordButton = page.getByRole('button', { name: /^record$/i });
     await recordButton.click();
-    
+
     // Emit modifier key combinations
     await emitInputEvent(page, {
       type: 'KeyPress',
@@ -129,9 +221,9 @@ test.describe('Input Recording Workflow - Desktop Mode', () => {
       code: 'Tab',
       modifiers: { alt: true },
     });
-    
+
     await page.waitForTimeout(500);
-    
+
     const timeline = page.locator('.timeline-list, .event-log-list');
     expect(await timeline.isVisible()).toBe(true);
   });
@@ -139,13 +231,13 @@ test.describe('Input Recording Workflow - Desktop Mode', () => {
   test('4.7 - Scroll events shown in timeline (not saved to actions)', async ({ page }) => {
     const recordButton = page.getByRole('button', { name: /^record$/i });
     await recordButton.click();
-    
+
     // Emit scroll events
     await emitInputEvent(page, { type: 'MouseScroll', deltaY: 120 });
     await emitInputEvent(page, { type: 'MouseScroll', deltaY: -60 });
-    
+
     await page.waitForTimeout(500);
-    
+
     // Scroll events should appear in timeline
     const timeline = page.locator('.timeline-list, .event-log-list');
     expect(await timeline.isVisible()).toBe(true);
@@ -154,17 +246,17 @@ test.describe('Input Recording Workflow - Desktop Mode', () => {
   test('4.8 - Stop recording flushes type buffer', async ({ page }) => {
     const recordButton = page.getByRole('button', { name: /^record$/i });
     await recordButton.click();
-    
+
     // Type some text
     await emitInputEvent(page, { type: 'KeyPress', key: 't', code: 'KeyT' });
     await emitInputEvent(page, { type: 'KeyPress', key: 'e', code: 'KeyE' });
     await emitInputEvent(page, { type: 'KeyPress', key: 's', code: 'KeyS' });
     await emitInputEvent(page, { type: 'KeyPress', key: 't', code: 'KeyT' });
-    
+
     // Stop immediately (should flush buffer)
     const stopButton = page.getByRole('button', { name: /^stop$/i });
     await stopButton.click();
-    
+
     const state = await getFakeDesktopState(page);
     expect(state?.recording).toBe(false);
   });
@@ -172,14 +264,14 @@ test.describe('Input Recording Workflow - Desktop Mode', () => {
   test('4.9 - Timeline shows last 20 events, auto-scrolls', async ({ page }) => {
     const recordButton = page.getByRole('button', { name: /^record$/i });
     await recordButton.click();
-    
+
     // Emit many events
     for (let i = 0; i < 25; i++) {
       await emitInputEvent(page, { type: 'MouseMove', x: 100 + i * 10, y: 200 });
     }
-    
+
     await page.waitForTimeout(500);
-    
+
     // Timeline should be visible
     const timeline = page.locator('.timeline-list, .event-log-list');
     expect(await timeline.isVisible()).toBe(true);
@@ -188,14 +280,14 @@ test.describe('Input Recording Workflow - Desktop Mode', () => {
   test('4.10 - Event counter updates in real-time', async ({ page }) => {
     const recordButton = page.getByRole('button', { name: /^record$/i });
     await recordButton.click();
-    
+
     // Emit a few events
     await emitInputEvent(page, { type: 'MouseMove', x: 100, y: 200 });
     await emitInputEvent(page, { type: 'MouseButtonPress', button: 'Left' });
     await emitInputEvent(page, { type: 'MouseButtonRelease', button: 'Left' });
-    
+
     await page.waitForTimeout(500);
-    
+
     // Look for event counter (might be in RecordingBar or similar)
     const counter = page.locator('text=/\\d+ (event|recorded step)/i');
     if (await counter.count() > 0) {
@@ -203,58 +295,116 @@ test.describe('Input Recording Workflow - Desktop Mode', () => {
     }
   });
 
-  test('4.11 - Save converts events to ActionConfig correctly', async ({ page }) => {
+  test('4.11 - Stop converts events to ActionConfig correctly', async ({ page }) => {
+    const initialState = await getFakeDesktopState(page);
+    const initialActionCount = initialState?.config?.profiles?.[0]?.actions?.length ?? 0;
+
     const recordButton = page.getByRole('button', { name: /^record$/i });
     await recordButton.click();
-    
+
     // Emit events that should convert to actions
-    await emitInputEvent(page, { type: 'MouseMove', x: 500, y: 600 });
-    await emitInputEvent(page, { type: 'MouseButtonPress', button: 'Left' });
-    await emitInputEvent(page, { type: 'MouseButtonRelease', button: 'Left' });
-    
+    await emitInputEvent(page, {
+      kind: 'mouse',
+      mouse: {
+        event_type: { button_down: 'Left' },
+        x: 500,
+        y: 600,
+        modifiers: { shift: false, control: false, alt: false, meta: false },
+        timestamp_ms: Date.now(),
+      },
+    });
+    await emitInputEvent(page, {
+      kind: 'mouse',
+      mouse: {
+        event_type: { button_up: 'Left' },
+        x: 500,
+        y: 600,
+        modifiers: { shift: false, control: false, alt: false, meta: false },
+        timestamp_ms: Date.now(),
+      },
+    });
+
+    await page.waitForTimeout(300);
+
     const stopButton = page.getByRole('button', { name: /^stop$/i });
     await stopButton.click();
-    
-    // Try to save
-    const saveButton = page.getByRole('button', { name: /save as actionsequence/i });
-    if (await saveButton.count() > 0 && await saveButton.isEnabled()) {
-      await saveButton.click();
-      await page.waitForTimeout(500);
-    }
+
+    await page.waitForTimeout(500);
+
+    // Verify action was added
+    const finalState = await getFakeDesktopState(page);
+    const finalActions = finalState?.config?.profiles?.[0]?.actions ?? [];
+    expect(finalActions.length).toBeGreaterThan(initialActionCount);
+
+    // Verify the action has correct coordinates
+    const clickAction = finalActions[finalActions.length - 1];
+    expect(clickAction.type).toBe('Click');
+    expect(clickAction.x).toBe(500);
+    expect(clickAction.y).toBe(600);
   });
 
-  test('4.12 - Saved actions appear in profile ActionSequence', async ({ page }) => {
+  test('4.12 - Actions automatically appear in profile after stop', async ({ page }) => {
+    const initialState = await getFakeDesktopState(page);
+    const initialActionCount = initialState?.config?.profiles?.[0]?.actions?.length ?? 0;
+
     const recordButton = page.getByRole('button', { name: /^record$/i });
     await recordButton.click();
-    
-    // Emit events
-    await emitInputEvent(page, { type: 'MouseButtonPress', button: 'Left' });
-    await emitInputEvent(page, { type: 'MouseButtonRelease', button: 'Left' });
-    
+
+    // Emit mouse click events
+    await emitInputEvent(page, {
+      kind: 'mouse',
+      mouse: {
+        event_type: { button_down: 'Left' },
+        x: 250,
+        y: 350,
+        modifiers: { shift: false, control: false, alt: false, meta: false },
+        timestamp_ms: Date.now(),
+      },
+    });
+    await emitInputEvent(page, {
+      kind: 'mouse',
+      mouse: {
+        event_type: { button_up: 'Left' },
+        x: 250,
+        y: 350,
+        modifiers: { shift: false, control: false, alt: false, meta: false },
+        timestamp_ms: Date.now(),
+      },
+    });
+
+    await page.waitForTimeout(300);
+
     const stopButton = page.getByRole('button', { name: /^stop$/i });
     await stopButton.click();
-    
-    const saveButton = page.getByRole('button', { name: /save as actionsequence/i });
-    if (await saveButton.count() > 0 && await saveButton.isEnabled()) {
-      await saveButton.click();
-      await page.waitForTimeout(500);
-      
-      // Check actions section (would need to verify profile has new actions)
-      const actionsSection = page.locator('text=/actions/i');
-      expect(await actionsSection.count()).toBeGreaterThan(0);
-    }
+
+    await page.waitForTimeout(500);
+
+    // Verify action appears in profile config
+    const finalState = await getFakeDesktopState(page);
+    const finalActions = finalState?.config?.profiles?.[0]?.actions ?? [];
+    // Note: Both button_down and button_up events are emitted, but only button_down creates a Click action
+    expect(finalActions.length).toBeGreaterThanOrEqual(initialActionCount + 1);
+
+    // Find the last Click action
+    const clickActions = finalActions.filter((a: any) => a.type === 'Click');
+    const newClickAction = clickActions[clickActions.length - 1];
+    expect(newClickAction).toBeDefined();
+    expect(newClickAction.type).toBe('Click');
+    expect(newClickAction.button).toBe('Left');
+    expect(newClickAction.x).toBe(250);
+    expect(newClickAction.y).toBe(350);
   });
 
   test('4.13 - Clear timeline button clears display only', async ({ page }) => {
     const recordButton = page.getByRole('button', { name: /^record$/i });
     await recordButton.click();
-    
+
     // Emit some events
     await emitInputEvent(page, { type: 'MouseMove', x: 100, y: 200 });
     await emitInputEvent(page, { type: 'MouseMove', x: 150, y: 250 });
-    
+
     await page.waitForTimeout(500);
-    
+
     // Look for clear button in RecordingBar specifically
     const recordingSection = page.locator('[data-testid="recording-bar"], .recording-bar, .recording-panel');
     const clearButton = recordingSection.getByRole('button', { name: /^clear$/i });
@@ -262,7 +412,7 @@ test.describe('Input Recording Workflow - Desktop Mode', () => {
       await clearButton.click();
       await page.waitForTimeout(200);
     }
-    
+
     // Recording should still be active
     const state = await getFakeDesktopState(page);
     expect(state?.recording).toBe(true);
@@ -273,25 +423,25 @@ test.describe('Input Recording Workflow - Desktop Mode', () => {
     // This test documents the behavior
     const recordButton = page.getByRole('button', { name: /^record$/i });
     await recordButton.click();
-    
+
     const state = await getFakeDesktopState(page);
     expect(state?.recording).toBe(true);
-    
+
     // Note: Real LOOPAUTOMA_BACKEND=fake check happens in Rust tests
   });
 
   test('4.16 - Recording idempotent (start twice succeeds)', async ({ page }) => {
     const recordButton = page.getByRole('button', { name: /^record$/i });
-    
+
     // Start recording
     await recordButton.click();
     await page.waitForTimeout(200);
-    
+
     // Try to start again (should be idempotent or button disabled)
     if (await recordButton.count() > 0 && await recordButton.isEnabled()) {
       await recordButton.click();
     }
-    
+
     const state = await getFakeDesktopState(page);
     expect(state?.recording).toBe(true);
   });
@@ -299,16 +449,16 @@ test.describe('Input Recording Workflow - Desktop Mode', () => {
   test('4.17 - Stop idempotent (stop twice succeeds)', async ({ page }) => {
     const recordButton = page.getByRole('button', { name: /^record$/i });
     await recordButton.click();
-    
+
     const stopButton = page.getByRole('button', { name: /^stop$/i });
     await stopButton.click();
     await page.waitForTimeout(200);
-    
+
     // Try to stop again (should be idempotent or button disabled)
     if (await stopButton.count() > 0 && await stopButton.isEnabled()) {
       await stopButton.click();
     }
-    
+
     const state = await getFakeDesktopState(page);
     expect(state?.recording).toBe(false);
   });

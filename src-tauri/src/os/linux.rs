@@ -671,7 +671,7 @@ fn run_input_loop(
             }
             rdev::EventType::MouseMove { x, y } => {
                 eprintln!("[LinuxInputCapture] Calling domain callback for MouseMove");
-                callback(InputEvent::Mouse(MouseEvent {
+                let event = InputEvent::Mouse(MouseEvent {
                     event_type: MouseEventType::Move,
                     x,
                     y,
@@ -682,7 +682,10 @@ fn run_input_loop(
                         meta: false,
                     },
                     timestamp_ms,
-                }));
+                });
+                eprintln!("[LinuxInputCapture] About to invoke callback with: {:?}", event);
+                callback(event);
+                eprintln!("[LinuxInputCapture] Callback invoked successfully");
             }
             rdev::EventType::Wheel { delta_x, delta_y } => {
                 eprintln!("[LinuxInputCapture] Calling domain callback for Wheel");

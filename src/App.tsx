@@ -425,8 +425,9 @@ export function App() {
             </div>
           </div>
           <RecordingBar
-            onSave={async (evts) => {
+            onStop={async (evts) => {
               if (!selectedProfile) return;
+              if (evts.length === 0) return;
               const newActions = toActions(evts);
               await updateProfile({
                 ...selectedProfile,

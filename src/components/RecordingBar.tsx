@@ -12,7 +12,6 @@ export type RecordingEvent =
 export function RecordingBar(props: {
   onStart?: () => void;
   onStop?: (events: RecordingEvent[]) => void;
-  onSave?: (events: RecordingEvent[]) => void;
 }) {
   const [recording, setRecording] = useState(false);
   const [events, setEvents] = useState<RecordingEvent[]>([]);
@@ -185,14 +184,10 @@ export function RecordingBar(props: {
           {recording && (
             <span className="running-chip" title="Recording in progress">Recording</span>
           )}
-          <button
-            onClick={() => props.onSave?.(eventsRef.current)}
-            disabled={events.length === 0}
-            title={events.length ? "Save recorded steps as an ActionSequence" : "Record some interactions to enable saving"}
-          >
-            Save as ActionSequence
-          </button>
-          <span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>{events.length} recorded step(s)</span>
+          <span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>
+            {events.length} recorded step(s)
+            {events.length > 0 && !recording && " (will be added to profile)"}
+          </span>
         </div>
         {error && (
           <div role="alert" className="alert" style={{ fontSize: 13 }}>
