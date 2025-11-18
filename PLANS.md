@@ -113,6 +113,90 @@ To prevent uncontrolled growth of this file:
 
 ## Active tasks
 
+### Task: Input Capture Auto-Transform on Stop (Complete)
+
+**Started:** 2025-11-18
+
+**User request**
+- Automatically transform captured input events into ActionSequence when stopping recording
+- Remove the separate "Save as ActionSequence" button
+- User flow: Record → perform actions → Stop → actions automatically added to profile
+
+**Context and constraints**
+- RecordingBar already captures events in state
+- toActions() helper already exists for transformation
+- onSave callback exists but requires manual button click
+- Architecture requires events flow: capture → buffer → transform → profile update
+
+**Plan (checklist)**
+
+- [x] 1. Trace event flow from capture to UI storage
+  - [x] 1a. Verify RecordingBar listens to loopautoma://input_event
+  - [x] 1b. Confirm events accumulate in component state
+  - [x] 1c. Identify why transformation isn't automatic
+
+- [x] 2. Implement automatic transformation on stop
+  - [x] 2a. Replace onSave with onStop in RecordingBar props
+  - [x] 2b. Update App.tsx to use onStop with transformation logic
+  - [x] 2c. Ensure zero events doesn't trigger update
+
+- [x] 3. Update RecordingBar UI
+  - [x] 3a. Remove onSave prop from interface
+  - [x] 3b. Remove "Save as ActionSequence" button
+  - [x] 3c. Update UI hint text to indicate auto-transform
+
+- [x] 4. Create/update E2E tests
+  - [x] 4a. Update test 4.1 to verify auto-transform on stop
+  - [x] 4b. Test mouse click + keyboard typing → actions
+  - [x] 4c. Update test 4.11 (stop converts to ActionConfig)
+  - [x] 4d. Update test 4.12 (actions auto-appear in profile)
+  - [x] 4e. Fix event format (InputEvent with kind/mouse/keyboard)
+  - [x] 4f. All 16 E2E tests passing
+
+- [x] 5. Documentation
+  - [x] 5a. Create doc/inputCaptureAutoTransform.md
+  - [x] 5b. Document before/after workflow
+  - [x] 5c. Document event flow and transformation
+  - [x] 5d. Update PLANS.md
+
+**Progress log**
+
+- 2025-11-18 — Started task, analyzed event flow
+- 2025-11-18 — Identified issue: onSave callback exists but not onStop
+- 2025-11-18 — Implemented onStop in App.tsx with auto-transform logic
+- 2025-11-18 — Removed "Save as ActionSequence" button from RecordingBar
+- 2025-11-18 — Updated E2E tests to verify auto-transformation
+- 2025-11-18 — Fixed test assertions for event format and duplicate handling
+- 2025-11-18 — All 16 E2E tests passing ✅
+- 2025-11-18 — Created inputCaptureAutoTransform.md documentation
+- 2025-11-18 — Task complete, ready for manual verification
+
+**Key findings**
+
+- RecordingBar was already capturing events correctly
+- Issue: Separate button required for transformation
+- Solution: Move transformation logic to onStop callback
+- Click actions only created on button_down (button_up just updates timeline)
+- Text characters buffered until key-up or stop flushes buffer
+- Event format: `{ kind: "mouse", mouse: {...} }` or `{ kind: "keyboard", keyboard: {...} }`
+
+**Assumptions and open questions**
+
+- Assumption: Auto-transform on stop is better UX than separate button
+- Assumption: Users want actions immediately added to profile
+- Open question: Should we add toast notification when actions are added?
+- Open question: Should we add preview/confirmation dialog before adding?
+
+**Follow-ups / future work**
+
+- Optional: Add "Save" button toggle in preferences
+- Show toast notification when actions are added
+- Add undo/redo for auto-transformed actions
+- Preview actions before they're added to profile
+- Improve event deduplication in fake test harness
+
+---
+
 ### Task: E2E Verification of Core Features (Integration Tests + Documentation)
 
 **Started:** 2025-11-16
