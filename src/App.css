@@ -867,12 +867,35 @@ select {
   padding: 2px 6px;
 }
 
+/* Base styling for all inputs/selects */
 input,
 textarea,
 select {
   background-color: var(--brand-surface);
   color: var(--brand-text);
   border: 1px solid var(--brand-border);
+}
+
+/* System theme: light mode */
+@media (prefers-color-scheme: light) {
+  main:not([data-theme]) input,
+  main:not([data-theme]) select,
+  main:not([data-theme]) textarea {
+    background-color: #ffffff;
+    color: #0c1729;
+    border-color: rgba(12, 23, 41, 0.18);
+  }
+}
+
+/* System theme: dark mode */
+@media (prefers-color-scheme: dark) {
+  main:not([data-theme]) input,
+  main:not([data-theme]) select,
+  main:not([data-theme]) textarea {
+    background-color: var(--brand-surface);
+    color: var(--brand-text);
+    border-color: var(--brand-border);
+  }
 }
 
 main[data-theme="light"] input,

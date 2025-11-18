@@ -267,14 +267,15 @@ function MainWindow() {
           const newActions = toActions(events);
           console.log("[App] Transformed to", newActions.length, "actions:", newActions);
 
+          // REPLACE the entire action sequence (not append) as user requested
           const updatedProfile = {
             ...currentProfile,
-            actions: [...currentProfile.actions, ...newActions],
+            actions: newActions,
           };
-          console.log("[App] Updating profile with new actions. Before:", currentProfile.actions.length, "After:", updatedProfile.actions.length);
+          console.log("[App] REPLACING action sequence. Before:", currentProfile.actions.length, "After:", updatedProfile.actions.length);
           console.log("[App] Updated profile:", updatedProfile);
-          void updateProfile(updatedProfile);
-          console.log("[App] Profile update called successfully");
+          await updateProfile(updatedProfile);
+          console.log("[App] Profile update completed. New actions should now be visible in GraphComposer");
         });
       } catch (err) {
         console.error("[App] Failed to set up action recorder event listener:", err);
