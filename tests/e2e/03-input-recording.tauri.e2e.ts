@@ -72,7 +72,7 @@ test.describe('Action Recorder Workflow - Desktop Mode', () => {
     // Click "Done" button
     const doneButton = page.getByRole('button', { name: /done/i });
     await doneButton.click();
-    
+
     // Wait for actions to be saved (with longer timeout for async processing)
     await page.waitForTimeout(1500);
 
@@ -99,7 +99,7 @@ test.describe('Action Recorder Workflow - Desktop Mode', () => {
     // Navigate to the action sequence section
     const graphComposer = page.locator('.graph-composer, [role="region"]').first();
     await expect(graphComposer).toBeVisible();
-    
+
     // Look for action items in the graph
     const actionItems = page.locator('.action-card, .action-item, [data-testid="action"]');
     const actionCount = await actionItems.count();

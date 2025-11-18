@@ -114,3 +114,8 @@ export async function actionRecorderClose(): Promise<void> {
   await callInvoke("action_recorder_close");
 }
 
+export async function actionRecorderComplete(actions: any[]): Promise<void> {
+  if (!isDesktopMode()) return; // treat as no-op in web preview
+  await callInvoke("action_recorder_complete", { actions });
+}
+

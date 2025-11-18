@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { emit } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { actionRecorderClose } from "../tauriBridge";
+import { actionRecorderClose, actionRecorderComplete } from "../tauriBridge";
 import { ActionNumberMarker } from "./ActionNumberMarker";
 
 const SCREENSHOT_SCALE = 0.8; // Display at 80% of original size
@@ -151,15 +150,18 @@ export function ActionRecorderWindow() {
 
             // Send actions to main window if any exist
             if (finalActions.length > 0) {
-                console.log("[ActionRecorder] Emitting actions:", finalActions);
-                await emit("loopautoma://action_recorder_complete", finalActions);
-                console.log("[ActionRecorder] Emit successful");
+                console.log("[ActionRecorder] Sending", finalActions.length, "actions to backend:", JSON.stringify(finalActions));
+                // Call Tauri command which will emit event and restore windows
+                await actionRecorderComplete(finalActions);
+                console.log("[ActionRecorder] Backend command completed successfully");
+            } else {
+                console.log("[ActionRecorder] No actions to send, just closing");
+                await actionRecorderClose();
+                await recorderWindow.close();
             }
         } catch (err) {
             console.error("[ActionRecorder] Error in handleDone:", err);
-        } finally {
-            // Always close, even if no actions
-            console.log("[ActionRecorder] Closing windows");
+            // On error, still try to close gracefully
             await actionRecorderClose();
             await recorderWindow.close();
         }

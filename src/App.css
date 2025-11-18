@@ -878,6 +878,7 @@ select {
 
 /* System theme: light mode */
 @media (prefers-color-scheme: light) {
+
   main:not([data-theme]) input,
   main:not([data-theme]) textarea,
   main:not([data-theme]) select {
@@ -889,6 +890,7 @@ select {
 
 /* System theme: dark mode */
 @media (prefers-color-scheme: dark) {
+
   main:not([data-theme]) input,
   main:not([data-theme]) textarea,
   main:not([data-theme]) select {

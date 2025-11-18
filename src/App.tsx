@@ -216,13 +216,14 @@ function MainWindow() {
   }, [selectedProfile]);
 
   const updateProfile = useCallback(async (updated: Profile) => {
-    if (!config) return;
-    const idx = config.profiles.findIndex((p) => p.id === updated.id);
+    // Always fetch fresh config to avoid stale closure when called from async event listeners
+    const freshConfig = await profilesLoad();
+    const idx = freshConfig.profiles.findIndex((p) => p.id === updated.id);
     const nextProfiles = idx >= 0
-      ? [...config.profiles.slice(0, idx), updated, ...config.profiles.slice(idx + 1)]
-      : [...config.profiles, updated];
-    await applyConfig({ version: config.version, profiles: nextProfiles });
-  }, [applyConfig, config]);
+      ? [...freshConfig.profiles.slice(0, idx), updated, ...freshConfig.profiles.slice(idx + 1)]
+      : [...freshConfig.profiles, updated];
+    await applyConfig({ version: freshConfig.version, profiles: nextProfiles });
+  }, [applyConfig]);
 
   // Subscribe to action recorder complete events
   useEffect(() => {
@@ -274,11 +275,11 @@ function MainWindow() {
           };
           console.log("[App] REPLACING action sequence. Before:", currentProfile.actions.length, "After:", updatedProfile.actions.length);
           console.log("[App] Updated profile:", JSON.stringify(updatedProfile, null, 2));
-          
+
           try {
             await updateProfile(updatedProfile);
             console.log("[App] Profile update completed successfully");
-            
+
             // Force verify the config was actually updated
             const verifyConfig = await profilesLoad();
             console.log("[App] Verification - Config reloaded:", JSON.stringify(verifyConfig.profiles[0]?.actions, null, 2));

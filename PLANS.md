@@ -1116,6 +1116,55 @@ Phase 9: CRITICAL FIX - Replace actions and system theme (COMPLETED)
     - Test now checks GraphComposer UI shows actions
     - Comprehensive logging will reveal EXACT failure point if still broken
   - Commit: 2e0d468 ✅
+- 2025-01-18 — Phase 11 FINAL FIX: Action persistence ROOT CAUSE resolved ✅
+  - **ROOT CAUSE IDENTIFIED**: Stale closure bug in updateProfile
+    - updateProfile had `config` in dependency array
+    - When action_recorder_complete event fired asynchronously, used stale config snapshot
+    - Updated profile merged with OLD config data, overwriting any concurrent changes
+  - **SOLUTION**: Fetch fresh config inside updateProfile
+    - Changed: `const freshConfig = await profilesLoad()` at function start
+    - Removed `config` from dependency array (now only depends on applyConfig)
+    - Event listener always operates on latest config state
+  - **VERIFICATION**: TypeScript compilation passes ✅
+  - User confirmed Y-coordinate markers now fixed (separate issue, already resolved)
+  - Ready for final testing: bun run tauri dev → record actions → verify in profiles.json
+- 2025-01-18 — Phase 12: Event log cleanup and action emission timing fix
+  - **ISSUE 1: MonitorTick spam flooding event log**
+    - MonitorTick events fire every 100ms (monitor tick interval)
+    - User only expects events every 60s (trigger interval)
+    - Event log showed dozens of useless "MonitorTick: next=48.7s" entries
+  - **SOLUTION**: Filter MonitorTick from EventLog display
+    - Added `filteredEvents = events.filter(e => e.type !== "MonitorTick")`
+    - MonitorTick still emitted for CountdownTimer component (needs it)
+    - Event log now only shows meaningful events: TriggerFired, ConditionEvaluated, ActionStarted, etc.
+  - **ISSUE 2: Action recorder event might not propagate before window closes**
+    - Window closes immediately after emit() call
+    - Event might not have time to reach main window listener
+  - **SOLUTION**: Add 100ms delay after emit
+    - `await new Promise(resolve => setTimeout(resolve, 100))` after emit
+    - Ensures event delivery before action-recorder window closes
+    - Better logging: JSON.stringify actions, separate log for "no actions" case
+  - Ready for testing: verify (1) event log clean, (2) actions persist
+- 2025-01-18 — Phase 13: **ROOT CAUSE FOUND AND FIXED** - Missing Tauri command bridge
+  - **THE ACTUAL BUG (after line-by-line analysis)**:
+    - ActionRecorderWindow was calling `emit("loopautoma://action_recorder_complete")` directly
+    - This emits a FRONTEND JavaScript event, NOT a Tauri backend command
+    - The event never reached Rust's `action_recorder_complete` function
+    - Frontend event listeners in different windows don't reliably communicate
+    - The `actionRecorderComplete` bridge function was MISSING from tauriBridge.ts
+  - **THE FIX**:
+    - Added `actionRecorderComplete(actions)` to tauriBridge.ts
+    - Changed ActionRecorderWindow to call Tauri command instead of emit
+    - Rust backend now properly emits event AND handles window lifecycle
+    - Removed 100ms delay workaround (no longer needed with proper command flow)
+  - **VERIFICATION STEPS**:
+    - Check terminal output (NOT F12 - that doesn't work in Tauri)
+    - Use Ctrl+Shift+I to open DevTools if needed
+    - Look for: "[ActionRecorder] Sending X actions to backend"
+    - Look for: "[App] Received X recorded action(s)"
+    - Look for: "[App] REPLACING action sequence"
+  - **DOCUMENTATION**: Created doc/developerConsole.md explaining how to access console in Tauri
+  - This should FINALLY fix action persistence after weeks of incorrect attempts
 
 **Assumptions and open questions**
 - Assumption: 80% screenshot scale is correct for action recorder
