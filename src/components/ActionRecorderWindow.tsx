@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { emit } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { actionRecorderClose } from "../tauriBridge";
 import { ActionNumberMarker } from "./ActionNumberMarker";
@@ -151,7 +152,7 @@ export function ActionRecorderWindow() {
             // Send actions to main window if any exist
             if (finalActions.length > 0) {
                 console.log("[ActionRecorder] Emitting actions:", finalActions);
-                await recorderWindow.emit("loopautoma://action_recorder_complete", finalActions);
+                await emit("loopautoma://action_recorder_complete", finalActions);
                 console.log("[ActionRecorder] Emit successful");
             }
         } catch (err) {
@@ -220,13 +221,12 @@ export function ActionRecorderWindow() {
 
                     {/* Render action markers at displayed (scaled) positions */}
                     {actions.map((action, index) => {
-                        if (action.type !== "click" || !screenshotRef.current) return null;
-                        const rect = screenshotRef.current.getBoundingClientRect();
-                        // action.x and action.y are real (unscaled) coordinates
+                        if (action.type !== "click") return null;
+                        // action.x and action.y are real (unscaled) coordinates.
                         // Convert them back to displayed coordinates for marker positioning
-                        // Must account for both X and Y offsets of the rendered screenshot
-                        const displayX = rect.left + action.x * SCREENSHOT_SCALE;
-                        const displayY = rect.top + action.y * SCREENSHOT_SCALE;
+                        // relative to the screenshot container itself.
+                        const displayX = action.x * SCREENSHOT_SCALE;
+                        const displayY = action.y * SCREENSHOT_SCALE;
                         return (
                             <ActionNumberMarker
                                 key={index}

@@ -1101,6 +1101,21 @@ Phase 9: CRITICAL FIX - Replace actions and system theme (COMPLETED)
   - Error was: "Unexpected token (234:43)" when using await inside non-async function
   - Fixed: `listen<RecordedAction[]>("...", async (event) => { await updateProfile(...) })`
   - Commit: 5879c1d ✅
+- 2025-01-18 — Phase 10 CRITICAL FIX (user reported 10 times): System theme + Action persistence
+  - **ISSUE 1: System theme white-on-white ACTUALLY FIXED**
+    - Previous fix had specificity problem (base rules overrode media queries)
+    - Moved media queries to top level with !important flags
+    - System theme now correctly inherits prefers-color-scheme from OS
+    - Dark OS → dark background + white text, Light OS → white background + dark text
+  - **ISSUE 2: Actions not persisting - DEEP DIAGNOSTIC ADDED**
+    - User reported 10+ times that actions don't save despite claiming fixed
+    - Added JSON.stringify logging to see exact profile data
+    - Added try-catch with error logging around updateProfile
+    - Added verification step: reload config after save to confirm persistence
+    - Updated E2E test to verify REPLACE behavior (expect exactly 2 actions, not append)
+    - Test now checks GraphComposer UI shows actions
+    - Comprehensive logging will reveal EXACT failure point if still broken
+  - Commit: 2e0d468 ✅
 
 **Assumptions and open questions**
 - Assumption: 80% screenshot scale is correct for action recorder

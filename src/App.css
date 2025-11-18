@@ -867,13 +867,20 @@ select {
   padding: 2px 6px;
 }
 
-/* Base styling for all inputs/selects - system theme inherits from prefers-color-scheme */
+/* Base styling for all inputs/selects */
+input,
+textarea,
+select {
+  background-color: var(--brand-surface);
+  color: var(--brand-text);
+  border: 1px solid var(--brand-border);
+}
 
 /* System theme: light mode */
 @media (prefers-color-scheme: light) {
-  input,
-  textarea,
-  select {
+  main:not([data-theme]) input,
+  main:not([data-theme]) textarea,
+  main:not([data-theme]) select {
     background-color: #ffffff !important;
     color: #0c1729 !important;
     border-color: rgba(12, 23, 41, 0.18) !important;
@@ -882,9 +889,9 @@ select {
 
 /* System theme: dark mode */
 @media (prefers-color-scheme: dark) {
-  input,
-  textarea,
-  select {
+  main:not([data-theme]) input,
+  main:not([data-theme]) textarea,
+  main:not([data-theme]) select {
     background-color: var(--brand-surface) !important;
     color: var(--brand-text) !important;
     border-color: var(--brand-border) !important;
