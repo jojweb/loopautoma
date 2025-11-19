@@ -93,6 +93,19 @@ pub trait ScreenCapture {
     fn displays(&self) -> Result<Vec<DisplayInfo>, BackendError>;
 }
 
+/// Trait for OCR text extraction from screen regions
+pub trait OCRCapture: Send + Sync {
+    /// Extract text from a screen region
+    fn extract_text(&self, region: &Region) -> Result<String, BackendError>;
+    
+    /// Extract text with caching (for performance)
+    /// Cache entries should be invalidated based on region hash changes
+    fn extract_text_cached(&self, region: &Region, _region_hash: u64) -> Result<String, BackendError> {
+        // Default implementation: no caching
+        self.extract_text(region)
+    }
+}
+
 pub trait Condition {
     fn evaluate(&mut self, now: Instant, regions: &[Region], capture: &dyn ScreenCapture) -> bool;
 }
@@ -228,11 +241,19 @@ impl ActionSequence {
 }
 
 // Guardrails
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Guardrails {
     pub cooldown: Duration,
     pub max_runtime: Option<Duration>,
     pub max_activations_per_hour: Option<u32>,
+    /// Keywords/patterns that indicate task success (terminate with success)
+    pub success_keywords: Vec<String>,
+    /// Keywords/patterns that indicate task failure (terminate with failure)
+    pub failure_keywords: Vec<String>,
+    /// Optional regex pattern for OCR-based termination
+    pub ocr_termination_pattern: Option<String>,
+    /// Region IDs to scan with OCR for termination detection
+    pub ocr_region_ids: Vec<String>,
 }
 
 impl Default for Guardrails {
@@ -241,6 +262,10 @@ impl Default for Guardrails {
             cooldown: Duration::from_millis(0),
             max_runtime: None,
             max_activations_per_hour: None,
+            success_keywords: Vec::new(),
+            failure_keywords: Vec::new(),
+            ocr_termination_pattern: None,
+            ocr_region_ids: Vec::new(),
         }
     }
 }
@@ -304,6 +329,18 @@ pub struct GuardrailsConfig {
     pub max_runtime_ms: Option<u64>,
     pub max_activations_per_hour: Option<u32>,
     pub cooldown_ms: u64,
+    /// Keywords/patterns that indicate task success (regex strings)
+    #[serde(default)]
+    pub success_keywords: Vec<String>,
+    /// Keywords/patterns that indicate task failure (regex strings)
+    #[serde(default)]
+    pub failure_keywords: Vec<String>,
+    /// Optional regex pattern for OCR-based termination
+    #[serde(default)]
+    pub ocr_termination_pattern: Option<String>,
+    /// Region IDs to scan with OCR for termination detection
+    #[serde(default)]
+    pub ocr_region_ids: Vec<String>,
 }
 
 /// Response from LLM for prompt generation with intelligent termination support

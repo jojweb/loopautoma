@@ -87,6 +87,10 @@ fn default_profile() -> Profile {
             max_runtime_ms: Some(3 * 60 * 60 * 1000),
             max_activations_per_hour: Some(120),
             cooldown_ms: 5_000,
+            success_keywords: Vec::new(),
+            failure_keywords: Vec::new(),
+            ocr_termination_pattern: None,
+            ocr_region_ids: Vec::new(),
         }),
     }
 }
@@ -212,6 +216,10 @@ pub fn build_monitor_from_profile<'a>(p: &Profile, api_key: Option<String>, mode
             cooldown: Duration::from_millis(g.cooldown_ms),
             max_runtime: g.max_runtime_ms.map(Duration::from_millis),
             max_activations_per_hour: g.max_activations_per_hour,
+            success_keywords: g.success_keywords.clone(),
+            failure_keywords: g.failure_keywords.clone(),
+            ocr_termination_pattern: g.ocr_termination_pattern.clone(),
+            ocr_region_ids: g.ocr_region_ids.clone(),
         })
         .unwrap_or_default();
 

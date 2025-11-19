@@ -664,4 +664,98 @@ fn core_keyboard_device_id(conn: &XCBConnection) -> Result<i32, BackendError> {
     }
 }
 
+// ===== OCR Support =====
+
+#[cfg(feature = "ocr-integration")]
+use crate::domain::OCRCapture;
+#[cfg(feature = "ocr-integration")]
+use std::sync::RwLock;
+#[cfg(feature = "ocr-integration")]
+use uni_ocr::{OcrEngine, OcrProvider};
+
+/// Linux OCR implementation using uni-ocr (Tesseract backend)
+#[cfg(feature = "ocr-integration")]
+pub struct LinuxOCR {
+    engine: OcrEngine,
+    cache: RwLock<HashMap<String, (String, u64)>>, // region_id -> (text, hash)
+}
+
+#[cfg(feature = "ocr-integration")]
+impl LinuxOCR {
+    pub fn new() -> Result<Self, BackendError> {
+        // Use Tesseract provider on Linux
+        let engine = OcrEngine::new(OcrProvider::Tesseract)
+            .map_err(|e| BackendError::new("ocr_init_failed", e.to_string()))?;
+        
+        Ok(Self {
+            engine,
+            cache: RwLock::new(HashMap::new()),
+        })
+    }
+}
+
+#[cfg(feature = "ocr-integration")]
+impl OCRCapture for LinuxOCR {
+    fn extract_text(&self, region: &Region) -> Result<String, BackendError> {
+        eprintln!("[OCR] Extracting text from region '{}'", region.id);
+        
+        // Capture the region as an image
+        let capture = LinuxCapture;
+        let frame = capture.capture_region(region)?;
+        
+        // Convert to image format
+        let img = image::RgbaImage::from_raw(frame.width, frame.height, frame.bytes)
+            .ok_or_else(|| BackendError::new("ocr_image_conversion", "Failed to convert frame to image"))?;
+        
+        // Save to a temporary PNG file (uni-ocr works with file paths)
+        let temp_path = format!("/tmp/loopautoma_ocr_{}.png", region.id);
+        img.save(&temp_path)
+            .map_err(|e| BackendError::new("ocr_temp_save", e.to_string()))?;
+        
+        // Perform OCR (blocking call - uni-ocr is async but we'll use blocking runtime)
+        let rt = tokio::runtime::Runtime::new()
+            .map_err(|e| BackendError::new("tokio_runtime", e.to_string()))?;
+        
+        let text = rt.block_on(async {
+            let (text, _json, _confidence) = self.engine.recognize_file(&temp_path).await
+                .map_err(|e| BackendError::new("ocr_extraction_failed", e.to_string()))?;
+            Ok::<String, BackendError>(text)
+        })?;
+        
+        // Clean up temp file
+        let _ = std::fs::remove_file(&temp_path);
+        
+        eprintln!("[OCR] Extracted text (length={}): {:?}", text.len(), text);
+        Ok(text)
+    }
+    
+    fn extract_text_cached(&self, region: &Region, region_hash: u64) -> Result<String, BackendError> {
+        // Try to get from cache first
+        {
+            let cache = self.cache.read()
+                .map_err(|_| BackendError::new("ocr_cache_lock", "Cache lock poisoned"))?;
+            
+            if let Some((cached_text, cached_hash)) = cache.get(&region.id) {
+                if *cached_hash == region_hash {
+                    eprintln!("[OCR] Cache hit for region '{}' (hash={})", region.id, region_hash);
+                    return Ok(cached_text.clone());
+                }
+            }
+        }
+        
+        // Cache miss or hash changed - extract text
+        eprintln!("[OCR] Cache miss for region '{}' (hash={})", region.id, region_hash);
+        let text = self.extract_text(region)?;
+        
+        // Update cache
+        {
+            let mut cache = self.cache.write()
+                .map_err(|_| BackendError::new("ocr_cache_lock", "Cache lock poisoned"))?;
+            cache.insert(region.id.clone(), (text.clone(), region_hash));
+        }
+        
+        Ok(text)
+    }
+}
+
 

@@ -123,6 +123,10 @@ fn build_profile(config: &SoakConfig) -> Profile {
             max_runtime_ms: Some(config.max_runtime_ms),
             max_activations_per_hour: Some((3_600_000u64 / config.cooldown_ms.max(1)).max(1) as u32),
             cooldown_ms: config.cooldown_ms,
+            success_keywords: Vec::new(),
+            failure_keywords: Vec::new(),
+            ocr_termination_pattern: None,
+            ocr_region_ids: Vec::new(),
         }),
     }
 }
