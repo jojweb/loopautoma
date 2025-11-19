@@ -81,8 +81,8 @@ mod tests {
     }
 
     #[test]
-    fn region_condition_reports_stable_after_duration() {
-        let mut c = RegionCondition::new(Duration::from_millis(200), 4);
+    fn region_condition_reports_stable_after_consecutive_checks() {
+        let mut c = RegionCondition::new(4, false); // expect_change=false means trigger when NO change
         let r = Region {
             id: "r1".into(),
             rect: Rect {
@@ -95,12 +95,12 @@ mod tests {
         };
         let cap = FakeCap { seq: vec![42] };
         let t0 = Instant::now();
-        // first evaluate: not yet stable
+        // First 3 evaluations: not yet 4 consecutive no-change states
         assert!(!c.evaluate(t0, &[r.clone()], &cap));
-        // before stable duration
-        assert!(!c.evaluate(t0 + Duration::from_millis(150), &[r.clone()], &cap));
-        // after stable duration
-        assert!(c.evaluate(t0 + Duration::from_millis(250), &[r], &cap));
+        assert!(!c.evaluate(t0 + Duration::from_millis(50), &[r.clone()], &cap));
+        assert!(!c.evaluate(t0 + Duration::from_millis(100), &[r.clone()], &cap));
+        // 4th consecutive evaluation with same hash: should trigger
+        assert!(c.evaluate(t0 + Duration::from_millis(150), &[r], &cap));
     }
 
     #[test]
@@ -163,7 +163,7 @@ mod tests {
     fn monitor_activates_once_when_condition_true() {
         let mut monitor = Monitor::new(
             Box::new(AlwaysTrigger),
-            Box::new(RegionCondition::new(Duration::from_millis(50), 4)),
+            Box::new(RegionCondition::new(4, false)),
             ActionSequence::new(vec![
                 Box::new(TypeText {
                     text: "continue".into(),
@@ -193,23 +193,29 @@ mod tests {
         let mut events = vec![];
         let t0 = Instant::now();
         monitor.start(&mut events);
-        // first ticks: condition not yet stable
-        monitor.tick(t0, &[r.clone()], &cap, &auto, &mut events);
+        // Need 4 consecutive ticks with same hash to trigger (expect_change=false, consecutive_checks=4)
+        monitor.tick(t0, &[r.clone()], &cap, &auto, &mut events); // check 1
+        monitor.tick(
+            t0 + Duration::from_millis(20),
+            &[r.clone()],
+            &cap,
+            &auto,
+            &mut events,
+        ); // check 2
         monitor.tick(
             t0 + Duration::from_millis(40),
             &[r.clone()],
             &cap,
             &auto,
             &mut events,
-        );
-        // after stable period
+        ); // check 3
         monitor.tick(
             t0 + Duration::from_millis(60),
             &[r],
             &cap,
             &auto,
             &mut events,
-        );
+        ); // check 4: should trigger action sequence
         assert_eq!(monitor.activations, 1);
         let calls = auto.calls.lock().unwrap().clone();
         assert_eq!(calls, vec!["type:continue", "key:Enter"]);
@@ -237,8 +243,8 @@ mod tests {
             },
             condition: ConditionConfig {
                 r#type: "RegionCondition".into(),
-                stable_ms: 30,
-                downscale: 4,
+                consecutive_checks: 1,
+                expect_change: false,
             },
             actions: vec![
                 ActionConfig::Type {
@@ -255,7 +261,7 @@ mod tests {
             }),
         };
 
-        let (mut mon, regions) = build_monitor_from_profile(&profile);
+        let (mut mon, regions) = build_monitor_from_profile(&profile, None, None);
 
         // Use our fakes just like the runtime path
         struct Cap;
@@ -341,7 +347,7 @@ mod tests {
         // Small guardrails to trigger quickly
         let mut m = Monitor::new(
             Box::new(AlwaysTrigger),
-            Box::new(RegionCondition::new(Duration::from_millis(0), 1)),
+            Box::new(RegionCondition::new(1, false)),
             ActionSequence::new(vec![]),
             Guardrails {
                 cooldown: Duration::from_millis(0),
@@ -405,7 +411,7 @@ mod tests {
         use crate::monitor::Monitor;
         let mut m = Monitor::new(
             Box::new(AlwaysTrigger),
-            Box::new(RegionCondition::new(Duration::from_millis(0), 1)),
+            Box::new(RegionCondition::new(1, false)),
             ActionSequence::new(vec![
                 Box::new(TypeText { text: "x".into() }) as Box<dyn Action + Send + Sync>
             ]),
@@ -482,7 +488,7 @@ mod tests {
         use crate::monitor::Monitor;
         let mut m = Monitor::new(
             Box::new(AlwaysTrigger),
-            Box::new(RegionCondition::new(Duration::from_millis(0), 1)),
+            Box::new(RegionCondition::new(1, false)),
             ActionSequence::new(vec![
                 Box::new(TypeText { text: "x".into() }) as Box<dyn Action + Send + Sync>
             ]),
@@ -589,8 +595,8 @@ mod tests {
             },
             condition: ConditionConfig {
                 r#type: "RegionCondition".into(),
-                stable_ms: 1,
-                downscale: 1,
+                consecutive_checks: 1,
+                expect_change: false,
             },
             actions: vec![
                 ActionConfig::Type {
@@ -607,7 +613,7 @@ mod tests {
             }),
         };
 
-        let (mut mon, regions) = build_monitor_from_profile(&profile);
+        let (mut mon, regions) = build_monitor_from_profile(&profile, None, None);
 
         // Use deterministic fakes: constant hash (no visual change) and no-op automation
         struct Cap;
@@ -699,7 +705,7 @@ mod tests {
         // Long-ish loop with small cooldown to simulate ongoing operation.
         let mut m = Monitor::new(
             Box::new(AlwaysTrigger),
-            Box::new(RegionCondition::new(Duration::from_millis(0), 1)),
+            Box::new(RegionCondition::new(1, false)),
             ActionSequence::new(vec![Box::new(TypeText {
                 text: "tick".into(),
             }) as Box<dyn Action + Send + Sync>]),
@@ -775,7 +781,7 @@ mod tests {
     fn panic_stop_helper_emits_watchdog_and_stop_state() {
         let mut m = Monitor::new(
             Box::new(AlwaysTrigger),
-            Box::new(RegionCondition::new(Duration::from_millis(0), 1)),
+            Box::new(RegionCondition::new(1, false)),
             ActionSequence::new(vec![]),
             Guardrails {
                 cooldown: Duration::from_millis(0),
@@ -800,16 +806,16 @@ mod tests {
 
     #[test]
     fn region_condition_handles_empty_regions() {
-        let mut c = RegionCondition::new(Duration::from_millis(100), 4);
+        let mut c = RegionCondition::new(1, false); // 1 consecutive check required
         let cap = FakeCap { seq: vec![42] };
         let t0 = Instant::now();
-        // No regions means stable immediately (vacuously true)
+        // No regions means condition met immediately (vacuously true - no change to detect)
         assert!(c.evaluate(t0, &[], &cap));
     }
 
     #[test]
     fn region_condition_resets_on_hash_change() {
-        let mut c = RegionCondition::new(Duration::from_millis(200), 4);
+        let mut c = RegionCondition::new(4, false); // expect_change=false, need 4 consecutive no-change checks
         let r = Region {
             id: "r1".into(),
             rect: Rect {
@@ -835,9 +841,10 @@ mod tests {
         }
         let cap1 = Cap1;
         let t0 = Instant::now();
-        assert!(!c.evaluate(t0, &[r.clone()], &cap1)); // first eval: not stable yet
-        assert!(!c.evaluate(t0 + Duration::from_millis(150), &[r.clone()], &cap1)); // still not stable
-                                                                                    // Hash changes to 99
+        assert!(!c.evaluate(t0, &[r.clone()], &cap1)); // check 1: no-change
+        assert!(!c.evaluate(t0 + Duration::from_millis(50), &[r.clone()], &cap1)); // check 2: no-change
+        assert!(!c.evaluate(t0 + Duration::from_millis(100), &[r.clone()], &cap1)); // check 3: no-change
+        // Hash changes to 99
         struct Cap2;
         impl ScreenCapture for Cap2 {
             fn hash_region(&self, _r: &Region, _d: u32) -> u64 {
@@ -851,11 +858,16 @@ mod tests {
             }
         }
         let cap2 = Cap2;
-        // Even after stable duration, change resets timer
-        assert!(!c.evaluate(t0 + Duration::from_millis(250), &[r.clone()], &cap2)); // hash changed, reset
-                                                                                    // Must wait another stable_ms from t250
-        assert!(!c.evaluate(t0 + Duration::from_millis(400), &[r.clone()], &cap2)); // still not stable
-        assert!(c.evaluate(t0 + Duration::from_millis(460), &[r], &cap2)); // now stable
+        // Hash changed (42→99), so any_changed=true, flips state to "change", consecutive=1
+        assert!(!c.evaluate(t0 + Duration::from_millis(150), &[r.clone()], &cap2));
+        // Now hash is stable at 99, so any_changed=false, flips state back to "no-change", consecutive=1
+        assert!(!c.evaluate(t0 + Duration::from_millis(200), &[r.clone()], &cap2));
+        // Continue with same hash: no-change, consecutive=2
+        assert!(!c.evaluate(t0 + Duration::from_millis(250), &[r.clone()], &cap2));
+        // Continue: no-change, consecutive=3
+        assert!(!c.evaluate(t0 + Duration::from_millis(300), &[r.clone()], &cap2));
+        // 4th consecutive no-change: trigger!
+        assert!(c.evaluate(t0 + Duration::from_millis(350), &[r], &cap2));
     }
 
     #[test]
@@ -902,7 +914,7 @@ mod tests {
     fn monitor_cooldown_prevents_immediate_reactivation() {
         let mut m = Monitor::new(
             Box::new(AlwaysTrigger),
-            Box::new(RegionCondition::new(Duration::from_millis(0), 1)),
+            Box::new(RegionCondition::new(1, false)),
             ActionSequence::new(vec![
                 Box::new(TypeText { text: "x".into() }) as Box<dyn Action + Send + Sync>
             ]),
@@ -1323,7 +1335,7 @@ mod tests {
         #[test]
         fn monitor_resets_context_on_start() {
             let trig = Box::new(IntervalTrigger::new(Duration::from_secs(1)));
-            let cond = Box::new(RegionCondition::new(Duration::from_millis(100), 1));
+            let cond = Box::new(RegionCondition::new(1, false));
             let seq = ActionSequence::new(vec![]);
             let guardrails = Guardrails::default();
 
@@ -1365,8 +1377,8 @@ mod tests {
                 },
                 condition: ConditionConfig {
                     r#type: "RegionCondition".to_string(),
-                    stable_ms: 5000,
-                    downscale: 4,
+                    consecutive_checks: 1,
+                    expect_change: false,
                 },
                 actions: vec![
                     ActionConfig::LLMPromptGeneration {
@@ -1389,7 +1401,7 @@ mod tests {
                 }),
             };
 
-            let (monitor, regions) = build_monitor_from_profile(&profile);
+            let (monitor, regions) = build_monitor_from_profile(&profile, None, None);
 
             assert_eq!(regions.len(), 1);
             assert_eq!(monitor.actions.actions.len(), 3);

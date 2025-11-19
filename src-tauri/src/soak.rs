@@ -10,10 +10,10 @@ use crate::fakes::{FakeAutomation, FakeCapture};
 pub struct SoakConfig {
     pub ticks: u64,
     pub check_interval_sec: f64,
-    pub stable_ms: u64,
+    pub consecutive_checks: u32,
+    pub expect_change: bool,
     pub cooldown_ms: u64,
     pub max_runtime_ms: u64,
-    pub downscale: u32,
 }
 
 impl Default for SoakConfig {
@@ -21,10 +21,10 @@ impl Default for SoakConfig {
         Self {
             ticks: 25_000,
             check_interval_sec: 0.1,
-            stable_ms: 80,
+            consecutive_checks: 1,
+            expect_change: false,
             cooldown_ms: 50,
             max_runtime_ms: 2_000,
-            downscale: 4,
         }
     }
 }
@@ -56,7 +56,7 @@ impl SoakReport {
 
 pub fn run_soak(config: &SoakConfig) -> SoakReport {
     let profile = build_profile(config);
-    let (mut monitor, regions) = crate::build_monitor_from_profile(&profile);
+    let (mut monitor, regions) = crate::build_monitor_from_profile(&profile, None, None);
     let capture = FakeCapture;
     let automation = FakeAutomation;
 
@@ -108,8 +108,8 @@ fn build_profile(config: &SoakConfig) -> Profile {
         },
         condition: ConditionConfig {
             r#type: "RegionCondition".into(),
-            stable_ms: config.stable_ms,
-            downscale: config.downscale,
+            consecutive_checks: config.consecutive_checks,
+            expect_change: config.expect_change,
         },
         actions: vec![
             ActionConfig::Type {

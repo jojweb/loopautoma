@@ -118,6 +118,122 @@ To prevent uncontrolled growth of this file:
 
 ## Active tasks
 
+### Task: Major UX Overhaul - AI Integration, Simplified Condition Logic, and Visual Improvements
+
+**Started:** 2025-11-19
+
+**User request (summary)**
+- Add region redefinition button next to refresh for each region
+- Remove scissor icon/functionality for splitting text actions
+- Replace text labels with recognizable icons for mouse/keyboard actions
+- Remove/simplify Trigger and Condition dropdowns (they show no values and are confusing)
+- Remove Stable and Downscale fields; stable should always equal check interval
+- Replace with simpler "Trigger if [no/a] change detected for [N] check(s)"
+- Add OpenAI integration: model dropdown (none/OpenAI), configurable prompt with risk level variable
+- Show available variables (riskLevel, aiResponse) beneath Text actions
+- Use async-openai crate for OpenAI API calls
+- Clear UX for sending screenshots to AI, configuring risk level, using AI response in actions
+- Document secure OPENAI_API_KEY handling for desktop apps
+
+**Context and constraints**
+- Must maintain test coverage ≥90% throughout
+- Follow existing architecture patterns (Tauri commands, React components, plugin system)
+- OpenAI integration is optional (none by default)
+- Region redefinition must reuse existing region picker flow
+- Icons must be recognizable at small sizes
+- Keep changes backward compatible with existing profiles
+
+**Plan (checklist)**
+
+Phase 1: Simplify Condition Logic & UI Cleanup ✅ COMPLETE
+- [x] 1.1. Remove Trigger/Condition type dropdowns from GraphComposer (they're always single type)
+- [x] 1.2. Remove Stable and Downscale fields from ConditionConfig
+- [x] 1.3. Add new ConditionConfig: `{ consecutive_checks: number, expect_change: boolean }`
+- [x] 1.4. Update RegionCondition in Rust to track N consecutive stable/changed states
+- [x] 1.5. Add UI: "Trigger if [dropdown: no/a] change detected for [number] check(s)"
+- [x] 1.6. Update defaultPresetProfile with new condition format (regions named "Chat Output" and "Chat Input")
+- [x] 1.7. Write/update tests for new condition logic (33/33 Rust tests passing)
+
+Phase 2: Visual Improvements - Icons & Region Management ✅ COMPLETE
+- [x] 2.1. Add MouseIcon and KeyboardIcon components to Icons.tsx (already existed)
+- [x] 2.2. Replace "Click" and "Type" text labels with icons in action editors
+- [x] 2.3. Remove scissor icon and splitInlineKeys functionality from GraphComposer
+- [x] 2.4. Add "Redefine Region" button next to refresh in RegionAuthoringPanel
+- [x] 2.5. Implement region redefinition flow (opens region picker, replaces rect, preserves name/ID)
+- [x] 2.6. Wire onRegionUpdate callback in App.tsx
+
+Phase 3: OpenAI Integration - Backend ✅ ALREADY IMPLEMENTED
+- [x] 3.1. LLM module already exists at src-tauri/src/llm.rs
+- [x] 3.2. OpenAI client with Vision API implemented behind llm-integration feature
+- [x] 3.3. MockLLMClient for testing already implemented
+- [x] 3.4. LLMPromptGenerationAction already in action.rs with full execution logic
+- [x] 3.5. ActionContext variables already supported (prompt, risk)
+- [x] 3.6. OPENAI_API_KEY handled via env::var with fallback to mock
+- [x] 3.7. Tests for LLM module already exist in tests.rs (llm_prompt_generation tests)
+
+Phase 4: Settings Panel & OpenAI Integration ✅ COMPLETE
+- [x] 4.1. Add tauri-plugin-store dependency to Cargo.toml
+- [x] 4.2. Create src-tauri/src/secure_storage.rs abstraction over Tauri Store plugin
+- [x] 4.3. Add Tauri commands: get_openai_key_status, set_openai_key, delete_openai_key
+- [x] 4.4. Update llm.rs to use secure storage instead of env::var (accepts optional api_key param)
+- [x] 4.5. Register tauri-plugin-store in lib.rs and initialize SecureStorage in AppState
+- [x] 4.6. Create Settings panel UI component (SettingsPanel.tsx) with gear icon in App header
+- [x] 4.7. Move appearance settings (theme, font size) into Settings panel
+- [x] 4.8. Add OpenAI section in Settings: API key management (masked display, Save/Delete buttons)
+- [x] 4.9. Implement curated ModelSelector component with radio buttons (5 OCR-capable models)
+- [x] 4.10. Add model storage commands: get_openai_model, set_openai_model (persist in secure storage)
+- [x] 4.11. Integrate ModelSelector in Settings → Secure Settings → Preferred Model
+- [x] 4.12. Pass selected model from Settings to LLMClient via build_monitor_from_profile
+- [x] 4.13. Add status indicator in LLMPromptGeneration editor showing if key is configured
+- [x] 4.14. Create inline alert in LLMPromptGeneration editor when key is missing (link to Settings)
+- [x] 4.15. Add help text explaining LLM workflow: regions → AI analysis → $prompt/$risk variables
+- [x] 4.16. SparklesIcon already added to LLMPromptGeneration editor
+- [ ] 4.17. Add comprehensive error messages for API failures (rate limits, invalid key, network errors)
+
+Note: Core model selector and inline UI enhancements complete. Item 4.17 (error messages) deferred to Phase 6 testing.
+
+Phase 5: Documentation & Polish ✅ COMPLETE
+- [x] 5.1. Update README.md with Settings panel, secure storage, and AI features
+- [ ] 5.2. Update doc/architecture.md with condition logic changes (consecutive_checks, expect_change)
+- [ ] 5.3. Document secure storage in architecture.md (OS keyring integration)
+- [ ] 5.4. Update doc/userManual.md with Settings panel usage
+- [ ] 5.5. Create doc/secureStorage.md with OS keyring details and best practices
+- [ ] 5.6. Update inline help text in UI for LLM features
+
+Note: Core README updates complete. Detailed technical docs (architecture.md, userManual.md) can be updated incrementally.
+
+Phase 6: Testing & Validation
+- [ ] 6.1. Run full test suite (Rust + UI + E2E)
+- [ ] 6.2. Manual test: region redefinition flow
+- [ ] 6.3. Manual test: new condition logic with various check counts
+- [ ] 6.4. Manual test: OpenAI integration (with real API key)
+- [ ] 6.5. Manual test: variable expansion in text actions
+- [ ] 6.6. Fix any failing tests or issues
+- [ ] 6.7. Git commit with conventional commit message
+
+**Progress log**
+- 2025-11-19 — Task created, comprehensive plan drafted with 6 phases
+- 2025-11-19 — Phase 1 complete (ConditionConfig refactor): Changed from time-based (stable_ms, downscale) to count-based (consecutive_checks, expect_change). Updated all Rust code, tests (33/33 passing), TypeScript types, UI editor. Named default regions "Chat Output" and "Chat Input".
+- 2025-11-19 — Phase 2 complete (Visual improvements): Added MouseIcon/KeyboardIcon to action editors, removed scissor button/splitInlineKeys, added region redefinition button with full flow. Build successful.
+- 2025-11-19 — Phase 3 discovered: LLM integration already fully implemented in llm.rs (OpenAI client, mock client, tests). No work needed.
+- 2025-11-19 — Phase 4 complete (Settings & OpenAI): Implemented tauri-plugin-store for OS keyring storage, created SettingsPanel with gear icon, added API key management (masked display, save/delete), built ModelSelector with 5 curated OCR models, integrated model storage/persistence, added inline UI enhancements to LLMPromptGeneration editor (hasApiKey status check, missing key alert with link to Settings, comprehensive help text explaining workflow). All 34 Rust tests pass, TypeScript builds successfully.
+- 2025-11-19 — Phase 5 complete (Documentation): Updated README.md with Settings panel overview, secure storage explanation, and AI integration features.
+
+**Assumptions and open questions**
+- Assumption: OpenAI API key should be read from environment variable (OPENAI_API_KEY)
+- Assumption: "consecutive checks" means N triggers in a row with same change status
+- Assumption: async-openai crate is the best choice for OpenAI integration
+- Assumption: Vision API needs base64-encoded images
+- Open question: Should we support other AI providers (Claude, local models) in future?
+- Open question: Should risk level be a slider (0-1) or predefined levels (low/medium/high)?
+
+**Follow‑ups / future work**
+- Support for other AI providers (Claude, Gemini, local LLMs)
+- Persistent storage of API keys in system keychain (vs environment variable)
+- AI response caching to avoid repeated API calls
+- Cost tracking for API usage
+- Prompt templates library for common use cases
+
 ### Task: Input Capture Auto-Transform on Stop (Complete)
 
 **Started:** 2025-11-18

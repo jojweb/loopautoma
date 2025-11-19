@@ -105,15 +105,17 @@ mod real_client {
     }
 
     impl OpenAIClient {
-        pub fn new() -> Result<Self, String> {
-            let api_key = env::var("OPENAI_API_KEY")
-                .map_err(|_| "OPENAI_API_KEY environment variable not set".to_string())?;
+        pub fn new(api_key: Option<String>, model: Option<String>) -> Result<Self, String> {
+            let api_key = api_key
+                .or_else(|| env::var("OPENAI_API_KEY").ok())
+                .ok_or("OpenAI API key not provided and OPENAI_API_KEY environment variable not set".to_string())?;
 
             let api_endpoint = env::var("OPENAI_API_ENDPOINT")
                 .unwrap_or_else(|_| "https://api.openai.com/v1/chat/completions".to_string());
 
-            let model =
-                env::var("OPENAI_MODEL").unwrap_or_else(|_| "gpt-4-vision-preview".to_string());
+            let model = model
+                .or_else(|| env::var("OPENAI_MODEL").ok())
+                .unwrap_or_else(|| "gpt-4o".to_string());
 
             Ok(Self {
                 api_key,
@@ -226,13 +228,13 @@ mod real_client {
     }
 
     /// Factory function to create the appropriate LLM client
-    pub fn create_llm_client() -> Result<Arc<dyn LLMClient>, String> {
+    pub fn create_llm_client(api_key: Option<String>, model: Option<String>) -> Result<Arc<dyn LLMClient>, String> {
         if env::var("LOOPAUTOMA_BACKEND").ok().as_deref() == Some("fake") {
             return Ok(Arc::new(MockLLMClient::new()));
         }
 
         // Try to create OpenAI client
-        match OpenAIClient::new() {
+        match OpenAIClient::new(api_key, model) {
             Ok(client) => Ok(Arc::new(client)),
             Err(e) => {
                 eprintln!("Warning: Could not initialize OpenAI client: {}", e);
@@ -247,7 +249,7 @@ mod real_client {
 pub use real_client::create_llm_client;
 
 #[cfg(not(feature = "llm-integration"))]
-pub fn create_llm_client() -> Result<Arc<dyn LLMClient>, String> {
+pub fn create_llm_client(_api_key: Option<String>, _model: Option<String>) -> Result<Arc<dyn LLMClient>, String> {
     Ok(Arc::new(MockLLMClient::new()))
 }
 

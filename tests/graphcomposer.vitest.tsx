@@ -12,9 +12,9 @@ describe("GraphComposer", () => {
     let p = defaultPresetProfile();
     const onChange = (next: any) => { p = next; };
     render(<GraphComposer profile={p} onChange={onChange} />);
-    // presence checks via query
-    expect(screen.getAllByText(/Trigger/).length >= 1).toBe(true);
-    expect(screen.getAllByText(/Condition/).length >= 1).toBe(true);
+    // presence checks for simplified UI (Phase 1)
+    expect(screen.getByText(/Check Every/i)).toBeTruthy();
+    expect(screen.getByText(/Trigger if/i)).toBeTruthy();
     expect(screen.getAllByText(/Action Sequence/).length >= 1).toBe(true);
 
     const addBtn = screen.getByLabelText(/Add action/i);
@@ -22,23 +22,29 @@ describe("GraphComposer", () => {
     expect(p.actions.length >= 1).toBe(true);
   });
 
-  it("updates trigger and condition via selects and editors", () => {
+  it("updates trigger and condition via editors", () => {
     const Wrapper = () => {
       const [p, setP] = useState(defaultPresetProfile());
       return <GraphComposer profile={p} onChange={setP as any} />;
     };
     render(<Wrapper />);
 
-    const triggerSelect = screen.getByTitle(/Choose how often/i) as HTMLSelectElement;
-    fireEvent.change(triggerSelect, { target: { value: "IntervalTrigger" } });
-    const intervalInput = screen.getByLabelText(/Check interval/i) as HTMLInputElement;
-    fireEvent.change(intervalInput, { target: { value: "2.5" } });
-    expect(intervalInput.value).toBe("2.5");
-
-    const conditionSelect = screen.getByTitle(/RegionCondition detects/i) as HTMLSelectElement;
-    fireEvent.change(conditionSelect, { target: { value: "RegionCondition" } });
-    const downscaleInput = screen.getByLabelText(/Downscale/i) as HTMLInputElement;
-    fireEvent.change(downscaleInput, { target: { value: "8" } });
-    expect(downscaleInput.value).toBe("8");
+    // Phase 1 simplified UI: no dropdowns, just editors
+    const intervalLabel = screen.getByText(/Check interval/i);
+    expect(intervalLabel).toBeTruthy();
+    
+    // Verify condition editor renders properly
+    const triggerText = screen.getByText(/Trigger if/i);
+    expect(triggerText).toBeTruthy();
+    
+    // Verify change/no change select exists
+    const changeSelect = screen.getByTitle(/Trigger on change or no change/i) as HTMLSelectElement;
+    expect(changeSelect).toBeTruthy();
+    fireEvent.change(changeSelect, { target: { value: "a" } });
+    expect(changeSelect.value).toBe("a");
+    
+    // Verify "change detected for" text exists
+    expect(screen.getByText(/change detected for/i)).toBeTruthy();
+    expect(screen.getByText(/check\(s\)/i)).toBeTruthy();
   });
 });

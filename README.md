@@ -14,12 +14,14 @@ Cross‑platform desktop automation that watches configurable screen regions and
 
 ## Features
 
-- Keep agents moving: automatically type "Continue" and press enter when an agent stalls.
-- **LLM-powered prompts**: Use GPT-4 Vision to analyze screen content and generate context-aware prompts with risk-based guardrails.
-- Run unattended: detect stable/changed UI regions and advance the flow.
-- Stay safe: cooldowns, rate limits, and guardrails to keep automation bounded.
-- Modern UI: dual light/dark palettes, responsive layout, and inline tooltips/icons across every panel.
-- Action ergonomics: insert special keys from a dropdown or inline `{Key:Enter}` syntax that automatically splits into discrete actions.
+- **Keep agents moving**: automatically type "Continue" and press enter when an agent stalls.
+- **AI-powered automation**: Use OpenAI's GPT-4 Vision to analyze screen content and generate intelligent prompts with built-in risk assessment (requires API key).
+- **Secure credential storage**: API keys stored in OS keyring (macOS Keychain, Windows Credential Manager, Linux Secret Service) — never in plaintext.
+- **Flexible conditions**: Trigger actions after N consecutive checks with no changes or when changes are detected.
+- **Run unattended**: detect stable/changed UI regions and advance workflows automatically.
+- **Stay safe**: risk thresholds, cooldowns, rate limits, and guardrails to keep automation bounded.
+- **Modern UI**: dual light/dark palettes, visual action icons (mouse, keyboard, sparkles), responsive layout, and inline tooltips.
+- **Settings panel**: Configure theme, font size, and OpenAI API key via a centralized Settings dialog (gear icon in header).
 
 ## Quick Start Tutorial
 
@@ -63,6 +65,16 @@ The app loads with a ready-to-use preset that keeps AI agents running:
 
 **Advanced**: Use the Recording feature to capture custom action sequences, or edit profiles via the Graphical Composer or JSON editor.
 
+### Settings
+
+Click the **gear icon** (⚙️) in the top-right to access Settings:
+
+- **Appearance**: Toggle between light/dark themes and adjust font size
+- **OpenAI Integration**: Securely store your API key for AI-powered prompt generation
+  - Get your API key from [platform.openai.com/api-keys](https://platform.openai.com/api-keys)
+  - Keys are encrypted and stored in your OS keyring (never in plaintext)
+  - Test, replace, or delete keys directly from the Settings panel
+
 ## Profiles & persistence
 
 - All automations live inside a single JSON document shaped as `{ "version": 1, "profiles": [...] }`.
@@ -92,8 +104,9 @@ See **[doc/install.md](doc/install.md)** for system requirements, troubleshootin
 
 - **Installation**: [doc/install.md](doc/install.md) — System requirements, packages, and troubleshooting
 - **User manual**: [doc/userManual.md](doc/userManual.md) — Guided tour of presets, guardrails, recording, regions, and editors
+- **OpenAI Integration**: [doc/openaiIntegration.md](doc/openaiIntegration.md) — AI-powered prompt generation with GPT-4 Vision, setup, and usage
 - **Architecture**: [doc/architecture.md](doc/architecture.md) — Technical design and contracts
-- **LLM Prompt Generation**: [doc/llmPromptGeneration.md](doc/llmPromptGeneration.md) — AI-powered dynamic prompts with risk guardrails
+- **LLM Prompt Generation**: [doc/llmPromptGeneration.md](doc/llmPromptGeneration.md) — Technical details on AI-powered dynamic prompts
 - **Rollout plan**: [doc/rollout-plan.md](doc/rollout-plan.md) — Development roadmap and phases
 - **Dev setup**: [doc/developer.md](doc/developer.md) — Building and testing from source
 

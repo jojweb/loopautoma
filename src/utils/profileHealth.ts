@@ -6,9 +6,7 @@ export type ProfileHealth = {
 };
 
 const MIN_CHECK_INTERVAL_SEC = 0.1;
-const MIN_STABLE_MS = 500;
 const MIN_COOLDOWN_MS = 500;
-const MIN_STABLE_SEC = MIN_STABLE_MS / 1000;
 const MIN_COOLDOWN_SEC = MIN_COOLDOWN_MS / 1000;
 
 export function auditProfile(profile: Profile | null): ProfileHealth {
@@ -43,11 +41,11 @@ export function auditProfile(profile: Profile | null): ProfileHealth {
   if (!profile.condition) {
     errors.push("Condition is missing.");
   } else {
-    if (profile.condition.downscale < 1) {
-      errors.push("Condition downscale must be ≥ 1.");
+    if (profile.condition.consecutive_checks < 1) {
+      errors.push("Condition consecutive_checks must be ≥ 1.");
     }
-    if (profile.condition.stable_ms < MIN_STABLE_MS) {
-      warnings.push(`Stable duration is low (< ${MIN_STABLE_SEC}s); monitor may flap.`);
+    if (profile.condition.consecutive_checks > 10) {
+      warnings.push(`Consecutive checks is high (> 10); actions may take long to trigger.`);
     }
   }
 

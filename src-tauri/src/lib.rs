@@ -4,6 +4,7 @@ mod condition;
 pub mod domain;
 mod llm;
 mod monitor;
+mod secure_storage;
 #[cfg(any(
     feature = "os-linux-capture-xcap",
     feature = "os-linux-automation",
@@ -47,17 +48,17 @@ fn default_profile() -> Profile {
                     width: 1000,
                     height: 450,
                 },
-                name: Some("Agent Output".into()),
+                name: Some("Chat Output".into()),
             },
             Region {
-                id: "progress".into(),
+                id: "chat-in".into(),
                 rect: Rect {
                     x: 80,
                     y: 560,
                     width: 1000,
                     height: 150,
                 },
-                name: Some("Progress Area".into()),
+                name: Some("Chat Input".into()),
             },
         ],
         trigger: TriggerConfig {
@@ -66,8 +67,8 @@ fn default_profile() -> Profile {
         },
         condition: ConditionConfig {
             r#type: "RegionCondition".into(),
-            stable_ms: 8_000,
-            downscale: 4,
+            consecutive_checks: 1,
+            expect_change: false,
         },
         actions: vec![
             ActionConfig::Click {
@@ -124,9 +125,10 @@ fn greet(name: &str) -> String {
 }
 
 #[derive(Default)]
-struct AppState {
+struct AppState<R: tauri::Runtime = tauri::Wry> {
     profiles: Mutex<ProfilesConfig>,      // in-memory MVP
     runner: Mutex<Option<MonitorRunner>>, // current monitor runner
+    secure_storage: Option<secure_storage::SecureStorage<R>>, // OS keyring access
 }
 
 struct MonitorRunner {
@@ -154,21 +156,21 @@ enum StopReason {
     Panic,
 }
 
-pub fn build_monitor_from_profile<'a>(p: &Profile) -> (monitor::Monitor<'a>, Vec<Region>) {
+pub fn build_monitor_from_profile<'a>(p: &Profile, api_key: Option<String>, model: Option<String>) -> (monitor::Monitor<'a>, Vec<Region>) {
     // Trigger
     let secs = p.trigger.check_interval_sec.clamp(0.1, 86_400.0);
     let trig = Box::new(trigger::IntervalTrigger::new(Duration::from_secs_f64(secs)));
 
     // Condition
     let cond = Box::new(condition::RegionCondition::new(
-        Duration::from_millis(p.condition.stable_ms),
-        p.condition.downscale,
+        p.condition.consecutive_checks,
+        p.condition.expect_change,
     ));
 
     // Actions
     let mut acts: Vec<Box<dyn Action + Send + Sync>> = vec![];
     let capture: Arc<dyn ScreenCapture + Send + Sync> = Arc::from(make_capture());
-    let llm_client = llm::create_llm_client().unwrap_or_else(|e| {
+    let llm_client = llm::create_llm_client(api_key, model).unwrap_or_else(|e| {
         eprintln!("Warning: Failed to create LLM client: {}", e);
         Arc::new(llm::MockLLMClient::new())
     });
@@ -311,7 +313,17 @@ fn monitor_start(
         .into_iter()
         .find(|p| p.id == profile_id)
         .ok_or_else(|| "profile not found".to_string())?;
-    let (mut mon, regions) = build_monitor_from_profile(&profile);
+    // Get API key and model from secure storage if available
+    let (api_key, model) = match &state.secure_storage {
+        Some(storage) => {
+            let key = storage.get_openai_key().ok().flatten();
+            let mdl = storage.get_openai_model().ok().flatten();
+            (key, mdl)
+        }
+        None => (None, None)
+    };
+    
+    let (mut mon, regions) = build_monitor_from_profile(&profile, api_key, model);
     let cancel = Arc::new(AtomicBool::new(false));
     let cancel_clone = cancel.clone();
     let panic_flag = Arc::new(AtomicBool::new(false));
@@ -389,7 +401,17 @@ fn monitor_panic_stop(state: tauri::State<AppState>) -> Result<(), String> {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .manage(AppState::default())
+        .plugin(tauri_plugin_store::Builder::new().build())
+        .setup(|app| {
+            let secure_storage = secure_storage::SecureStorage::new(app.handle())
+                .ok(); // Gracefully handle init failure
+            app.manage(AppState {
+                profiles: Mutex::new(ProfilesConfig::default()),
+                runner: Mutex::new(None),
+                secure_storage,
+            });
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             greet,
             profiles_load,
@@ -406,6 +428,11 @@ pub fn run() {
             action_recorder_show,
             action_recorder_close,
             action_recorder_complete,
+            get_openai_key_status,
+            set_openai_key,
+            delete_openai_key,
+            get_openai_model,
+            set_openai_model,
             app_quit
         ])
         .run(tauri::generate_context!())
@@ -734,4 +761,52 @@ fn action_recorder_show(app: tauri::AppHandle) -> Result<(), String> {
     .map_err(|e| e.to_string())?;
     
     Ok(())
+}
+
+// ===== Secure Storage Commands =====
+
+#[tauri::command]
+fn get_openai_key_status(state: tauri::State<AppState>) -> Result<bool, String> {
+    match &state.secure_storage {
+        Some(storage) => storage.has_openai_key(),
+        None => Err("Secure storage not initialized".to_string()),
+    }
+}
+
+#[tauri::command]
+fn set_openai_key(key: String, state: tauri::State<AppState>) -> Result<(), String> {
+    if key.trim().is_empty() {
+        return Err("API key cannot be empty".to_string());
+    }
+    match &state.secure_storage {
+        Some(storage) => storage.set_openai_key(&key),
+        None => Err("Secure storage not initialized".to_string()),
+    }
+}
+
+#[tauri::command]
+fn delete_openai_key(state: tauri::State<AppState>) -> Result<(), String> {
+    match &state.secure_storage {
+        Some(storage) => storage.delete_openai_key(),
+        None => Err("Secure storage not initialized".to_string()),
+    }
+}
+
+#[tauri::command]
+fn get_openai_model(state: tauri::State<AppState>) -> Result<Option<String>, String> {
+    match &state.secure_storage {
+        Some(storage) => storage.get_openai_model(),
+        None => Err("Secure storage not initialized".to_string()),
+    }
+}
+
+#[tauri::command]
+fn set_openai_model(model: String, state: tauri::State<AppState>) -> Result<(), String> {
+    if model.trim().is_empty() {
+        return Err("Model cannot be empty".to_string());
+    }
+    match &state.secure_storage {
+        Some(storage) => storage.set_openai_model(&model),
+        None => Err("Secure storage not initialized".to_string()),
+    }
 }

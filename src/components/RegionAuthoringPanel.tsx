@@ -16,6 +16,7 @@ type RegionAuthoringPanelProps = {
   disabled?: boolean;
   onRegionAdd?: (draft: RegionDraft) => Promise<void> | void;
   onRegionRemove?: (regionId: string) => Promise<void> | void;
+  onRegionUpdate?: (regionId: string, newRect: Rect) => Promise<void> | void;
 };
 
 const toDataUrl = (value?: string | null): string | null => {
@@ -23,7 +24,7 @@ const toDataUrl = (value?: string | null): string | null => {
   return value.startsWith("data:") ? value : `data:image/png;base64,${value}`;
 };
 
-export function RegionAuthoringPanel({ regions, disabled, onRegionAdd, onRegionRemove }: RegionAuthoringPanelProps) {
+export function RegionAuthoringPanel({ regions, disabled, onRegionAdd, onRegionRemove, onRegionUpdate }: RegionAuthoringPanelProps) {
   const regionCount = regions?.length ?? 0;
   const [pending, setPending] = useState<{ rect: Rect; thumbnail?: string | null } | null>(null);
   const [pendingId, setPendingId] = useState("");
@@ -33,12 +34,27 @@ export function RegionAuthoringPanel({ regions, disabled, onRegionAdd, onRegionR
   const [error, setError] = useState<string | null>(null);
   const [thumbnails, setThumbnails] = useState<Record<string, string | null>>({});
   const [thumbLoading, setThumbLoading] = useState<string | null>(null);
+  const [redefiningRegionId, setRedefiningRegionId] = useState<string | null>(null);
 
   useEffect(() => {
     let dispose: (() => void) | undefined;
     subscribeEvent<RegionPickEventPayload>("loopautoma://region_pick_complete", (payload) => {
       if (!payload) return;
       setOverlayActive(false);
+      
+      // Check if we're redefining an existing region
+      if (redefiningRegionId && onRegionUpdate) {
+        onRegionUpdate(redefiningRegionId, payload.rect);
+        if (payload.thumbnail_png_base64) {
+          setThumbnails((prev) => ({ ...prev, [redefiningRegionId]: payload.thumbnail_png_base64 ?? null }));
+        }
+        setRedefiningRegionId(null);
+        setStatus("Region redefined successfully.");
+        setError(null);
+        return;
+      }
+      
+      // Otherwise, create new pending region
       setPending({
         rect: payload.rect,
         thumbnail: payload.thumbnail_png_base64 ?? null,
@@ -55,7 +71,7 @@ export function RegionAuthoringPanel({ regions, disabled, onRegionAdd, onRegionR
         // ignore
       }
     };
-  }, [regionCount]);
+  }, [regionCount, redefiningRegionId, onRegionUpdate]);
 
   const launchOverlay = useCallback(async () => {
     if (disabled) {
@@ -132,6 +148,23 @@ export function RegionAuthoringPanel({ regions, disabled, onRegionAdd, onRegionR
       setError(msg || "Unable to refresh thumbnail");
     } finally {
       setThumbLoading((current) => (current === region.id ? null : current));
+    }
+  }, []);
+
+  const redefineRegion = useCallback(async (regionId: string) => {
+    setRedefiningRegionId(regionId);
+    setError(null);
+    setStatus("Opening overlay to redefine region…");
+    try {
+      await regionPickerShow();
+      setOverlayActive(true);
+      setStatus("Overlay active — click and drag to redefine the region boundaries.");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setError(msg || "Unable to open overlay");
+      setStatus(null);
+      setOverlayActive(false);
+      setRedefiningRegionId(null);
     }
   }, []);
 
@@ -264,6 +297,19 @@ export function RegionAuthoringPanel({ regions, disabled, onRegionAdd, onRegionR
                         <RefreshIcon size={16} />
                         <span className="sr-only">Refresh thumbnail</span>
                       </button>
+                      {onRegionUpdate && (
+                        <button
+                          type="button"
+                          className="icon-button"
+                          onClick={() => redefineRegion(region.id)}
+                          disabled={overlayActive}
+                          title="Redefine region boundaries"
+                          aria-label="Redefine region"
+                        >
+                          <MouseIcon size={16} />
+                          <span className="sr-only">Redefine</span>
+                        </button>
+                      )}
                       {onRegionRemove && (
                         <button
                           type="button"

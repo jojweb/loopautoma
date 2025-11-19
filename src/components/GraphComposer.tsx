@@ -1,19 +1,14 @@
 import { useEffect, useMemo } from "react";
 import { ActionConfig, Profile } from "../types";
-import { containsInlineKeySyntax, splitInlineKeySyntax } from "../utils/specialKeys";
 import {
   getActionEditor,
   getActionTypes,
   getConditionEditor,
-  getConditionTypes,
   getTriggerEditor,
-  getTriggerTypes,
 } from "../plugins/registry";
-import { PlusIcon, TrashIcon, ScissorsIcon } from "./Icons";
+import { PlusIcon, TrashIcon } from "./Icons";
 
 export function GraphComposer({ profile, onChange }: { profile: Profile | null; onChange: (p: Profile) => void }) {
-  const triggerTypes = useMemo(() => getTriggerTypes(), []);
-  const conditionTypes = useMemo(() => getConditionTypes(), []);
   const actionTypes = useMemo(() => getActionTypes(), []);
 
   useEffect(() => {
@@ -25,64 +20,24 @@ export function GraphComposer({ profile, onChange }: { profile: Profile | null; 
   const TrigEditor = getTriggerEditor(profile.trigger.type);
   const CondEditor = getConditionEditor(profile.condition.type);
 
-  const splitInlineKeys = (index: number) => {
-    if (!profile) return;
-    const target = profile.actions[index];
-    if (!target || target.type !== "Type") return;
-    const expanded = splitInlineKeySyntax(target.text);
-    // splitInlineKeySyntax returns multiple Type actions if inline keys are found
-    if (expanded.length <= 1) {
-      return;
-    }
-    const next = [...profile.actions];
-    next.splice(index, 1, ...expanded);
-    onChange({ ...profile, actions: next });
-  };
-
   return (
     <div style={{ display: "grid", gap: 12 }}>
       <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
-        <label style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <strong title="When the loop checks the condition">Trigger</strong>
-          <select
-            value={profile.trigger.type}
-            onChange={(e) => onChange({ ...profile, trigger: { ...profile.trigger, type: e.target.value } })}
-            title="Choose how often to tick (IntervalTrigger recommended for MVP)"
-          >
-            {triggerTypes.map((t) => (
-              <option key={t} value={t}>{t}</option>
-            ))}
-          </select>
-        </label>
+        <strong title="How often to check regions">Check Every</strong>
         {TrigEditor && (
-          <span>
-            <TrigEditor value={profile.trigger} onChange={(next) => onChange({ ...profile, trigger: next })} />
-          </span>
+          <TrigEditor value={profile.trigger} onChange={(next) => onChange({ ...profile, trigger: next })} />
         )}
       </div>
 
       <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
-        <label style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <strong title="What must be true before actions run">Condition</strong>
-          <select
-            value={profile.condition.type}
-            onChange={(e) => onChange({ ...profile, condition: { ...profile.condition, type: e.target.value } })}
-            title="RegionCondition detects no visual change for a duration"
-          >
-            {conditionTypes.map((t) => (
-              <option key={t} value={t}>{t}</option>
-            ))}
-          </select>
-        </label>
+        <span>Trigger if</span>
         {CondEditor && (
-          <span>
-            <CondEditor
-              value={profile.condition}
-              onChange={(next) => onChange({ ...profile, condition: next })}
-              profile={profile}
-              onProfileChange={onChange}
-            />
-          </span>
+          <CondEditor
+            value={profile.condition}
+            onChange={(next) => onChange({ ...profile, condition: next })}
+            profile={profile}
+            onProfileChange={onChange}
+          />
         )}
       </div>
 
@@ -122,7 +77,6 @@ export function GraphComposer({ profile, onChange }: { profile: Profile | null; 
         <ol className="action-sequence-list">
           {profile.actions.map((a, i) => {
             const Editor = getActionEditor(a.type);
-            const showSplitInline = a.type === "Type" && containsInlineKeySyntax(a.text);
             return (
               <li key={i} className="action-row">
                 <div className="action-row-controls">
@@ -140,18 +94,6 @@ export function GraphComposer({ profile, onChange }: { profile: Profile | null; 
                     <TrashIcon size={16} />
                     <span className="sr-only">Remove action</span>
                   </button>
-                  {showSplitInline && (
-                    <button
-                      type="button"
-                      className="icon-button"
-                      onClick={() => splitInlineKeys(i)}
-                      title="Split inline special keys into discrete Type/Key actions"
-                      aria-label="Split inline keys"
-                    >
-                      <ScissorsIcon size={16} />
-                      <span className="sr-only">Split inline keys</span>
-                    </button>
-                  )}
                 </div>
                 <div className="action-row-editor">
                   {Editor && (

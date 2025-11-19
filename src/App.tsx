@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type JSX } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import reactLogo from "./assets/react.svg";
 import "./App.css";
 import { ProfileSelector } from "./components/ProfileSelector";
@@ -9,6 +9,8 @@ import { RegionAuthoringPanel } from "./components/RegionAuthoringPanel";
 import { GraphComposer } from "./components/GraphComposer";
 import { CountdownTimer } from "./components/CountdownTimer";
 import { ActionRecorderWindow, type RecordedAction } from "./components/ActionRecorderWindow";
+import { SettingsPanel } from "./components/SettingsPanel";
+import { SettingsIcon } from "./components/Icons";
 
 import { useEventStream, useProfiles, useRunState } from "./store";
 import { normalizeProfilesConfig, Profile, ProfilesConfig } from "./types";
@@ -41,47 +43,7 @@ const paletteOptions: PaletteOption[] = [
   { id: "noir", label: "Noir Violet", swatch: ["#a78bfa", "#6366f1"] },
 ];
 
-const themeOptions: { id: ThemeChoice; label: string; icon: JSX.Element }[] = [
-  {
-    id: "system",
-    label: "System theme",
-    icon: (
-      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-        <rect x="3" y="4" width="18" height="12" rx="2" ry="2" fill="currentColor" opacity="0.25" />
-        <rect x="5" y="6" width="14" height="8" rx="1.2" ry="1.2" stroke="currentColor" fill="none" strokeWidth="1.5" />
-        <rect x="10" y="18" width="4" height="1.5" rx="0.75" fill="currentColor" />
-      </svg>
-    ),
-  },
-  {
-    id: "light",
-    label: "Light theme",
-    icon: (
-      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-        <circle cx="12" cy="12" r="4" fill="currentColor" />
-        <g stroke="currentColor" strokeWidth="1.5">
-          <line x1="12" y1="2" x2="12" y2="5" />
-          <line x1="12" y1="19" x2="12" y2="22" />
-          <line x1="2" y1="12" x2="5" y2="12" />
-          <line x1="19" y1="12" x2="22" y2="12" />
-          <line x1="4.2" y1="4.2" x2="6.3" y2="6.3" />
-          <line x1="17.7" y1="17.7" x2="19.8" y2="19.8" />
-          <line x1="17.7" y1="6.3" x2="19.8" y2="4.2" />
-          <line x1="4.2" y1="19.8" x2="6.3" y2="17.7" />
-        </g>
-      </svg>
-    ),
-  },
-  {
-    id: "dark",
-    label: "Dark theme",
-    icon: (
-      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-        <path d="M21 12.5A8.5 8.5 0 1 1 11.5 3a7 7 0 1 0 9.5 9.5Z" fill="currentColor" />
-      </svg>
-    ),
-  },
-];
+
 
 export function App() {
   // Check if we're in the action-recorder window
@@ -110,6 +72,7 @@ function MainWindow() {
   const [theme, setTheme] = useState<ThemeChoice>("dark");
   const [palette, setPalette] = useState<PaletteChoice>("serene");
   const [fontSize, setFontSize] = useState(13);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const profiles = config?.profiles ?? [];
 
   // Use ref to ensure we always have latest profile in event listener
@@ -142,6 +105,13 @@ function MainWindow() {
       window.localStorage.setItem(THEME_STORAGE_KEY, theme);
     }
   }, [palette, theme]);
+
+  // Listen for open-settings event from action editors
+  useEffect(() => {
+    const handleOpenSettings = () => setIsSettingsOpen(true);
+    window.addEventListener("open-settings", handleOpenSettings);
+    return () => window.removeEventListener("open-settings", handleOpenSettings);
+  }, []);
 
   const applyConfig = useCallback(
     async (next: ProfilesConfig) => {
@@ -328,9 +298,6 @@ function MainWindow() {
     document.documentElement.style.setProperty("--base-font-size", `${fontSize}px`);
   }, [fontSize]);
 
-  const increaseFontSize = () => setFontSize((prev) => Math.min(prev + 1, 20));
-  const decreaseFontSize = () => setFontSize((prev) => Math.max(prev - 1, 10));
-
   const themeAttr = theme === "system" ? undefined : theme;
 
   return (
@@ -346,38 +313,6 @@ function MainWindow() {
           </div>
         </div>
         <div className="top-right">
-          <div className="font-size-controls" role="group" aria-label="Font size">
-            <button
-              className="font-size-btn"
-              onClick={decreaseFontSize}
-              title="Decrease font size"
-              aria-label="Decrease font size"
-            >
-              −
-            </button>
-            <button
-              className="font-size-btn"
-              onClick={increaseFontSize}
-              title="Increase font size"
-              aria-label="Increase font size"
-            >
-              +
-            </button>
-          </div>
-          <div className="theme-icons" role="group" aria-label="Color theme">
-            {themeOptions.map((item) => (
-              <button
-                key={item.id}
-                className={`icon-btn ${theme === item.id ? "active" : ""}`}
-                onClick={() => setTheme(item.id)}
-                title={item.label}
-                aria-pressed={theme === item.id}
-                aria-label={item.label}
-              >
-                {item.icon}
-              </button>
-            ))}
-          </div>
           <div className="palette-picker" role="group" aria-label="Accent palette">
             {paletteOptions.map((option) => (
               <button
@@ -405,6 +340,14 @@ function MainWindow() {
               <img src={reactLogo} className="badge" alt="React" />
             </a>
           </div>
+          <button
+            className="icon-btn"
+            onClick={() => setIsSettingsOpen(true)}
+            title="Settings"
+            aria-label="Settings"
+          >
+            <SettingsIcon size={20} />
+          </button>
           <button className="danger" onClick={quitApp} title="Quit Loop Automa window">
             Quit
           </button>
@@ -588,6 +531,15 @@ function MainWindow() {
                 regions: selectedProfile.regions.filter((region) => region.id !== regionId),
               });
             }}
+            onRegionUpdate={async (regionId, newRect) => {
+              if (!selectedProfile) return;
+              await updateProfile({
+                ...selectedProfile,
+                regions: selectedProfile.regions.map((region) =>
+                  region.id === regionId ? { ...region, rect: newRect } : region
+                ),
+              });
+            }}
           />
         </article>
 
@@ -626,6 +578,15 @@ function MainWindow() {
           <ProfileEditor config={config} onChange={applyConfig} />
         </article>
       </section>
+
+      <SettingsPanel
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        theme={theme === "system" ? "dark" : theme}
+        onThemeChange={(newTheme) => setTheme(newTheme)}
+        fontSize={fontSize}
+        onFontSizeChange={setFontSize}
+      />
     </main>
   );
 }

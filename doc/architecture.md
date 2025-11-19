@@ -78,7 +78,8 @@ Interfaces are intentionally minimal; implementations can extend via associated 
   - Configuration: IntervalTrigger exposes `check_interval_sec`, the time between evaluations of the Trigger/Condition pair. Profiles may choose any value between 0.1 seconds and 86 400 seconds (24 hours). For the RegionCondition “no change in Regions” preset, the default is 60 seconds.
 - Condition
   - Purpose: abstract predicate on environment/system state.
-  - MVP: RegionCondition detects no visual change in multiple Regions for a configured duration (stableMs).
+  - MVP: RegionCondition tracks consecutive evaluations with consistent change/no-change states. Triggers when N consecutive checks all have the expected state (change or no-change).
+  - Algorithm: After each evaluation, increments `consecutive_same_state` counter if the change status matches the previous evaluation; resets to 1 if it differs. Triggers when counter >= `consecutive_checks`.
 - Action
   - Purpose: a single executable unit manipulating environment state.
   - Examples: MoveCursor(x,y), Click, Type("continue"), Key(Enter).
@@ -117,7 +118,7 @@ Example Profile (conceptual):
     { "id": "r2", "rect": { "x": 860, "y": 120, "width": 640, "height": 200 } }
   ],
   "trigger": { "type": "IntervalTrigger", "check_interval_sec": 60 },
-  "condition": { "type": "RegionCondition", "stableMs": 5000, "downscale": 4, "hash": "xxh3" },
+  "condition": { "type": "RegionCondition", "consecutive_checks": 3, "expect_change": false },
   "actions": [
     { "type": "MoveCursor", "x": 1000, "y": 700 },
     { "type": "Click", "button": "left" },
@@ -138,7 +139,7 @@ Example Profile (conceptual):
     { "id": "progress", "rect": { "x": 80, "y": 740, "width": 1200, "height": 200 }, "name": "Progress Area" }
   ],
   "trigger": { "type": "IntervalTrigger", "check_interval_sec": 60 },
-  "condition": { "type": "RegionCondition", "stableMs": 8000, "downscale": 4, "hash": "xxh3" },
+  "condition": { "type": "RegionCondition", "consecutive_checks": 5, "expect_change": false },
   "actions": [
     { "type": "MoveCursor", "x": 960, "y": 980 },
     { "type": "Click", "button": "left" },
@@ -155,7 +156,7 @@ Profile schema (minimal contract):
 - profile.name: string
 - regions: Region[] where Region = { id: string, rect: { x: number>=0, y: number>=0, width: number>0, height: number>0 }, name?: string }
 - trigger: { type: "IntervalTrigger", check_interval_sec: number in [0.1, 86400] }
-- condition: { type: "RegionCondition", stableMs: number>0, downscale: number>=1, hash: "xxh3" }
+- condition: { type: "RegionCondition", consecutive_checks: number in [1, 10], expect_change: boolean }
 - actions: Action[] (order significant) where
   - MoveCursor { type: "MoveCursor", x: number>=0, y: number>=0 }
   - Click { type: "Click", button: "left" | "right" | "middle" }

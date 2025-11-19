@@ -10,8 +10,8 @@ describe("Types and defaults", () => {
     expect(profile.trigger.type).toBe("IntervalTrigger");
     expect(profile.trigger.check_interval_sec).toBeGreaterThan(0);
     expect(profile.condition.type).toBe("RegionCondition");
-    expect(profile.condition.stable_ms).toBeGreaterThan(0);
-    expect(profile.condition.downscale).toBeGreaterThan(0);
+    expect(profile.condition.consecutive_checks).toBeGreaterThan(0);
+    expect(typeof profile.condition.expect_change).toBe("boolean");
     expect(profile.actions).toBeDefined();
     expect(Array.isArray(profile.actions)).toBe(true);
   });

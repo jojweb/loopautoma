@@ -44,7 +44,7 @@ describe("GraphComposer actions", () => {
     expect(itemsAfterRemove.length).toBe(1);
   });
 
-  it("splits inline special key syntax into discrete Type actions", () => {
+  it("preserves inline special key syntax in Type actions", () => {
     const Wrapper = () => {
       const [p, setP] = useState(() => {
         const d = defaultPresetProfile();
@@ -54,18 +54,15 @@ describe("GraphComposer actions", () => {
     };
     render(<Wrapper />);
 
-    const splitBtn = screen.getByLabelText(/Split inline keys/i);
-    expect(splitBtn).toBeTruthy();
-    fireEvent.click(splitBtn);
-
+    // Verify inline syntax is preserved in the Type action editor
     const list = screen.getAllByRole("list")[0];
     const items = within(list).getAllByRole("listitem");
-    expect(items.length).toBeGreaterThan(1);
+    expect(items.length).toBe(1);
 
-    const firstType = within(items[0]).getByLabelText(/Text/i) as HTMLTextAreaElement;
-    expect(firstType.value.trim()).toBe("Hello");
-    // Second action is now also a Type action with {Key:Enter}
-    const secondType = within(items[1]).getByLabelText(/Text/i) as HTMLTextAreaElement;
-    expect(secondType.value.trim()).toBe("{Key:Enter}");
+    const typeInput = within(items[0]).getByLabelText(/Text/i) as HTMLTextAreaElement;
+    expect(typeInput.value).toBe("Hello {Key:Enter}");
+    
+    // Verify the help text exists (shows inline syntax is supported)
+    expect(screen.getByText(/\{Key:Enter\}/i)).toBeTruthy();
   });
 });

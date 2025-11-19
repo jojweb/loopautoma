@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import App from "../src/App";
 import * as bridge from "../src/tauriBridge";
 import { defaultPresetProfile, ProfilesConfig } from "../src/types";
@@ -21,7 +21,9 @@ describe("Guardrails UI", () => {
     const maxact = await screen.findByLabelText(/Max activations\/hour/);
     fireEvent.change(maxact, { target: { value: "77" } });
 
-    expect(saveSpy).toHaveBeenCalled();
+    // Wait for all async profilesSave calls to complete
+    await waitFor(() => expect(saveSpy).toHaveBeenCalledTimes(3));
+    
     const lastCall = saveSpy.mock.calls[saveSpy.mock.calls.length - 1];
     const lastConfig = lastCall[0] as ProfilesConfig;
     const lastProfile = lastConfig.profiles.find((p) => p.id === preset.id)!;

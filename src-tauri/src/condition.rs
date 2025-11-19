@@ -1,50 +1,73 @@
 use std::collections::HashMap;
-use std::time::{Duration, Instant};
+use std::time::Instant;
 
 use crate::domain::{Condition, Region, ScreenCapture};
 
 pub struct RegionCondition {
-    stable_ms: Duration,
-    downscale: u32,
-    // Track per-region last hash and last change time
-    last: HashMap<String, (u64, Instant)>,
+    consecutive_checks: u32,
+    expect_change: bool,
+    // Track per-region last hash
+    last_hashes: HashMap<String, u64>,
+    // Track consecutive evaluations with same change/no-change state
+    consecutive_same_state: u32,
+    last_had_change: Option<bool>,
 }
 
 impl RegionCondition {
-    pub fn new(stable_ms: Duration, downscale: u32) -> Self {
+    pub fn new(consecutive_checks: u32, expect_change: bool) -> Self {
         Self {
-            stable_ms,
-            downscale: downscale.max(1),
-            last: HashMap::new(),
+            consecutive_checks: consecutive_checks.max(1),
+            expect_change,
+            last_hashes: HashMap::new(),
+            consecutive_same_state: 0,
+            last_had_change: None,
         }
     }
 }
 
 impl Condition for RegionCondition {
-    fn evaluate(&mut self, now: Instant, regions: &[Region], capture: &dyn ScreenCapture) -> bool {
-        let mut all_stable = true;
+    fn evaluate(&mut self, _now: Instant, regions: &[Region], capture: &dyn ScreenCapture) -> bool {
+        // Check if any region changed since last evaluation
+        let mut any_changed = false;
         for r in regions {
-            let h = capture.hash_region(r, self.downscale);
-            match self.last.get_mut(&r.id) {
+            let h = capture.hash_region(r, 1); // No downscaling
+            match self.last_hashes.get(&r.id) {
                 None => {
-                    // First observation: set change time to now and consider not yet stable
-                    self.last.insert(r.id.clone(), (h, now));
-                    all_stable = false;
+                    // First observation: record hash, don't count as change yet
+                    self.last_hashes.insert(r.id.clone(), h);
                 }
-                Some((prev_h, last_change)) => {
-                    if *prev_h != h {
-                        *prev_h = h;
-                        *last_change = now;
-                        all_stable = false;
-                    } else {
-                        // unchanged; stable if duration exceeds stable_ms
-                        if now.duration_since(*last_change) < self.stable_ms {
-                            all_stable = false;
-                        }
+                Some(&prev_h) => {
+                    if prev_h != h {
+                        any_changed = true;
+                        self.last_hashes.insert(r.id.clone(), h);
                     }
                 }
             }
         }
-        all_stable
+
+        // Update consecutive count
+        match self.last_had_change {
+            None => {
+                // First evaluation after initialization
+                self.last_had_change = Some(any_changed);
+                self.consecutive_same_state = 1;
+            }
+            Some(prev_had_change) => {
+                if prev_had_change == any_changed {
+                    // Same state as last time
+                    self.consecutive_same_state += 1;
+                } else {
+                    // State flipped
+                    self.last_had_change = Some(any_changed);
+                    self.consecutive_same_state = 1;
+                }
+            }
+        }
+
+        // Check if condition is met
+        let current_state_matches = any_changed == self.expect_change;
+        let enough_consecutive = self.consecutive_same_state >= self.consecutive_checks;
+        
+        current_state_matches && enough_consecutive
     }
 }

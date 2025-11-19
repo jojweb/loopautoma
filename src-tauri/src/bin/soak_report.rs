@@ -9,7 +9,7 @@ fn main() -> ExitCode {
         Ok(_) => ExitCode::SUCCESS,
         Err(err) => {
             eprintln!("{err}");
-            eprintln!("Usage: cargo run --bin soak_report -- [--ticks N] [--check-interval-sec N] [--stable-ms N] [--cooldown-ms N] [--max-runtime-ms N] [--downscale N]");
+            eprintln!("Usage: cargo run --bin soak_report -- [--ticks N] [--check-interval-sec N] [--consecutive-checks N] [--expect-change] [--cooldown-ms N] [--max-runtime-ms N]");
             ExitCode::FAILURE
         }
     }
@@ -26,10 +26,14 @@ fn run_with_args(args: &[String]) -> Result<(), String> {
         match flag.as_str() {
             "--ticks" => cfg.ticks = parse_u64(value, flag)?,
             "--check-interval-sec" => cfg.check_interval_sec = parse_f64(value, flag)?,
-            "--stable-ms" => cfg.stable_ms = parse_u64(value, flag)?,
+            "--consecutive-checks" => cfg.consecutive_checks = parse_u32(value, flag)?,
+            "--expect-change" => {
+                cfg.expect_change = value.parse::<bool>()
+                    .map_err(|_| format!("Invalid boolean value for {flag}: {value}"))?;
+                i -= 1; // expect-change is a flag, not a key-value pair
+            }
             "--cooldown-ms" => cfg.cooldown_ms = parse_u64(value, flag)?,
             "--max-runtime-ms" => cfg.max_runtime_ms = parse_u64(value, flag)?,
-            "--downscale" => cfg.downscale = parse_u32(value, flag)?,
             _ => return Err(format!("Unknown flag {flag}")),
         }
         i += 2;

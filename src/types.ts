@@ -3,7 +3,11 @@ export type Rect = { x: number; y: number; width: number; height: number };
 export type Region = { id: string; rect: Rect; name?: string };
 
 export type TriggerConfig = { type: string; check_interval_sec: number };
-export type ConditionConfig = { type: string; stable_ms: number; downscale: number };
+export type ConditionConfig = { 
+  type: string; 
+  consecutive_checks: number; 
+  expect_change: boolean;
+};
 
 export type MouseButton = "Left" | "Right" | "Middle";
 export type ActionConfig =
@@ -75,7 +79,7 @@ export const defaultPresetProfile = (): Profile => ({
   name: "New Profile",
   regions: [],
   trigger: { type: "IntervalTrigger", check_interval_sec: 5 },
-  condition: { type: "RegionCondition", stable_ms: 5000, downscale: 4 },
+  condition: { type: "RegionCondition", consecutive_checks: 1, expect_change: false },
   actions: [],
   guardrails: { cooldown_ms: 5000 },
 });

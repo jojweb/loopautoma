@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ActionConfig, MouseButton } from "../types";
 import { SPECIAL_KEYS, formatInlineKeyToken } from "../utils/specialKeys";
 import { AcceleratingNumberInput } from "../components/AcceleratingNumberInput";
 import { KeyboardReferenceOverlay } from "../components/KeyboardReferenceOverlay";
+import { MouseIcon, KeyboardIcon, SparklesIcon } from "../components/Icons";
 import {
   ActionEditorProps,
   ConditionEditorProps,
@@ -41,39 +42,36 @@ function IntervalTriggerEditor({ value, onChange }: TriggerEditorProps) {
 function RegionConditionEditor({ value, onChange }: ConditionEditorProps) {
   return (
     <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-      <label
-        title="Regions must be unchanged (stable) for this duration before actions trigger. Set to same value as check interval to trigger on first stable evaluation."
-        style={{ display: "flex", alignItems: "center", gap: 6 }}
+      <select
+        value={value.expect_change ? "a" : "no"}
+        onChange={(e) =>
+          onChange({
+            ...value,
+            type: "RegionCondition",
+            expect_change: e.target.value === "a",
+          })
+        }
+        title="Trigger on change or no change"
+        style={{ width: 80 }}
       >
-        <span>Stable (s)</span>
-        <AcceleratingNumberInput
-          min={0}
-          value={value.stable_ms / 1000}
-          onValueChange={(next) =>
-            onChange({
-              ...value,
-              type: "RegionCondition",
-              stable_ms: Math.max(0, (next === "" ? 0 : Number(next)) * 1000),
-            })
-          }
-          inputMode="decimal"
-          containerStyle={{ width: 150 }}
-        />
-      </label>
-      <label
-        title="Downscale factor for hashing (higher = faster, lower precision)"
-        style={{ display: "flex", alignItems: "center", gap: 6 }}
-      >
-        <span>Downscale</span>
-        <AcceleratingNumberInput
-          min={1}
-          value={value.downscale}
-          onValueChange={(next) =>
-            onChange({ ...value, type: "RegionCondition", downscale: next === "" ? 1 : Number(next) })
-          }
-          containerStyle={{ width: 110 }}
-        />
-      </label>
+        <option value="no">no</option>
+        <option value="a">a</option>
+      </select>
+      <span>change detected for</span>
+      <AcceleratingNumberInput
+        min={1}
+        value={value.consecutive_checks}
+        onValueChange={(next) =>
+          onChange({
+            ...value,
+            type: "RegionCondition",
+            consecutive_checks: Math.max(1, next === "" ? 1 : Number(next)),
+          })
+        }
+        containerStyle={{ width: 80 }}
+        title="Number of consecutive checks with same state"
+      />
+      <span>check(s)</span>
     </div>
   );
 }
@@ -83,6 +81,7 @@ function ClickEditor({ value, onChange }: ActionEditorProps) {
   const v = value as Extract<ActionConfig, { type: "Click" }>;
   return (
     <>
+      <MouseIcon size={16} style={{ flexShrink: 0, opacity: 0.7 }} />
       <label title="Cursor X coordinate in screen pixels" style={{ display: "flex", alignItems: "center", gap: 6 }}>
         <span>X</span>
         <AcceleratingNumberInput
@@ -128,6 +127,7 @@ function TypeEditor({ value, onChange }: ActionEditorProps) {
   };
   return (
     <>
+      <KeyboardIcon size={16} style={{ flexShrink: 0, opacity: 0.7 }} />
       <div className="type-editor" title="Type literal text; use {Key:Enter} inline markers for special keys">
         <label>
           Text
@@ -166,6 +166,9 @@ function TypeEditor({ value, onChange }: ActionEditorProps) {
             ⌨️ Key reference
           </button>
         </div>
+        <div style={{ fontSize: 11, opacity: 0.7, marginTop: 4, paddingTop: 4, borderTop: "1px solid #eee" }}>
+          💡 Available variables: <code>$prompt</code> (from LLM action), <code>$risk</code> (risk level)
+        </div>
       </div>
       {showKeyRef && <KeyboardReferenceOverlay onClose={() => setShowKeyRef(false)} />}
     </>
@@ -174,9 +177,24 @@ function TypeEditor({ value, onChange }: ActionEditorProps) {
 
 function LLMPromptGenerationEditor({ value, onChange }: ActionEditorProps) {
   const v = value as Extract<ActionConfig, { type: "LLMPromptGeneration" }>;
+  const [hasApiKey, setHasApiKey] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    // Check if running in Tauri environment
+    if (typeof window !== "undefined" && "__TAURI_INTERNALS__" in window) {
+      import("../tauriSecureStorage").then(({ getOpenAIKeyStatus }) => {
+        getOpenAIKeyStatus()
+          .then((status) => setHasApiKey(status))
+          .catch(() => setHasApiKey(false));
+      });
+    }
+  }, []);
+
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 8, padding: 8, border: "1px solid #ccc", borderRadius: 4 }}>
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+    <>
+      <SparklesIcon size={16} style={{ flexShrink: 0, opacity: 0.7 }} />
+      <div style={{ display: "flex", flexDirection: "column", gap: 8, padding: 8, border: "1px solid #ccc", borderRadius: 4, flex: 1 }}>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
         <label title="Region IDs to capture and send to LLM (comma-separated)">
           Region IDs
           <input
@@ -229,10 +247,41 @@ function LLMPromptGenerationEditor({ value, onChange }: ActionEditorProps) {
           style={{ width: 150, marginLeft: 6 }}
         />
       </label>
-      <div style={{ fontSize: 11, opacity: 0.7, marginTop: 4 }}>
-        💡 Tip: Reference the variable in subsequent Type actions using {'$' + (v.variable_name || "prompt")}
+        {hasApiKey === false && (
+          <div
+            style={{
+              padding: "8px 12px",
+              borderRadius: 4,
+              backgroundColor: "#fff3cd",
+              color: "#856404",
+              fontSize: 12,
+              border: "1px solid #ffeaa7",
+              marginBottom: 8,
+            }}
+            role="alert"
+          >
+            ⚠️ OpenAI API key not configured. <a 
+              href="#" 
+              onClick={(e) => { 
+                e.preventDefault(); 
+                window.dispatchEvent(new CustomEvent("open-settings"));
+              }} 
+              style={{ color: "#856404", textDecoration: "underline", cursor: "pointer" }}
+            >
+              Open Settings
+            </a> to add your key.
+          </div>
+        )}
+        
+        <div style={{ fontSize: 11, opacity: 0.7, marginTop: 4, lineHeight: 1.5 }}>
+          💡 <strong>How it works:</strong> Captures specified regions as screenshots → sends to OpenAI GPT-4 Vision → analyzes content → generates prompt based on risk threshold → stores result in ${'{'}${v.variable_name || "prompt"}{'}'} variable for use in subsequent Type actions.
+        </div>
+        
+        <div style={{ fontSize: 11, opacity: 0.7, marginTop: 4 }}>
+          💡 <strong>Tip:</strong> Reference the variable in subsequent Type actions using {'$' + (v.variable_name || "prompt")}
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 

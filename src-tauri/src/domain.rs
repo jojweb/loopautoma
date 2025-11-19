@@ -249,8 +249,8 @@ pub struct TriggerConfig {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ConditionConfig {
     pub r#type: String,
-    pub stable_ms: u64,
-    pub downscale: u32,
+    pub consecutive_checks: u32,
+    pub expect_change: bool,
 }
 
 /// Action configuration variants for the automation sequence.
