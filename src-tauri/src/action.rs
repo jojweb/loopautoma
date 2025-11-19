@@ -205,3 +205,111 @@ impl LLMPromptGenerationAction {
         eprintln!("⚠️  RISK THRESHOLD EXCEEDED - ALARM ⚠️");
     }
 }
+
+/// Termination check action that evaluates conditions and requests termination
+pub struct TerminationCheckAction {
+    pub check_type: String,
+    pub context_vars: Vec<String>,
+    pub ocr_region_ids: Vec<String>,
+    pub ai_query_prompt: Option<String>,
+    pub termination_condition: String,
+    pub all_regions: Vec<crate::domain::Region>,
+    pub capture: std::sync::Arc<dyn crate::domain::ScreenCapture + Send + Sync>,
+    pub llm_client: std::sync::Arc<dyn crate::llm::LLMClient>,
+}
+
+impl Action for TerminationCheckAction {
+    fn name(&self) -> &'static str {
+        "TerminationCheck"
+    }
+
+    fn execute(
+        &self,
+        _automation: &dyn crate::domain::Automation,
+        context: &mut crate::domain::ActionContext,
+    ) -> Result<(), String> {
+        use regex::Regex;
+        
+        let condition_met = match self.check_type.as_str() {
+            "context" => {
+                // Inspect context variables
+                let mut values = Vec::new();
+                for var_name in &self.context_vars {
+                    if let Some(value) = context.get(var_name) {
+                        values.push(value);
+                    }
+                }
+                
+                // Check if termination_condition regex matches any value
+                let pattern = Regex::new(&self.termination_condition)
+                    .map_err(|e| format!("Invalid termination condition regex: {}", e))?;
+                
+                values.iter().any(|v| pattern.is_match(v))
+            }
+            "ocr" => {
+                // Extract text from OCR regions and check pattern
+                #[cfg(feature = "ocr-integration")]
+                {
+                    use crate::domain::OCRCapture;
+                    let ocr = crate::os::linux::LinuxOCR::new()
+                        .map_err(|e| format!("Failed to initialize OCR: {}", e.message))?;
+                    
+                    let pattern = Regex::new(&self.termination_condition)
+                        .map_err(|e| format!("Invalid termination condition regex: {}", e))?;
+                    
+                    let mut found = false;
+                    for region_id in &self.ocr_region_ids {
+                        if let Some(region) = self.all_regions.iter().find(|r| &r.id == region_id) {
+                            let region_hash = self.capture.hash_region(region, 1);
+                            if let Ok(text) = ocr.extract_text_cached(region, region_hash) {
+                                if pattern.is_match(&text) {
+                                    found = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    found
+                }
+                #[cfg(not(feature = "ocr-integration"))]
+                {
+                    return Err("OCR termination check requires 'ocr-integration' feature".to_string());
+                }
+            }
+            "ai_query" => {
+                // Call LLM with custom query and check task_complete
+                let query_prompt = self.ai_query_prompt.as_deref()
+                    .ok_or("ai_query_prompt required for ai_query check_type")?;
+                
+                // Collect all regions for LLM
+                let mut captured_regions = Vec::new();
+                for region in &self.all_regions {
+                    captured_regions.push(region.clone());
+                }
+                
+                // Capture images
+                let region_images = crate::llm::capture_region_images(&captured_regions, self.capture.as_ref())?;
+                
+                // Call LLM
+                let risk_guidance = crate::llm::build_risk_guidance();
+                let llm_response = self.llm_client.generate_prompt(
+                    &captured_regions,
+                    region_images,
+                    Some(query_prompt),
+                    &risk_guidance,
+                )?;
+                
+                llm_response.task_complete
+            }
+            _ => {
+                return Err(format!("Unknown check_type: {}", self.check_type));
+            }
+        };
+        
+        if condition_met {
+            context.request_termination(format!("TerminationCheck: {}", self.termination_condition));
+        }
+        
+        Ok(())
+    }
+}

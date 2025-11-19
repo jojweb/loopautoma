@@ -209,6 +209,22 @@ pub fn build_monitor_from_profile<'a>(p: &Profile, api_key: Option<String>, mode
                 capture: capture.clone(),
                 llm_client: llm_client.clone(),
             })),
+            ActionConfig::TerminationCheck {
+                check_type,
+                context_vars,
+                ocr_region_ids,
+                ai_query_prompt,
+                termination_condition,
+            } => acts.push(Box::new(action::TerminationCheckAction {
+                check_type: check_type.clone(),
+                context_vars: context_vars.clone(),
+                ocr_region_ids: ocr_region_ids.clone(),
+                ai_query_prompt: ai_query_prompt.clone(),
+                termination_condition: termination_condition.clone(),
+                all_regions: p.regions.clone(),
+                capture: capture.clone(),
+                llm_client: llm_client.clone(),
+            })),
         }
     }
     let seq = ActionSequence::new(acts);

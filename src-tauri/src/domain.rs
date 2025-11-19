@@ -77,6 +77,9 @@ pub enum Event {
     WatchdogTripped {
         reason: String,
     },
+    TerminationCheckTriggered {
+        reason: String,
+    },
     Error {
         message: String,
     },
@@ -246,6 +249,15 @@ impl ActionSequence {
                     return false;
                 }
             }
+            
+            // Check termination flag after each action
+            if context.is_termination_requested() {
+                events.push(Event::TerminationCheckTriggered {
+                    reason: context.get("termination_reason").unwrap_or_default().to_string(),
+                });
+                return true; // Return success but stop sequence
+            }
+            
             // Add delay between actions to allow window manager to process events
             // Critical for X11: cursor move needs time to update focus before click/type
             if i < self.actions.len() - 1 {
@@ -343,6 +355,20 @@ pub enum ActionConfig {
         /// OCR mode: "local" (extract text locally) or "vision" (send screenshots)
         #[serde(default)]
         ocr_mode: OcrMode,
+    },
+    TerminationCheck {
+        /// Type of termination check: "context", "ocr", or "ai_query"
+        check_type: String,
+        /// Context variables to inspect (for check_type = "context")
+        #[serde(default)]
+        context_vars: Vec<String>,
+        /// Region IDs to scan with OCR (for check_type = "ocr")
+        #[serde(default)]
+        ocr_region_ids: Vec<String>,
+        /// AI query prompt (for check_type = "ai_query")
+        ai_query_prompt: Option<String>,
+        /// Regex pattern or logic expression for termination condition
+        termination_condition: String,
     },
 }
 

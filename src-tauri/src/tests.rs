@@ -1841,4 +1841,266 @@ mod tests {
         // 3. Manual testing with Tesseract installed
         // 4. Monitor.check_ocr_termination() logic tested above
     }
+
+    mod termination_check_tests {
+        use super::*;
+        use crate::action::TerminationCheckAction;
+        use crate::llm::MockLLMClient;
+        use crate::ActionContext;
+        use std::sync::Arc;
+        
+        // Re-use TestCapture from parent module
+        struct TestCapture;
+        impl ScreenCapture for TestCapture {
+            fn hash_region(&self, _region: &Region, _downscale: u32) -> u64 {
+                42
+            }
+            fn capture_region(&self, region: &Region) -> Result<ScreenFrame, BackendError> {
+                let width = region.rect.width.min(10);
+                let height = region.rect.height.min(10);
+                let bytes = vec![255u8; (width * height * 4) as usize];
+                Ok(ScreenFrame {
+                    display: DisplayInfo {
+                        id: 0,
+                        name: Some("Test Display".to_string()),
+                        x: 0,
+                        y: 0,
+                        width: 1920,
+                        height: 1080,
+                        scale_factor: 1.0,
+                        is_primary: true,
+                    },
+                    width,
+                    height,
+                    stride: width * 4,
+                    bytes,
+                    timestamp_ms: 0,
+                })
+            }
+            fn displays(&self) -> Result<Vec<DisplayInfo>, BackendError> {
+                Ok(vec![])
+            }
+        }
+        
+        #[test]
+        fn termination_check_context_matches_pattern() {
+            let regions = vec![Region {
+                id: "r1".to_string(),
+                rect: Rect { x: 0, y: 0, width: 100, height: 100 },
+                name: None,
+            }];
+            
+            let action = TerminationCheckAction {
+                check_type: "context".to_string(),
+                context_vars: vec!["status".to_string()],
+                ocr_region_ids: vec![],
+                ai_query_prompt: None,
+                termination_condition: "DONE|COMPLETE".to_string(), // Regex pattern
+                all_regions: regions,
+                capture: Arc::new(TestCapture),
+                llm_client: Arc::new(MockLLMClient::new()),
+            };
+            
+            let mut context = ActionContext::new();
+            context.set("status", "DONE");
+            
+            let auto = FakeAuto::new();
+            let result = action.execute(&auto, &mut context);
+            
+            assert!(result.is_ok());
+            assert!(context.is_termination_requested());
+        }
+        
+        #[test]
+        fn termination_check_context_no_match() {
+            let regions = vec![Region {
+                id: "r1".to_string(),
+                rect: Rect { x: 0, y: 0, width: 100, height: 100 },
+                name: None,
+            }];
+            
+            let action = TerminationCheckAction {
+                check_type: "context".to_string(),
+                context_vars: vec!["status".to_string()],
+                ocr_region_ids: vec![],
+                ai_query_prompt: None,
+                termination_condition: "DONE|COMPLETE".to_string(),
+                all_regions: regions,
+                capture: Arc::new(TestCapture),
+                llm_client: Arc::new(MockLLMClient::new()),
+            };
+            
+            let mut context = ActionContext::new();
+            context.set("status", "RUNNING");
+            
+            let auto = FakeAuto::new();
+            let result = action.execute(&auto, &mut context);
+            
+            assert!(result.is_ok());
+            assert!(!context.is_termination_requested());
+        }
+        
+        #[test]
+        fn termination_check_ai_query_complete() {
+            let regions = vec![Region {
+                id: "r1".to_string(),
+                rect: Rect { x: 0, y: 0, width: 100, height: 100 },
+                name: None,
+            }];
+            
+            // Mock LLM that returns task_complete=true
+            let completion_client = Arc::new(MockLLMClient::with_completion(
+                "Task is complete".to_string()
+            ));
+            
+            let action = TerminationCheckAction {
+                check_type: "ai_query".to_string(),
+                context_vars: vec![],
+                ocr_region_ids: vec![],
+                ai_query_prompt: Some("Is the task done?".to_string()),
+                termination_condition: "".to_string(), // Not used for ai_query
+                all_regions: regions,
+                capture: Arc::new(TestCapture),
+                llm_client: completion_client,
+            };
+            
+            let mut context = ActionContext::new();
+            
+            let auto = FakeAuto::new();
+            let result = action.execute(&auto, &mut context);
+            
+            assert!(result.is_ok());
+            assert!(context.is_termination_requested());
+        }
+        
+        #[test]
+        fn termination_check_ai_query_continue() {
+            let regions = vec![Region {
+                id: "r1".to_string(),
+                rect: Rect { x: 0, y: 0, width: 100, height: 100 },
+                name: None,
+            }];
+            
+            // Mock LLM that returns continuation
+            let continue_client = Arc::new(MockLLMClient::new());
+            
+            let action = TerminationCheckAction {
+                check_type: "ai_query".to_string(),
+                context_vars: vec![],
+                ocr_region_ids: vec![],
+                ai_query_prompt: Some("Is the task done?".to_string()),
+                termination_condition: "".to_string(),
+                all_regions: regions,
+                capture: Arc::new(TestCapture),
+                llm_client: continue_client,
+            };
+            
+            let mut context = ActionContext::new();
+            
+            let auto = FakeAuto::new();
+            let result = action.execute(&auto, &mut context);
+            
+            assert!(result.is_ok());
+            assert!(!context.is_termination_requested());
+        }
+        
+        #[test]
+        fn termination_check_invalid_check_type() {
+            let regions = vec![Region {
+                id: "r1".to_string(),
+                rect: Rect { x: 0, y: 0, width: 100, height: 100 },
+                name: None,
+            }];
+            
+            let action = TerminationCheckAction {
+                check_type: "invalid".to_string(),
+                context_vars: vec![],
+                ocr_region_ids: vec![],
+                ai_query_prompt: None,
+                termination_condition: "".to_string(),
+                all_regions: regions,
+                capture: Arc::new(TestCapture),
+                llm_client: Arc::new(MockLLMClient::new()),
+            };
+            
+            let mut context = ActionContext::new();
+            
+            let auto = FakeAuto::new();
+            let result = action.execute(&auto, &mut context);
+            
+            assert!(result.is_err());
+            assert!(result.unwrap_err().contains("Unknown check_type"));
+        }
+        
+        #[test]
+        fn action_sequence_stops_on_termination_check() {
+            use crate::{Event, ActionSequence, Automation};
+            
+            // Simple test action that increments a counter
+            struct CounterAction {
+                id: u32,
+            }
+            impl Action for CounterAction {
+                fn name(&self) -> &'static str {
+                    "Counter"
+                }
+                fn execute(&self, _automation: &dyn Automation, context: &mut ActionContext) -> Result<(), String> {
+                    let count = context.get("counter").unwrap_or("0").parse::<u32>().unwrap_or(0);
+                    context.set("counter", &(count + 1).to_string());
+                    Ok(())
+                }
+            }
+            
+            let regions = vec![Region {
+                id: "r1".to_string(),
+                rect: Rect { x: 0, y: 0, width: 100, height: 100 },
+                name: None,
+            }];
+            
+            // Create sequence: Counter -> TerminationCheck (triggers) -> Counter (should not execute)
+            let actions: Vec<Box<dyn Action + Send + Sync>> = vec![
+                Box::new(CounterAction { id: 1 }),
+                Box::new(TerminationCheckAction {
+                    check_type: "context".to_string(),
+                    context_vars: vec!["status".to_string()],
+                    ocr_region_ids: vec![],
+                    ai_query_prompt: None,
+                    termination_condition: "DONE".to_string(),
+                    all_regions: regions.clone(),
+                    capture: Arc::new(TestCapture),
+                    llm_client: Arc::new(MockLLMClient::new()),
+                }),
+                Box::new(CounterAction { id: 2 }),
+            ];
+            
+            let sequence = ActionSequence::new(actions);
+            let mut context = ActionContext::new();
+            context.set("status", "DONE"); // Will trigger termination
+            context.set("counter", "0");
+            
+            let auto = FakeAuto::new();
+            let mut events = vec![];
+            
+            let success = sequence.run(&auto, &mut context, &mut events);
+            
+            assert!(success); // Returns true even though terminated early
+            assert!(context.is_termination_requested());
+            
+            // Counter should be 1 (only first action executed)
+            let counter = context.get("counter").unwrap_or("0").parse::<u32>().unwrap_or(0);
+            assert_eq!(counter, 1, "Third action should not have executed");
+            
+            // Should see: ActionStarted (Counter), ActionCompleted (Counter),
+            //             ActionStarted (TerminationCheck), ActionCompleted (TerminationCheck),
+            //             TerminationCheckTriggered
+            // Should NOT see third ActionStarted (Counter)
+            let action_started_count = events.iter().filter(|e| matches!(e, Event::ActionStarted { .. })).count();
+            assert_eq!(action_started_count, 2, "Should only execute 2 actions before termination");
+            
+            let termination_events: Vec<_> = events.iter()
+                .filter(|e| matches!(e, Event::TerminationCheckTriggered { .. }))
+                .collect();
+            assert_eq!(termination_events.len(), 1, "Should emit exactly one TerminationCheckTriggered event");
+        }
+    }
 }
