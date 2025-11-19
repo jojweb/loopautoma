@@ -176,6 +176,7 @@ mod tests {
                 cooldown: Duration::from_millis(0),
                 max_runtime: None,
                 max_activations_per_hour: Some(10),
+                heartbeat_timeout: None,
                 success_keywords: vec![],
                 failure_keywords: vec![],
                 ocr_termination_pattern: None,
@@ -263,6 +264,7 @@ mod tests {
                 max_runtime_ms: Some(10_000),
                 max_activations_per_hour: Some(5),
                 cooldown_ms: 100,
+                heartbeat_timeout_ms: None,
                 success_keywords: vec![],
                 failure_keywords: vec![],
                 ocr_termination_pattern: None,
@@ -363,6 +365,7 @@ mod tests {
                 cooldown: Duration::from_millis(0),
                 max_runtime: Some(Duration::from_millis(1)),
                 max_activations_per_hour: None,
+                heartbeat_timeout: None,
                 success_keywords: vec![],
                 failure_keywords: vec![],
                 ocr_termination_pattern: None,
@@ -434,6 +437,7 @@ mod tests {
                 cooldown: Duration::from_millis(0),
                 max_runtime: None,
                 max_activations_per_hour: Some(1),
+                heartbeat_timeout: None,
                 success_keywords: vec![],
                 failure_keywords: vec![],
                 ocr_termination_pattern: None,
@@ -516,6 +520,7 @@ mod tests {
                 cooldown: Duration::from_millis(0),
                 max_runtime: None,
                 max_activations_per_hour: Some(1),
+                heartbeat_timeout: None,
                 success_keywords: vec![],
                 failure_keywords: vec![],
                 ocr_termination_pattern: None,
@@ -635,6 +640,7 @@ mod tests {
                 max_runtime_ms: Some(10_000),
                 max_activations_per_hour: Some(5),
                 cooldown_ms: 0,
+                heartbeat_timeout_ms: None,
                 success_keywords: vec![],
                 failure_keywords: vec![],
                 ocr_termination_pattern: None,
@@ -743,6 +749,7 @@ mod tests {
                 cooldown: Duration::from_millis(1),
                 max_runtime: Some(Duration::from_millis(5)),
                 max_activations_per_hour: Some(1_000_000),
+                heartbeat_timeout: None,
                 success_keywords: vec![],
                 failure_keywords: vec![],
                 ocr_termination_pattern: None,
@@ -822,6 +829,7 @@ mod tests {
                 cooldown: Duration::from_millis(0),
                 max_runtime: None,
                 max_activations_per_hour: None,
+                heartbeat_timeout: None,
                 success_keywords: vec![],
                 failure_keywords: vec![],
                 ocr_termination_pattern: None,
@@ -962,6 +970,7 @@ mod tests {
                 cooldown: Duration::from_millis(100),
                 max_runtime: None,
                 max_activations_per_hour: None,
+                heartbeat_timeout: None,
                 success_keywords: vec![],
                 failure_keywords: vec![],
                 ocr_termination_pattern: None,
@@ -1538,6 +1547,7 @@ mod tests {
                     max_runtime_ms: Some(3600000),
                     max_activations_per_hour: Some(60),
                     cooldown_ms: 5000,
+                    heartbeat_timeout_ms: None,
                     success_keywords: vec![],
                     failure_keywords: vec![],
                     ocr_termination_pattern: None,
@@ -2030,6 +2040,55 @@ mod tests {
             
             assert!(result.is_err());
             assert!(result.unwrap_err().contains("Unknown check_type"));
+        }
+        
+        #[test]
+        fn heartbeat_watchdog_triggers_on_stall() {
+            use std::time::{Duration, Instant};
+            use crate::{Event, ActionSequence, Guardrails};
+            use crate::monitor::Monitor;
+            use crate::trigger::IntervalTrigger;
+            use crate::condition::RegionCondition;
+            
+            let trigger = Box::new(IntervalTrigger::new(Duration::from_millis(100)));
+            let condition = Box::new(RegionCondition::new(1, false));
+            let actions = ActionSequence::new(vec![]);
+            let guardrails = Guardrails {
+                cooldown: Duration::from_millis(0),
+                max_runtime: None,
+                max_activations_per_hour: None,
+                heartbeat_timeout: Some(Duration::from_millis(100)),
+                ocr_mode: crate::domain::OcrMode::default(),
+                success_keywords: vec![],
+                failure_keywords: vec![],
+                ocr_termination_pattern: None,
+                ocr_region_ids: vec![],
+            };
+            
+            let mut monitor = Monitor::new(trigger, condition, actions, guardrails);
+            let mut events = vec![];
+            
+            monitor.start(&mut events);
+            
+            // Set last_action_progress to simulate stalled heartbeat
+            let now = Instant::now();
+            monitor.last_action_progress = Some(now - Duration::from_millis(150));
+            
+            // Tick should detect stalled heartbeat (150ms > 100ms timeout)
+            let regions = vec![];
+            let auto = FakeAuto::new();
+            let capture = crate::FakeCapture;
+            
+            monitor.tick(now, &regions, &capture, &auto, &mut events);
+            
+            // Should have watchdog event with heartbeat_stalled reason
+            let watchdog_events: Vec<_> = events.iter()
+                .filter(|e| matches!(e, Event::WatchdogTripped { reason } if reason == "heartbeat_stalled"))
+                .collect();
+            assert_eq!(watchdog_events.len(), 1, "Should emit heartbeat_stalled watchdog event");
+            
+            // Monitor should be stopped
+            assert!(monitor.started_at.is_none());
         }
         
         #[test]

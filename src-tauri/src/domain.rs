@@ -274,6 +274,8 @@ pub struct Guardrails {
     pub cooldown: Duration,
     pub max_runtime: Option<Duration>,
     pub max_activations_per_hour: Option<u32>,
+    /// Maximum time without action progress before watchdog triggers (heartbeat pattern)
+    pub heartbeat_timeout: Option<Duration>,
     /// OCR mode for termination pattern matching
     pub ocr_mode: OcrMode,
     /// Keywords/patterns that indicate task success (terminate with success)
@@ -292,6 +294,7 @@ impl Default for Guardrails {
             cooldown: Duration::from_millis(0),
             max_runtime: None,
             max_activations_per_hour: None,
+            heartbeat_timeout: None,
             ocr_mode: OcrMode::default(),
             success_keywords: Vec::new(),
             failure_keywords: Vec::new(),
@@ -377,6 +380,9 @@ pub struct GuardrailsConfig {
     pub max_runtime_ms: Option<u64>,
     pub max_activations_per_hour: Option<u32>,
     pub cooldown_ms: u64,
+    /// Maximum time without action progress before watchdog triggers (heartbeat pattern)
+    #[serde(default)]
+    pub heartbeat_timeout_ms: Option<u64>,
     /// OCR mode for termination pattern matching
     #[serde(default)]
     pub ocr_mode: OcrMode,

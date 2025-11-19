@@ -13,6 +13,7 @@ pub struct SoakConfig {
     pub consecutive_checks: u32,
     pub expect_change: bool,
     pub cooldown_ms: u64,
+    pub heartbeat_timeout_ms: Option<u64>,
     pub max_runtime_ms: u64,
 }
 
@@ -24,6 +25,7 @@ impl Default for SoakConfig {
             consecutive_checks: 1,
             expect_change: false,
             cooldown_ms: 50,
+            heartbeat_timeout_ms: None,
             max_runtime_ms: 2_000,
         }
     }
@@ -123,6 +125,7 @@ fn build_profile(config: &SoakConfig) -> Profile {
             max_runtime_ms: Some(config.max_runtime_ms),
             max_activations_per_hour: Some((3_600_000u64 / config.cooldown_ms.max(1)).max(1) as u32),
             cooldown_ms: config.cooldown_ms,
+            heartbeat_timeout_ms: None,
             ocr_mode: crate::domain::OcrMode::default(),
             success_keywords: Vec::new(),
             failure_keywords: Vec::new(),

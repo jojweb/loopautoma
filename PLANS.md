@@ -239,23 +239,31 @@ To prevent uncontrolled growth of this file:
   - [x] 3.8f. All 44 tests passing ✅ (verified 3x)
   - [x] 3.8g. Note: Real LinuxOCR.extract_text() requires Tesseract (validated manually)
 
-**Phase 4: TerminationCheck Action**
-- [ ] 4.1. Add TerminationCheck variant to ActionConfig
-  - [ ] 4.1a. check_type: "context" | "ocr" | "ai_query"
-  - [ ] 4.1b. context_vars: Vec<String> (variables to inspect)
-  - [ ] 4.1c. ocr_region_ids: Vec<String>
-  - [ ] 4.1d. ai_query_prompt: Option<String>
-  - [ ] 4.1e. termination_condition: String (regex or logic expression)
-- [ ] 4.2. Implement TerminationCheck::run() in action.rs
-  - [ ] 4.2a. For context check: inspect ActionContext variables
-  - [ ] 4.2b. For OCR check: extract text and match pattern
-  - [ ] 4.2c. For AI query: call LLM with custom prompt, check task_complete
-  - [ ] 4.2d. Set context.should_terminate = true if condition met
-  - [ ] 4.2e. Set context.termination_reason
-- [ ] 4.3. Update ActionSequence.run() to check should_terminate
-  - [ ] 4.3a. After each action, check context.should_terminate
-  - [ ] 4.3b. If true, stop sequence early and return
-  - [ ] 4.3c. Emit Event::TerminationCheckTriggered with reason
+**Phase 4: TerminationCheck Action** ✅ COMPLETE
+- [x] 4.1. Add TerminationCheck variant to ActionConfig
+  - [x] 4.1a. check_type: "context" | "ocr" | "ai_query"
+  - [x] 4.1b. context_vars: Vec<String> (variables to inspect)
+  - [x] 4.1c. ocr_region_ids: Vec<String>
+  - [x] 4.1d. ai_query_prompt: Option<String>
+  - [x] 4.1e. termination_condition: String (regex or logic expression)
+- [x] 4.2. Implement TerminationCheck::run() in action.rs
+  - [x] 4.2a. For context check: inspect ActionContext variables
+  - [x] 4.2b. For OCR check: extract text and match pattern
+  - [x] 4.2c. For AI query: call LLM with custom prompt, check task_complete
+  - [x] 4.2d. Set context.should_terminate = true if condition met
+  - [x] 4.2e. Set context.termination_reason
+- [x] 4.3. Update ActionSequence.run() to check should_terminate
+  - [x] 4.3a. After each action, check context.should_terminate
+  - [x] 4.3b. If true, stop sequence early and return
+  - [x] 4.3c. Emit Event::TerminationCheckTriggered with reason
+- [x] 4.4. Comprehensive testing (6 new tests)
+  - [x] 4.4a. Test context variable inspection mode
+  - [x] 4.4b. Test OCR-based termination mode
+  - [x] 4.4c. Test AI query termination mode
+  - [x] 4.4d. Test should_terminate flag setting
+  - [x] 4.4e. Test invalid check_type error handling
+  - [x] 4.4f. Test ActionSequence early stopping on termination
+  - [x] 4.4g. All 50 tests passing ✅ (verified 3x)
 
 **Phase 5: Heartbeat Watchdog (Airflow Pattern)**
 - [ ] 5.1. Add heartbeat_timeout_ms to Guardrails
@@ -481,6 +489,7 @@ To prevent uncontrolled growth of this file:
 - 2025-01-19 — Phase 3.6 COMPLETE: Fixed test compilation errors - added ocr_mode to all LLMPromptGenerationAction, Guardrails, and GuardrailsConfig test initializations (sed + manual fixes). All 39 Rust tests passing ✅.
 - 2025-01-19 — Phase 3.7 COMPLETE: Implemented ocr_mode in LLMPromptGenerationAction.execute() (~40 lines). Local mode: extracts text with LinuxOCR, appends to system prompt, sends text-only to LLM (empty images vec). Vision mode: captures screenshots, sends images to LLM (original behavior). Changed OcrMode::default() to Vision (no Tesseract required).
 - 2025-01-19 — Phase 3.8 COMPLETE: Added 5 comprehensive OCR tests (ocr_mode serialization, defaults, LLM action mode switching, Guardrails fields, Monitor termination logic). All 44 Rust tests passing ✅ (verified 3x). Total Phase 3: 156 steps complete across 3.0-3.8. Ready for Phase 4.
+- 2025-01-19 — Phase 4 COMPLETE: Implemented TerminationCheck action with three modes (context, ocr, ai_query). Added TerminationCheck variant to ActionConfig, implemented TerminationCheckAction struct (~120 lines) with regex matching, OCR text extraction, and LLM task_complete detection. Updated ActionSequence.run() to check should_terminate after each action and stop early with TerminationCheckTriggered event. Added 6 comprehensive tests covering all modes + early sequence stopping. All 50 tests passing ✅ (verified 3x). Commit: 8745798.
 
 **Assumptions and open questions**
 - Assumption: uni-ocr provides sufficient OCR accuracy for English text (primary use case)

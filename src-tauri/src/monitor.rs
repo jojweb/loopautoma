@@ -15,6 +15,8 @@ pub struct Monitor<'a> {
     pub last_activation_at: Option<Instant>,
     activation_log: VecDeque<Instant>,
     pub context: ActionContext,
+    /// Heartbeat: Last time an action made progress (used for stall detection)
+    pub last_action_progress: Option<Instant>,
 }
 
 impl<'a> Monitor<'a> {
@@ -34,6 +36,7 @@ impl<'a> Monitor<'a> {
             last_activation_at: None,
             activation_log: VecDeque::new(),
             context: ActionContext::new(),
+            last_action_progress: None,
         }
     }
 
@@ -43,6 +46,7 @@ impl<'a> Monitor<'a> {
         self.last_activation_at = None;
         self.activation_log.clear();
         self.context = ActionContext::new(); // Reset context on start
+        self.last_action_progress = None; // Reset heartbeat on start
         events.push(Event::MonitorStateChanged {
             state: MonitorState::Running,
         });
@@ -86,6 +90,19 @@ impl<'a> Monitor<'a> {
                 if now.duration_since(start) > max_rt {
                     out_events.push(Event::WatchdogTripped {
                         reason: "max_runtime".into(),
+                    });
+                    self.stop(out_events);
+                    return;
+                }
+            }
+        }
+
+        // guard: heartbeat watchdog (stall detection)
+        if let Some(heartbeat_timeout) = self.guardrails.heartbeat_timeout {
+            if let Some(last_progress) = self.last_action_progress {
+                if now.duration_since(last_progress) > heartbeat_timeout {
+                    out_events.push(Event::WatchdogTripped {
+                        reason: "heartbeat_stalled".into(),
                     });
                     self.stop(out_events);
                     return;
@@ -161,6 +178,9 @@ impl<'a> Monitor<'a> {
             }
         }
 
+        // Touch heartbeat before running actions
+        self.last_action_progress = Some(now);
+        
         let ok = self.actions.run(automation, &mut self.context, out_events);
         if ok {
             self.activations += 1;
