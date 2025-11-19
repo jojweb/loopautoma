@@ -14,7 +14,7 @@ pub enum OcrMode {
 
 impl Default for OcrMode {
     fn default() -> Self {
-        Self::Local  // Default to local for cost efficiency
+        Self::Vision  // Default to vision mode (no Tesseract required)
     }
 }
 

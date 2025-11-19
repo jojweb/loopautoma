@@ -91,17 +91,57 @@ impl Action for LLMPromptGenerationAction {
             }
         }
 
-        // 2. Capture screen regions as PNG images
-        let region_images = capture_region_images(&captured_regions, self.capture.as_ref())?;
+        // 2. Determine mode and prepare LLM input
+        let (region_images, extracted_text) = match self.ocr_mode {
+            crate::domain::OcrMode::Local => {
+                // Local mode: Extract text from regions using OCR, send text-only to LLM
+                #[cfg(feature = "ocr-integration")]
+                {
+                    use crate::domain::OCRCapture;
+                    let ocr = crate::os::linux::LinuxOCR::new()
+                        .map_err(|e| format!("Failed to initialize OCR: {}", e.message))?;
+                    
+                    let mut texts = Vec::new();
+                    for region in &captured_regions {
+                        let region_hash = self.capture.hash_region(region, 1);
+                        let text = ocr.extract_text_cached(region, region_hash)
+                            .map_err(|e| format!("OCR extraction failed for '{}': {}", region.id, e.message))?;
+                        texts.push(format!("Region '{}': {}", region.id, text));
+                    }
+                    
+                    // Return empty images vec + extracted text
+                    (Vec::new(), Some(texts.join("\n\n")))
+                }
+                #[cfg(not(feature = "ocr-integration"))]
+                {
+                    return Err("Local OCR mode requires 'ocr-integration' feature".to_string());
+                }
+            }
+            crate::domain::OcrMode::Vision => {
+                // Vision mode: Capture screenshots and send to LLM vision API (current behavior)
+                let images = capture_region_images(&captured_regions, self.capture.as_ref())?;
+                (images, None)
+            }
+        };
 
         // 3. Build risk guidance
         let risk_guidance = build_risk_guidance();
 
-        // 4. Call LLM with regions and images
+        // 4. Build system prompt (append extracted text if in Local mode)
+        let effective_system_prompt = if let Some(ref text) = extracted_text {
+            let base = self.system_prompt.as_deref().unwrap_or(
+                "You are an AI assistant helping with desktop automation."
+            );
+            Some(format!("{}\n\nExtracted text from screen regions:\n{}", base, text))
+        } else {
+            self.system_prompt.clone()
+        };
+
+        // 5. Call LLM with regions and images/text
         let llm_response = self.llm_client.generate_prompt(
             &captured_regions,
             region_images,
-            self.system_prompt.as_deref(),
+            effective_system_prompt.as_deref(),
             &risk_guidance,
         )?;
 

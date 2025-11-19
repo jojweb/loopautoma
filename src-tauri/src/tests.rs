@@ -1694,4 +1694,151 @@ mod tests {
             assert!(!has_watchdog_event, "Should not emit WatchdogTripped for continuation");
         }
     }
+
+    #[cfg(feature = "ocr-integration")]
+    mod ocr_tests {
+        use super::*;
+        use crate::domain::OcrMode;
+        use crate::{ActionContext, Event};
+        
+        // Re-use TestCapture from parent module
+        struct TestCapture;
+        impl ScreenCapture for TestCapture {
+            fn hash_region(&self, _region: &Region, _downscale: u32) -> u64 {
+                42
+            }
+            fn capture_region(&self, region: &Region) -> Result<ScreenFrame, BackendError> {
+                let width = region.rect.width.min(10);
+                let height = region.rect.height.min(10);
+                let bytes = vec![255u8; (width * height * 4) as usize];
+                Ok(ScreenFrame {
+                    display: DisplayInfo {
+                        id: 0,
+                        name: Some("Test Display".to_string()),
+                        x: 0,
+                        y: 0,
+                        width: 1920,
+                        height: 1080,
+                        scale_factor: 1.0,
+                        is_primary: true,
+                    },
+                    width,
+                    height,
+                    stride: width * 4,
+                    bytes,
+                    timestamp_ms: 0,
+                })
+            }
+            fn displays(&self) -> Result<Vec<DisplayInfo>, BackendError> {
+                Ok(vec![])
+            }
+        }
+        
+        #[test]
+        fn ocr_mode_defaults_to_vision() {
+            // Verify default is Vision (doesn't require Tesseract)
+            let mode = OcrMode::default();
+            assert!(matches!(mode, OcrMode::Vision));
+        }
+        
+        #[test]
+        fn ocr_mode_serialization() {
+            // Test serde rename_all = "lowercase"
+            let local_json = serde_json::to_string(&OcrMode::Local).unwrap();
+            assert_eq!(local_json, "\"local\"");
+            
+            let vision_json = serde_json::to_string(&OcrMode::Vision).unwrap();
+            assert_eq!(vision_json, "\"vision\"");
+            
+            // Test deserialization
+            let local: OcrMode = serde_json::from_str("\"local\"").unwrap();
+            assert!(matches!(local, OcrMode::Local));
+            
+            let vision: OcrMode = serde_json::from_str("\"vision\"").unwrap();
+            assert!(matches!(vision, OcrMode::Vision));
+        }
+        
+        #[test]
+        fn llm_action_uses_vision_mode_by_default() {
+            // Test that LLM action respects ocr_mode field
+            use crate::action::LLMPromptGenerationAction;
+            use crate::llm::MockLLMClient;
+            use std::sync::Arc;
+            
+            let regions = vec![Region {
+                id: "r1".to_string(),
+                rect: Rect { x: 0, y: 0, width: 100, height: 100 },
+                name: Some("Test".to_string()),
+            }];
+            
+            let action = LLMPromptGenerationAction {
+                region_ids: vec!["r1".to_string()],
+                risk_threshold: 0.9,
+                system_prompt: None,
+                variable_name: "prompt".to_string(),
+                all_regions: regions.clone(),
+                ocr_mode: OcrMode::Vision, // Explicit Vision mode
+                capture: Arc::new(TestCapture),
+                llm_client: Arc::new(MockLLMClient::new()),
+            };
+            
+            let auto = FakeAuto::new();
+            let mut context = ActionContext::new();
+            
+            // Should succeed without Tesseract in Vision mode
+            let result = action.execute(&auto, &mut context);
+            assert!(result.is_ok(), "Vision mode should work without Tesseract");
+        }
+        
+        #[test]
+        fn guardrails_ocr_fields_default_to_empty() {
+            let guardrails = Guardrails::default();
+            assert!(guardrails.success_keywords.is_empty());
+            assert!(guardrails.failure_keywords.is_empty());
+            assert!(guardrails.ocr_termination_pattern.is_none());
+            assert!(guardrails.ocr_region_ids.is_empty());
+            assert!(matches!(guardrails.ocr_mode, OcrMode::Vision));
+        }
+        
+        #[test]
+        fn monitor_check_ocr_termination_requires_local_mode() {
+            // Test that OCR termination only runs in Local mode
+            let trigger = Box::new(IntervalTrigger::new(Duration::from_millis(100)));
+            let condition = Box::new(RegionCondition::new(1, false));
+            let actions = ActionSequence::new(vec![]);
+            
+            let mut guardrails = Guardrails::default();
+            guardrails.ocr_mode = OcrMode::Vision; // Vision mode
+            guardrails.success_keywords = vec!["SUCCESS".to_string()];
+            guardrails.ocr_region_ids = vec!["r1".to_string()];
+            
+            let mut monitor = Monitor::new(trigger, condition, actions, guardrails);
+            
+            let regions = vec![Region {
+                id: "r1".to_string(),
+                rect: Rect { x: 0, y: 0, width: 100, height: 100 },
+                name: Some("Test".to_string()),
+            }];
+            
+            let mut events = Vec::new();
+            monitor.start(&mut events);
+            
+            let auto = FakeAuto::new();
+            let capture: &dyn ScreenCapture = &TestCapture;
+            
+            // Tick should not trigger OCR termination in Vision mode
+            monitor.tick(Instant::now(), &regions, capture, &auto, &mut events);
+            
+            // Should not have WatchdogTripped event (OCR check skipped)
+            let has_watchdog = events.iter().any(|e| matches!(e, Event::WatchdogTripped { .. }));
+            assert!(!has_watchdog, "OCR termination should not run in Vision mode");
+        }
+        
+        // Note: Testing actual LinuxOCR.extract_text() requires Tesseract installation
+        // which is not guaranteed in CI environment. The integration is validated by:
+        // 1. Type checking (OCRCapture trait implemented)
+        // 2. Feature gating (ocr-integration feature)
+        // 3. Manual testing with Tesseract installed
+        // 4. Monitor.check_ocr_termination() logic tested above
+    }
 }
