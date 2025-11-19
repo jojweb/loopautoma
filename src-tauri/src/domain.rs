@@ -2,6 +2,22 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
 
+/// OCR/Vision mode for text extraction and LLM integration
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum OcrMode {
+    /// Local OCR (Tesseract) - extract text locally, send only text to LLM
+    Local,
+    /// Vision mode - send screenshots directly to LLM vision API
+    Vision,
+}
+
+impl Default for OcrMode {
+    fn default() -> Self {
+        Self::Local  // Default to local for cost efficiency
+    }
+}
+
 // Basic geometry and region types
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Rect {
@@ -246,6 +262,8 @@ pub struct Guardrails {
     pub cooldown: Duration,
     pub max_runtime: Option<Duration>,
     pub max_activations_per_hour: Option<u32>,
+    /// OCR mode for termination pattern matching
+    pub ocr_mode: OcrMode,
     /// Keywords/patterns that indicate task success (terminate with success)
     pub success_keywords: Vec<String>,
     /// Keywords/patterns that indicate task failure (terminate with failure)
@@ -262,6 +280,7 @@ impl Default for Guardrails {
             cooldown: Duration::from_millis(0),
             max_runtime: None,
             max_activations_per_hour: None,
+            ocr_mode: OcrMode::default(),
             success_keywords: Vec::new(),
             failure_keywords: Vec::new(),
             ocr_termination_pattern: None,
@@ -321,6 +340,9 @@ pub enum ActionConfig {
         system_prompt: Option<String>,
         /// Variable name to store the generated prompt (default: "prompt")
         variable_name: Option<String>,
+        /// OCR mode: "local" (extract text locally) or "vision" (send screenshots)
+        #[serde(default)]
+        ocr_mode: OcrMode,
     },
 }
 
@@ -329,6 +351,9 @@ pub struct GuardrailsConfig {
     pub max_runtime_ms: Option<u64>,
     pub max_activations_per_hour: Option<u32>,
     pub cooldown_ms: u64,
+    /// OCR mode for termination pattern matching
+    #[serde(default)]
+    pub ocr_mode: OcrMode,
     /// Keywords/patterns that indicate task success (regex strings)
     #[serde(default)]
     pub success_keywords: Vec<String>,

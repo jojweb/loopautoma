@@ -126,6 +126,23 @@ impl<'a> Monitor<'a> {
             return;
         }
 
+        // OCR-based termination check (only in local mode with configured patterns)
+        #[cfg(feature = "ocr-integration")]
+        if self.guardrails.ocr_mode == crate::domain::OcrMode::Local
+            && (!self.guardrails.ocr_region_ids.is_empty()
+                && (!self.guardrails.success_keywords.is_empty()
+                    || !self.guardrails.failure_keywords.is_empty()
+                    || self.guardrails.ocr_termination_pattern.is_some()))
+        {
+            if let Some(termination_reason) = self.check_ocr_termination(regions, capture) {
+                out_events.push(Event::WatchdogTripped {
+                    reason: termination_reason,
+                });
+                self.stop(out_events);
+                return;
+            }
+        }
+
         // rate limit
         if let Some(max_per_hour) = self.guardrails.max_activations_per_hour {
             let window = Duration::from_secs(3600);
@@ -160,5 +177,84 @@ impl<'a> Monitor<'a> {
             out_events.push(Event::WatchdogTripped { reason });
             self.stop(out_events);
         }
+    }
+
+    /// Check OCR regions for termination patterns (success/failure keywords)
+    /// Returns Some(reason) if termination should occur, None otherwise
+    #[cfg(feature = "ocr-integration")]
+    fn check_ocr_termination(
+        &self,
+        regions: &[crate::domain::Region],
+        capture: &dyn crate::domain::ScreenCapture,
+    ) -> Option<String> {
+        use crate::domain::OCRCapture;
+        use regex::Regex;
+
+        // Create OCR capture instance
+        let ocr = match crate::os::linux::LinuxOCR::new() {
+            Ok(o) => o,
+            Err(e) => {
+                eprintln!("[Monitor] Failed to initialize OCR: {}", e.message);
+                return None;
+            }
+        };
+
+        // Extract text from configured OCR regions
+        for region_id in &self.guardrails.ocr_region_ids {
+            let region = match regions.iter().find(|r| &r.id == region_id) {
+                Some(r) => r,
+                None => {
+                    eprintln!("[Monitor] OCR region '{}' not found", region_id);
+                    continue;
+                }
+            };
+
+            // Get region hash for caching
+            let region_hash = capture.hash_region(region, 1);
+
+            // Extract text with caching
+            let text = match ocr.extract_text_cached(region, region_hash) {
+                Ok(t) => t,
+                Err(e) => {
+                    eprintln!("[Monitor] OCR extraction failed for '{}': {}", region_id, e.message);
+                    continue;
+                }
+            };
+
+            let text_upper = text.to_uppercase();
+
+            // Check success keywords
+            for keyword in &self.guardrails.success_keywords {
+                if let Ok(re) = Regex::new(keyword) {
+                    if re.is_match(&text) {
+                        return Some(format!("ocr_success_pattern: {}", keyword));
+                    }
+                } else if text_upper.contains(&keyword.to_uppercase()) {
+                    return Some(format!("ocr_success_keyword: {}", keyword));
+                }
+            }
+
+            // Check failure keywords
+            for keyword in &self.guardrails.failure_keywords {
+                if let Ok(re) = Regex::new(keyword) {
+                    if re.is_match(&text) {
+                        return Some(format!("ocr_failure_pattern: {}", keyword));
+                    }
+                } else if text_upper.contains(&keyword.to_uppercase()) {
+                    return Some(format!("ocr_failure_keyword: {}", keyword));
+                }
+            }
+
+            // Check custom termination pattern
+            if let Some(pattern) = &self.guardrails.ocr_termination_pattern {
+                if let Ok(re) = Regex::new(pattern) {
+                    if re.is_match(&text) {
+                        return Some(format!("ocr_termination_pattern: {}", pattern));
+                    }
+                }
+            }
+        }
+
+        None
     }
 }

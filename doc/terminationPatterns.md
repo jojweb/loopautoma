@@ -37,6 +37,63 @@ Loopautoma profiles can now terminate intelligently based on multiple concurrent
 
 All signals are composable—any one can trigger termination. Profiles emit detailed events and play audio notifications for user awareness.
 
+## OCR vs Vision Mode
+
+Loopautoma supports two approaches for text extraction and analysis:
+
+### Local OCR Mode (`ocr_mode: "local"`)
+
+- **Text extraction:** Performed locally using Tesseract (via uni-ocr)
+- **LLM input:** Only extracted text is sent to LLM (no images)
+- **Advantages:**
+  - Lower API costs (text-only prompts vs vision prompts)
+  - Faster processing (no image encoding/upload)
+  - Works offline for termination pattern matching
+  - Better privacy (no screenshots leave the machine for OCR)
+- **Disadvantages:**
+  - OCR accuracy depends on font clarity, contrast, resolution
+  - Cannot analyze visual elements (colors, layouts, icons)
+  - Requires Tesseract installation on system
+- **Best for:** Text-heavy UIs, logs, terminals, documentation
+
+### Vision Mode (`ocr_mode: "vision"`)
+
+- **Text extraction:** Performed by LLM vision API (GPT-4 Vision, etc.)
+- **LLM input:** Raw screenshots sent directly to LLM
+- **Advantages:**
+  - Higher accuracy for complex layouts and fonts
+  - Can analyze visual context (colors, positions, UI state)
+  - No local OCR dependencies required
+  - Handles overlays, anti-aliased text, images-as-text
+- **Disadvantages:**
+  - Higher API costs (vision tokens ~10x more expensive)
+  - Requires internet connection
+  - Screenshots leave the machine (privacy consideration)
+  - Slower processing (image encoding + larger payloads)
+- **Best for:** Complex UIs, web apps, games, visual feedback
+
+### Configuration
+
+```json
+{
+  "actions": [
+    {
+      "type": "LLMPromptGeneration",
+      "ocr_mode": "local",  // or "vision"
+      "region_ids": ["terminal-output"],
+      "system_prompt": "Analyze the terminal output for completion."
+    }
+  ],
+  "guardrails": {
+    "ocr_mode": "local",  // used for termination pattern matching
+    "success_keywords": ["BUILD SUCCESS", "All tests passed"],
+    "ocr_region_ids": ["build-log"]
+  }
+}
+```
+
+**Recommendation:** Start with `"local"` for cost efficiency. Switch to `"vision"` if OCR accuracy is insufficient.
+
 ## Termination Signals
 
 ### AI Task Completion

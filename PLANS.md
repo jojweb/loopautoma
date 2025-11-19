@@ -25,6 +25,7 @@ Any LLM agent (Copilot, Cursor, Codex, etc.) working in this repo must:
     - [Structure rules](#structure-rules)
     - [Plan-then-act contract](#plan-then-act-contract)
   - [Active tasks](#active-tasks)
+    - [Task: Intelligent Termination System - AI Completion, OCR, Guardrails, and Audio Notifications](#task-intelligent-termination-system---ai-completion-ocr-guardrails-and-audio-notifications)
     - [Task: Major UX Overhaul - AI Integration, Simplified Condition Logic, and Visual Improvements](#task-major-ux-overhaul---ai-integration-simplified-condition-logic-and-visual-improvements)
     - [Task: Input Capture Auto-Transform on Stop (Complete)](#task-input-capture-auto-transform-on-stop-complete)
     - [Task: E2E Verification of Core Features (Integration Tests + Documentation)](#task-e2e-verification-of-core-features-integration-tests--documentation)
@@ -190,29 +191,52 @@ To prevent uncontrolled growth of this file:
   - [x] 2.6e. Test Monitor continues when LLM returns continuation
   - [x] 2.6f. All 39 Rust tests passing
 
-**Phase 3: Offline OCR Integration (uni-ocr)**
-- [ ] 3.1. Add uni-ocr dependency to Cargo.toml
-  - [ ] 3.1a. Add uni-ocr = "0.7" (latest stable)
-  - [ ] 3.1b. Add regex = "1" for pattern matching
-- [ ] 3.2. Create OCRCapture trait in domain.rs
-  - [ ] 3.2a. fn extract_text(region: &Region) -> Result<String, String>
-  - [ ] 3.2b. fn extract_text_cached(region: &Region) -> Result<String, String>
-  - [ ] 3.2c. Add cache invalidation strategy (time-based or hash-based)
-- [ ] 3.3. Implement LinuxOCRCapture in os/linux.rs
-  - [ ] 3.3a. Use uni-ocr with English language pack
-  - [ ] 3.3b. Implement region capture → OCR → text extraction
-  - [ ] 3.3c. Add caching layer (HashMap<RegionId, (String, Instant)>)
-  - [ ] 3.3d. Implement threaded nonblocking extraction (spawn task)
-- [ ] 3.4. Add OCR configuration to Guardrails
-  - [ ] 3.4a. success_keywords: Vec<String> (regex patterns)
-  - [ ] 3.4b. failure_keywords: Vec<String> (regex patterns)
-  - [ ] 3.4c. ocr_termination_pattern: Option<String> (regex)
-  - [ ] 3.4d. ocr_region_ids: Vec<String> (which regions to scan)
-- [ ] 3.5. Implement OCR-based termination in Monitor.tick()
-  - [ ] 3.5a. After condition evaluates, scan OCR regions
-  - [ ] 3.5b. Check for success_keywords → terminate with success reason
-  - [ ] 3.5c. Check for failure_keywords → terminate with failure reason
-  - [ ] 3.5d. Check for ocr_termination_pattern → terminate with pattern match reason
+**Phase 3: Offline OCR Integration (uni-ocr)** 🔄 IN PROGRESS
+- [x] 3.0. Add OCR/Vision mode toggle design (user requested enhancement)
+  - [x] 3.0a. Create OcrMode enum (Local/Vision) with serde support
+  - [x] 3.0b. Add ocr_mode to Guardrails struct with #[serde(default)]
+  - [x] 3.0c. Add ocr_mode to GuardrailsConfig with #[serde(default)]
+  - [x] 3.0d. Add ocr_mode to ActionConfig::LLMPromptGeneration
+  - [x] 3.0e. Update architecture.md and terminationPatterns.md with OCR vs Vision mode docs
+- [x] 3.1. Add uni-ocr and regex dependencies to Cargo.toml
+  - [x] 3.1a. Add uni-ocr = "0.1.5" (Tesseract backend for Linux)
+  - [x] 3.1b. Add regex = "1" for pattern matching
+- [x] 3.2. Create OCRCapture trait in domain.rs
+  - [x] 3.2a. fn extract_text(&self, region: &Region) -> Result<String, String>
+  - [x] 3.2b. Optional cache parameter in implementation
+- [x] 3.3. Implement LinuxOCR in os/linux.rs
+  - [x] 3.3a. Use uni-ocr 0.1.5 with Tesseract backend (English)
+  - [x] 3.3b. Implement region capture → OCR → text extraction (~120 lines)
+  - [x] 3.3c. Add caching layer (HashMap<RegionId, (String, Instant)>)
+  - [x] 3.3d. Cache expires after 2 seconds
+- [x] 3.4. Add OCR configuration to Guardrails
+  - [x] 3.4a. success_keywords: Vec<String> (regex patterns)
+  - [x] 3.4b. failure_keywords: Vec<String> (regex patterns)
+  - [x] 3.4c. ocr_termination_pattern: Option<String> (regex)
+  - [x] 3.4d. ocr_region_ids: Vec<String> (which regions to scan)
+  - [x] 3.4e. ocr_mode: OcrMode (Local vs Vision)
+- [x] 3.5. Implement OCR-based termination in Monitor.check_ocr_termination()
+  - [x] 3.5a. After condition evaluates, scan OCR regions (called in tick)
+  - [x] 3.5b. Check for success_keywords → return termination reason
+  - [x] 3.5c. Check for failure_keywords → return termination reason
+  - [x] 3.5d. Check for ocr_termination_pattern → return termination reason
+- [x] 3.6. Fix test compilation errors after adding ocr_mode field
+  - [x] 3.6a. Add ocr_mode to all LLMPromptGenerationAction test initializations
+  - [x] 3.6b. Add OCR fields to all Guardrails test initializations
+  - [x] 3.6c. Add OCR fields to all GuardrailsConfig test initializations
+  - [x] 3.6d. Run cargo test --lib to verify (all 39 tests passing ✅)
+- [ ] 3.7. Update LLMPromptGenerationAction to use ocr_mode
+  - [ ] 3.7a. In Local mode: extract text from regions with LinuxOCR, send text to LLM
+  - [ ] 3.7b. In Vision mode: send region screenshots to LLM vision API (current behavior)
+  - [ ] 3.7c. Update LLM client to support text-only vs screenshot modes
+- [ ] 3.8. Comprehensive OCR testing
+  - [ ] 3.8a. Test LinuxOCR text extraction with mock images
+  - [ ] 3.8b. Test OCR termination with success_keywords
+  - [ ] 3.8c. Test OCR termination with failure_keywords
+  - [ ] 3.8d. Test OCR termination with regex pattern
+  - [ ] 3.8e. Test caching behavior (2s expiry)
+  - [ ] 3.8f. Test Local mode vs Vision mode in LLM action
+  - [ ] 3.8g. Verify ≥90% coverage (run cargo llvm-cov)
 
 **Phase 4: TerminationCheck Action**
 - [ ] 4.1. Add TerminationCheck variant to ActionConfig
@@ -452,6 +476,8 @@ To prevent uncontrolled growth of this file:
 - 2025-01-19 — Task created, comprehensive 12-phase plan drafted (136 steps)
 - 2025-01-19 — Phase 1 COMPLETE: Created doc/terminationPatterns.md, updated architecture.md
 - 2025-01-19 — Phase 2 COMPLETE: Extended LLM schema with structured termination, added tests, all 39 tests passing
+- 2025-01-19 — Phase 3.0-3.5 COMPLETE: Added OCR/Vision mode toggle (user enhancement), uni-ocr + regex deps, created OCRCapture trait, implemented LinuxOCR with caching (~120 lines), extended Guardrails with OCR fields (ocr_mode, success_keywords, failure_keywords, ocr_termination_pattern, ocr_region_ids), implemented Monitor.check_ocr_termination() with full regex pattern matching (~80 lines)
+- 2025-01-19 — Phase 3.6 COMPLETE: Fixed test compilation errors - added ocr_mode to all LLMPromptGenerationAction, Guardrails, and GuardrailsConfig test initializations (sed + manual fixes). All 39 Rust tests passing ✅. Build successful with 1 warning (ocr_mode field unused in action.rs - expected, will be used in 3.7). Remaining: 3.7 (implement ocr_mode in LLM action), 3.8 (comprehensive OCR tests).
 
 **Assumptions and open questions**
 - Assumption: uni-ocr provides sufficient OCR accuracy for English text (primary use case)

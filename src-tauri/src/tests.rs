@@ -176,6 +176,11 @@ mod tests {
                 cooldown: Duration::from_millis(0),
                 max_runtime: None,
                 max_activations_per_hour: Some(10),
+                success_keywords: vec![],
+                failure_keywords: vec![],
+                ocr_termination_pattern: None,
+                ocr_region_ids: vec![],
+                ocr_mode: crate::domain::OcrMode::default(),
             },
         );
         let r = Region {
@@ -258,6 +263,11 @@ mod tests {
                 max_runtime_ms: Some(10_000),
                 max_activations_per_hour: Some(5),
                 cooldown_ms: 100,
+                success_keywords: vec![],
+                failure_keywords: vec![],
+                ocr_termination_pattern: None,
+                ocr_region_ids: vec![],
+                ocr_mode: crate::domain::OcrMode::default(),
             }),
         };
 
@@ -353,6 +363,11 @@ mod tests {
                 cooldown: Duration::from_millis(0),
                 max_runtime: Some(Duration::from_millis(1)),
                 max_activations_per_hour: None,
+                success_keywords: vec![],
+                failure_keywords: vec![],
+                ocr_termination_pattern: None,
+                ocr_region_ids: vec![],
+                ocr_mode: crate::domain::OcrMode::default(),
             },
         );
         let r = Region {
@@ -419,6 +434,11 @@ mod tests {
                 cooldown: Duration::from_millis(0),
                 max_runtime: None,
                 max_activations_per_hour: Some(1),
+                success_keywords: vec![],
+                failure_keywords: vec![],
+                ocr_termination_pattern: None,
+                ocr_region_ids: vec![],
+                ocr_mode: crate::domain::OcrMode::default(),
             },
         );
         let r = Region {
@@ -496,6 +516,11 @@ mod tests {
                 cooldown: Duration::from_millis(0),
                 max_runtime: None,
                 max_activations_per_hour: Some(1),
+                success_keywords: vec![],
+                failure_keywords: vec![],
+                ocr_termination_pattern: None,
+                ocr_region_ids: vec![],
+                ocr_mode: crate::domain::OcrMode::default(),
             },
         );
         let r = Region {
@@ -610,6 +635,11 @@ mod tests {
                 max_runtime_ms: Some(10_000),
                 max_activations_per_hour: Some(5),
                 cooldown_ms: 0,
+                success_keywords: vec![],
+                failure_keywords: vec![],
+                ocr_termination_pattern: None,
+                ocr_region_ids: vec![],
+                ocr_mode: crate::domain::OcrMode::default(),
             }),
         };
 
@@ -713,6 +743,11 @@ mod tests {
                 cooldown: Duration::from_millis(1),
                 max_runtime: Some(Duration::from_millis(5)),
                 max_activations_per_hour: Some(1_000_000),
+                success_keywords: vec![],
+                failure_keywords: vec![],
+                ocr_termination_pattern: None,
+                ocr_region_ids: vec![],
+                ocr_mode: crate::domain::OcrMode::default(),
             },
         );
         let r = Region {
@@ -787,6 +822,11 @@ mod tests {
                 cooldown: Duration::from_millis(0),
                 max_runtime: None,
                 max_activations_per_hour: None,
+                success_keywords: vec![],
+                failure_keywords: vec![],
+                ocr_termination_pattern: None,
+                ocr_region_ids: vec![],
+                ocr_mode: crate::domain::OcrMode::default(),
             },
         );
         let mut evs = vec![];
@@ -922,6 +962,11 @@ mod tests {
                 cooldown: Duration::from_millis(100),
                 max_runtime: None,
                 max_activations_per_hour: None,
+                success_keywords: vec![],
+                failure_keywords: vec![],
+                ocr_termination_pattern: None,
+                ocr_region_ids: vec![],
+                ocr_mode: crate::domain::OcrMode::default(),
             },
         );
         let r = Region {
@@ -1160,6 +1205,7 @@ mod tests {
                 risk_threshold: 0.5,
                 system_prompt: None,
                 variable_name: "prompt".to_string(),
+                ocr_mode: crate::domain::OcrMode::default(),
                 all_regions: regions,
                 capture: make_test_capture(),
                 llm_client: make_test_llm_client(),
@@ -1195,6 +1241,7 @@ mod tests {
                 risk_threshold: 0.5,
                 system_prompt: None,
                 variable_name: "prompt".to_string(),
+                ocr_mode: crate::domain::OcrMode::default(),
                 all_regions: regions,
                 capture: make_test_capture(),
                 llm_client: make_test_llm_client(),
@@ -1232,6 +1279,7 @@ mod tests {
                 risk_threshold: 0.5, // Lower than response's 0.8
                 system_prompt: None,
                 variable_name: "prompt".to_string(),
+                ocr_mode: crate::domain::OcrMode::default(),
                 all_regions: regions,
                 capture: make_test_capture(),
                 llm_client: high_risk_client,
@@ -1316,6 +1364,7 @@ mod tests {
                 risk_threshold: 0.5,
                 system_prompt: None,
                 variable_name: "prompt".to_string(),
+                ocr_mode: crate::domain::OcrMode::default(),
                 all_regions: regions,
                 capture: make_test_capture(),
                 llm_client: completion_client,
@@ -1352,6 +1401,7 @@ mod tests {
                 risk_threshold: 0.5,
                 system_prompt: None,
                 variable_name: "prompt".to_string(),
+                ocr_mode: crate::domain::OcrMode::default(),
                 all_regions: regions,
                 capture: make_test_capture(),
                 llm_client: make_test_llm_client(),
@@ -1410,6 +1460,7 @@ mod tests {
                 all_regions: regions,
                 capture: make_test_capture(),
                 llm_client: make_test_llm_client(),
+                ocr_mode: crate::domain::OcrMode::default(),
             };
 
             let mut context = ActionContext::new();
@@ -1474,6 +1525,7 @@ mod tests {
                         risk_threshold: 0.5,
                         system_prompt: Some("Generate a safe prompt".to_string()),
                         variable_name: Some("prompt".to_string()),
+                        ocr_mode: crate::domain::OcrMode::default(),
                     },
                     ActionConfig::Type {
                         text: "$prompt".to_string(),
@@ -1486,6 +1538,11 @@ mod tests {
                     max_runtime_ms: Some(3600000),
                     max_activations_per_hour: Some(60),
                     cooldown_ms: 5000,
+                    success_keywords: vec![],
+                    failure_keywords: vec![],
+                    ocr_termination_pattern: None,
+                    ocr_region_ids: vec![],
+                    ocr_mode: crate::domain::OcrMode::default(),
                 }),
             };
 
@@ -1560,6 +1617,7 @@ mod tests {
                 system_prompt: None,
                 variable_name: "prompt".to_string(),
                 all_regions: regions.clone(),
+                ocr_mode: crate::domain::OcrMode::default(),
                 capture: capture as Arc<dyn ScreenCapture + Send + Sync>,
                 llm_client: completion_client as Arc<dyn crate::llm::LLMClient + Send + Sync>,
             };
@@ -1607,6 +1665,7 @@ mod tests {
                 system_prompt: None,
                 variable_name: "prompt".to_string(),
                 all_regions: regions.clone(),
+                ocr_mode: crate::domain::OcrMode::default(),
                 capture: capture as Arc<dyn ScreenCapture + Send + Sync>,
                 llm_client: continue_client as Arc<dyn crate::llm::LLMClient + Send + Sync>,
             };

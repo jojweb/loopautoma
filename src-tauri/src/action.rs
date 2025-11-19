@@ -65,6 +65,7 @@ pub struct LLMPromptGenerationAction {
     pub risk_threshold: f64,
     pub system_prompt: Option<String>,
     pub variable_name: String,
+    pub ocr_mode: crate::domain::OcrMode,
     pub all_regions: Vec<Region>,
     pub capture: std::sync::Arc<dyn ScreenCapture + Send + Sync>,
     pub llm_client: std::sync::Arc<dyn LLMClient>,

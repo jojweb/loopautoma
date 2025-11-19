@@ -4,6 +4,8 @@ mod condition;
 pub mod domain;
 mod llm;
 mod monitor;
+
+use domain::OcrMode;
 mod secure_storage;
 #[cfg(any(
     feature = "os-linux-capture-xcap",
@@ -87,6 +89,7 @@ fn default_profile() -> Profile {
             max_runtime_ms: Some(3 * 60 * 60 * 1000),
             max_activations_per_hour: Some(120),
             cooldown_ms: 5_000,
+            ocr_mode: OcrMode::default(),
             success_keywords: Vec::new(),
             failure_keywords: Vec::new(),
             ocr_termination_pattern: None,
@@ -193,6 +196,7 @@ pub fn build_monitor_from_profile<'a>(p: &Profile, api_key: Option<String>, mode
                 risk_threshold,
                 system_prompt,
                 variable_name,
+                ocr_mode,
             } => acts.push(Box::new(action::LLMPromptGenerationAction {
                 region_ids: region_ids.clone(),
                 risk_threshold: *risk_threshold,
@@ -200,6 +204,7 @@ pub fn build_monitor_from_profile<'a>(p: &Profile, api_key: Option<String>, mode
                 variable_name: variable_name
                     .clone()
                     .unwrap_or_else(|| "prompt".to_string()),
+                ocr_mode: *ocr_mode,
                 all_regions: p.regions.clone(),
                 capture: capture.clone(),
                 llm_client: llm_client.clone(),
@@ -216,6 +221,7 @@ pub fn build_monitor_from_profile<'a>(p: &Profile, api_key: Option<String>, mode
             cooldown: Duration::from_millis(g.cooldown_ms),
             max_runtime: g.max_runtime_ms.map(Duration::from_millis),
             max_activations_per_hour: g.max_activations_per_hour,
+            ocr_mode: g.ocr_mode,
             success_keywords: g.success_keywords.clone(),
             failure_keywords: g.failure_keywords.clone(),
             ocr_termination_pattern: g.ocr_termination_pattern.clone(),
