@@ -50,6 +50,10 @@ RUN apt-get update && \
       libxkbcommon-x11-dev \
       libxcb-xkb-dev \
       libxdo-dev \
+      libasound2-dev \
+      tesseract-ocr \
+      libtesseract-dev \
+      libleptonica-dev \
       && rm -rf /var/lib/apt/lists/*
 
 # Install Rust (stable) via rustup
