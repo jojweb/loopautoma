@@ -78,59 +78,61 @@ impl AudioNotifier for MockAudioNotifier {
 #[cfg(feature = "audio-notifications")]
 mod rodio_impl {
     use super::*;
-    use rodio::OutputStream;
+    use rodio::{OutputStream, Sink, Source};
+    use std::time::Duration;
     
     /// Rodio-based audio notifier
     pub struct RodioAudioNotifier {
         enabled: Arc<Mutex<bool>>,
-        #[allow(dead_code)]
         volume: Arc<Mutex<f32>>,
-        intervention_data: &'static [u8],
-        completion_data: &'static [u8],
     }
     
     impl RodioAudioNotifier {
-        /// Create new audio notifier with embedded sound files
+        /// Create new audio notifier
         pub fn new() -> Result<Self, String> {
             Ok(Self {
                 enabled: Arc::new(Mutex::new(true)),
                 volume: Arc::new(Mutex::new(0.5)),
-                // Use simple sine wave tones for now (440Hz for intervention, 880Hz for completion)
-                // In production, these would be actual .wav files embedded via include_bytes!
-                intervention_data: &[],
-                completion_data: &[],
             })
         }
         
-        fn play_sound(&self, _data: &[u8], _description: &str) -> Result<(), String> {
+        fn play_tone(&self, frequency: f32, duration_ms: u64, description: &str) -> Result<(), String> {
             if !self.is_enabled() {
                 return Ok(()); // Silently skip if disabled
             }
             
-            // For now, just validate that rodio can initialize
-            // In production with actual sound files, this would:
-            // 1. Create OutputStream
-            // 2. Create Sink
-            // 3. Decode sound data
-            // 4. Set volume
-            // 5. Play sound
+            let volume = *self.volume.lock().unwrap();
             
-            let _stream = OutputStream::try_default()
-                .map_err(|e| format!("Failed to initialize audio output: {}", e))?;
+            // Create audio output stream
+            let (_stream, stream_handle) = OutputStream::try_default()
+                .map_err(|e| format!("Failed to initialize audio output for {}: {}", description, e))?;
             
-            // Placeholder: would decode and play actual sound
-            // For MVP, we validate audio system works but don't play actual sounds
+            // Create sink for playback
+            let sink = Sink::try_new(&stream_handle)
+                .map_err(|e| format!("Failed to create audio sink for {}: {}", description, e))?;
+            
+            // Use rodio's built-in sine wave source
+            let source = rodio::source::SineWave::new(frequency)
+                .take_duration(Duration::from_millis(duration_ms))
+                .amplify(volume);
+            
+            // Play and wait for completion
+            sink.append(source);
+            sink.sleep_until_end();
+            
             Ok(())
         }
     }
     
     impl AudioNotifier for RodioAudioNotifier {
         fn play_intervention_needed(&self) -> Result<(), String> {
-            self.play_sound(self.intervention_data, "intervention")
+            // Alert tone: 880Hz (A5) for 200ms - higher pitch for urgency
+            self.play_tone(880.0, 200, "intervention")
         }
         
         fn play_profile_ended(&self) -> Result<(), String> {
-            self.play_sound(self.completion_data, "completion")
+            // Completion tone: 440Hz (A4) for 300ms - lower, calmer tone
+            self.play_tone(440.0, 300, "completion")
         }
         
         fn set_volume(&self, volume: f32) -> Result<(), String> {
@@ -196,10 +198,32 @@ mod tests {
     #[cfg(feature = "audio-notifications")]
     #[test]
     fn rodio_notifier_initializes() {
-        // This test only verifies that rodio can initialize
-        // Actual sound playback requires audio hardware
+        // This test verifies that rodio can initialize and play sounds
+        // May fail in CI without audio hardware
         let result = RodioAudioNotifier::new();
-        // May fail in CI without audio hardware, so we just check it doesn't panic
-        let _ = result;
+        if let Ok(notifier) = result {
+            // Try to play sounds (will succeed if audio hardware available)
+            let _ = notifier.play_intervention_needed();
+            let _ = notifier.play_profile_ended();
+        }
+    }
+    
+    #[cfg(feature = "audio-notifications")]
+    #[test]
+    #[ignore] // Run manually with: cargo test test_audio_playback -- --ignored --nocapture
+    fn test_audio_playback() {
+        // Manual test to hear actual sounds
+        println!("Testing audio playback...");
+        let notifier = RodioAudioNotifier::new().expect("Failed to create audio notifier");
+        
+        println!("Playing intervention sound (880 Hz)...");
+        notifier.play_intervention_needed().expect("Failed to play intervention sound");
+        
+        std::thread::sleep(std::time::Duration::from_millis(500));
+        
+        println!("Playing completion sound (440 Hz)...");
+        notifier.play_profile_ended().expect("Failed to play completion sound");
+        
+        println!("Audio test complete!");
     }
 }

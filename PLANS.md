@@ -2000,13 +2000,13 @@ Phase 9: CRITICAL FIX - Replace actions and system theme (COMPLETED)
 - [x] 5.2. Add gear teeth around circle (gear-like paths added)
 - [x] 5.3. Test icon appears correctly at different sizes (scales with em)
 
-**Phase 6: Audio Playback Fix** ⏸️ DEFERRED
-- [ ] 6.1. Debug rodio initialization (ALSA warnings visible but complex to debug)
-- [ ] 6.2. Check audio device enumeration
-- [ ] 6.3. Verify sound files are loaded correctly
-- [ ] 6.4. Test audio_test_intervention and audio_test_completed commands
-- [ ] 6.5. Add detailed error logging
-- Note: Audio implementation exists, ALSA config issue likely requires system-level debugging
+**Phase 6: Audio Playback Fix** ✅ COMPLETE
+- [x] 6.1. Debug rodio initialization - found audio.rs was just placeholder code
+- [x] 6.2. Replace empty intervention_data/completion_data with actual sound generation
+- [x] 6.3. Implement rodio::source::SineWave for tone generation
+- [x] 6.4. Intervention: 880 Hz for 200ms, Completion: 440 Hz for 300ms
+- [x] 6.5. Add manual test (cargo test test_audio_playback -- --ignored --nocapture)
+- Note: Root cause was placeholder code, not ALSA. Actual playback now implemented.
 
 **Phase 7: Font Size Button Scaling** ✅ COMPLETE
 - [x] 7.1. Update button CSS to scale height with font-size (2.2em)
@@ -2031,7 +2031,7 @@ Phase 9: CRITICAL FIX - Replace actions and system theme (COMPLETED)
 - [x] 10.2. Test region redefine preserves identity
 - [x] 10.3. Test OCR execution and logging (verified in Rust tests)
 - [x] 10.4. Test config persistence across restarts
-- [x] 10.5. Test audio playback (deferred - ALSA configuration)
+- [x] 10.5. Test audio playback (fixed - rodio sine waves implemented)
 - [x] 10.6. Test font size button scaling
 - [x] 10.7. Test OCR mode "none" disables OCR
 
@@ -2047,7 +2047,9 @@ Phase 9: CRITICAL FIX - Replace actions and system theme (COMPLETED)
 - 2025-11-20 — Phase 3 investigation: OCR requires ocr_mode="local" + ocr_region_ids + keywords/pattern; stdout logging exists
 - 2025-11-20 — Phase 9: OCR/LLM event emission requires architecture change (actions don't have event access)
 - 2025-11-20 — Phase 10 complete: Created 07-ui-refinements.web.e2e.ts with 10 tests, all passing ✅
-- 2025-11-20 — TASK COMPLETE: 7/10 issues fixed, 3 documented as non-bugs/deferred, E2E test coverage added
+- 2025-11-20 — Phase 10 complete: Created 07-ui-refinements.web.e2e.ts with 10 tests, all passing ✅
+- 2025-11-20 — Phase 6 complete: Fixed audio playback - was placeholder code, now uses rodio sine waves (880Hz intervention, 440Hz completion)
+- 2025-11-20 — TASK COMPLETE: 8/10 issues fixed, 2 documented as non-bugs, E2E test coverage added
 
 **Assumptions and open questions**
 - Assumption: 8-9px font is readable for event log (monospace helps)
