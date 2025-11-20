@@ -120,7 +120,7 @@ impl Action for LLMPromptGenerationAction {
             crate::domain::OcrMode::Vision => {
                 // Vision mode: Capture screenshots and send to LLM vision API (current behavior)
                 let images = capture_region_images(&captured_regions, self.capture.as_ref())?;
-                (images, None)
+                (images, None::<String>)
             }
         };
 
