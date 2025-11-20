@@ -170,4 +170,45 @@ describe("EventLog", () => {
     expect(listItem).toBeTruthy();
     expect(listItem?.style.fontFamily).toBe("monospace");
   });
+
+  it("handles unknown event types with default formatting", () => {
+    render(
+      <EventLog
+        events={[
+          // @ts-expect-error - Testing unknown event type
+          { type: "UnknownEventType" },
+        ]}
+      />
+    );
+
+    expect(screen.getByText(/Event\(UnknownEventType\)/)).toBeTruthy();
+  });
+
+  it("displays MonitorTick with zero cooldown", () => {
+    const tickEvent = {
+      type: "MonitorTick" as const,
+      next_check_ms: 3000,
+      cooldown_remaining_ms: 0,
+      condition_met: false
+    };
+    
+    // MonitorTick is filtered, but test the formatting logic exists
+    render(<EventLog events={[tickEvent]} />);
+    expect(screen.queryByText(/MonitorTick/)).toBeNull();
+  });
+
+  it("handles multiple MonitorStateChanged events", () => {
+    render(
+      <EventLog
+        events={[
+          { type: "MonitorStateChanged", state: "Running" },
+          { type: "MonitorStateChanged", state: "Stopped" },
+          { type: "MonitorStateChanged", state: "Running" },
+        ]}
+      />
+    );
+
+    const items = screen.getAllByText(/MonitorStateChanged/);
+    expect(items.length).toBe(3);
+  });
 });

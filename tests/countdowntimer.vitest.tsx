@@ -102,4 +102,117 @@ describe("CountdownTimer", () => {
         unmount();
         expect(mockUnsubscribe).toHaveBeenCalled();
     });
+
+    it("handles next check reaching zero", async () => {
+        render(<CountdownTimer />);
+
+        eventCallback({
+            type: "MonitorTick",
+            next_check_ms: 0,
+            cooldown_remaining_ms: 0,
+            condition_met: false,
+        });
+
+        await waitFor(() => {
+            expect(screen.getByText("Next Check In")).toBeTruthy();
+            expect(screen.getByText("0.0s")).toBeTruthy();
+        });
+    });
+
+    it("handles null/undefined event gracefully", async () => {
+        render(<CountdownTimer />);
+
+        // Call with null event
+        eventCallback(null);
+
+        // Component should still render nothing
+        expect(screen.queryByText("Next Check In")).toBeNull();
+    });
+
+    it("handles event without type field", async () => {
+        render(<CountdownTimer />);
+
+        // Call with invalid event
+        eventCallback({});
+
+        // Should not crash
+        expect(screen.queryByText("Next Check In")).toBeNull();
+    });
+
+    it("does not show cooldown when it is zero", async () => {
+        render(<CountdownTimer />);
+
+        eventCallback({
+            type: "MonitorTick",
+            next_check_ms: 3000,
+            cooldown_remaining_ms: 0,
+            condition_met: false,
+        });
+
+        await waitFor(() => {
+            expect(screen.getByText("Next Check In")).toBeTruthy();
+            expect(screen.queryByText("Cooldown")).toBeNull();
+        });
+    });
+
+    it("does not show action ready when condition not met", async () => {
+        render(<CountdownTimer />);
+
+        eventCallback({
+            type: "MonitorTick",
+            next_check_ms: 1000,
+            cooldown_remaining_ms: 0,
+            condition_met: false,
+        });
+
+        await waitFor(() => {
+            expect(screen.getByText("Next Check In")).toBeTruthy();
+            expect(screen.queryByText("Action Ready")).toBeNull();
+        });
+    });
+
+    it("does not show action ready when cooldown is active", async () => {
+        render(<CountdownTimer />);
+
+        eventCallback({
+            type: "MonitorTick",
+            next_check_ms: 1000,
+            cooldown_remaining_ms: 2000,
+            condition_met: true,
+        });
+
+        await waitFor(() => {
+            expect(screen.getByText("Cooldown")).toBeTruthy();
+            expect(screen.queryByText("Action Ready")).toBeNull();
+        });
+    });
+
+    it("handles MonitorStateChanged with Running state", async () => {
+        render(<CountdownTimer />);
+
+        eventCallback({
+            type: "MonitorStateChanged",
+            state: "Running",
+        });
+
+        // Should not affect timer state when no tick has been received
+        expect(screen.queryByText("Next Check In")).toBeNull();
+    });
+
+    it("handles dispose function throwing error", async () => {
+        const throwingUnsubscribe = vi.fn(() => {
+            throw new Error("Unsubscribe error");
+        });
+
+        vi.mocked(eventBridge.subscribeEvent).mockImplementation((_channel: string, callback: any) => {
+            eventCallback = callback;
+            return Promise.resolve(throwingUnsubscribe);
+        });
+
+        const { unmount } = render(<CountdownTimer />);
+        await waitFor(() => expect(eventBridge.subscribeEvent).toHaveBeenCalled());
+
+        // Should not crash when unmounting
+        expect(() => unmount()).not.toThrow();
+    });
 });
