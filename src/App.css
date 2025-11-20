@@ -751,6 +751,11 @@ textarea {
 
 button {
   cursor: pointer;
+  /* Ensure button text never overflows container */
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 button:hover {
