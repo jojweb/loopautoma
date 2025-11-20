@@ -93,6 +93,10 @@ impl Action for LLMPromptGenerationAction {
 
         // 2. Determine mode and prepare LLM input
         let (region_images, extracted_text) = match self.ocr_mode {
+            crate::domain::OcrMode::None => {
+                // None mode: No OCR or vision, return error (LLM prompt generation requires at least vision mode)
+                return Err("LLM prompt generation requires ocr_mode to be 'local' or 'vision' (currently 'none')".to_string());
+            }
             crate::domain::OcrMode::Local => {
                 // Local mode: Extract text from regions using OCR, send text-only to LLM
                 #[cfg(feature = "ocr-integration")]

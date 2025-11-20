@@ -27,7 +27,7 @@ export type GuardrailsConfig = {
   cooldown_ms: number;
   // Intelligent termination fields (Phase 7)
   heartbeat_timeout_ms?: number;
-  ocr_mode?: "local" | "vision";
+  ocr_mode?: "none" | "local" | "vision";
   success_keywords?: string[];
   failure_keywords?: string[];
   ocr_termination_pattern?: string;

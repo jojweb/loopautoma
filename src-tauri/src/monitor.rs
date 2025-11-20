@@ -143,9 +143,10 @@ impl<'a> Monitor<'a> {
             return;
         }
 
-        // OCR-based termination check (only in local mode with configured patterns)
+        // OCR-based termination check (skip if mode is None, only run in Local mode)
         #[cfg(feature = "ocr-integration")]
-        if self.guardrails.ocr_mode == crate::domain::OcrMode::Local
+        if self.guardrails.ocr_mode != crate::domain::OcrMode::None
+            && self.guardrails.ocr_mode == crate::domain::OcrMode::Local
             && (!self.guardrails.ocr_region_ids.is_empty()
                 && (!self.guardrails.success_keywords.is_empty()
                     || !self.guardrails.failure_keywords.is_empty()

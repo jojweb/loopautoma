@@ -85,21 +85,22 @@ export function TerminationConditionsEditor({
       <div className="termination-section">
         <h4 className="termination-subsection-title">OCR Pattern Matching</h4>
         <div className="form-group">
-          <label htmlFor="ocr-mode" title="Choose between local Tesseract OCR or cloud-based GPT-4 Vision API for text extraction">
+          <label htmlFor="ocr-mode" title="Choose OCR mode: none (disabled), local Tesseract OCR, or cloud-based GPT-4 Vision API">
             OCR Mode
             <span className="help-text">
-              (local = Tesseract, vision = GPT-4 Vision)
+              (none = disabled, local = Tesseract, vision = GPT-4 Vision)
             </span>
           </label>
           <select
             id="ocr-mode"
-            value={guardrails.ocr_mode || "vision"}
+            value={guardrails.ocr_mode || "none"}
             onChange={(e) =>
-              updateGuardrails({ ocr_mode: e.target.value as "local" | "vision" })
+              updateGuardrails({ ocr_mode: e.target.value as "none" | "local" | "vision" })
             }
           >
-            <option value="vision">Vision API (default)</option>
+            <option value="none">None (OCR disabled)</option>
             <option value="local">Local OCR (Tesseract)</option>
+            <option value="vision">Vision API</option>
           </select>
         </div>
 

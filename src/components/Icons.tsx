@@ -95,10 +95,8 @@ export function SettingsIcon({ size = 18, ...props }: IconProps) {
     return (
         <svg viewBox="0 0 24 24" width={size} height={size} {...baseProps} {...props}>
             <circle cx="12" cy="12" r="3" />
-            <path d="M12 1v6m0 6v10" />
-            <path d="m4.93 4.93 4.24 4.24m5.66 5.66 4.24 4.24" />
-            <path d="M1 12h6m6 0h10" />
-            <path d="m4.93 19.07 4.24-4.24m5.66-5.66 4.24-4.24" />
+            <path d="M12 3v1.5M12 19.5V21M5.64 5.64l1.06 1.06M17.3 17.3l1.06 1.06M3 12h1.5M19.5 12H21M5.64 18.36l1.06-1.06M17.3 6.7l1.06-1.06" />
+            <path d="M15.73 4.27l-0.86 0.86a8 8 0 0 1 0 13.74l0.86 0.86a9 9 0 0 0 0-15.46zM8.27 4.27l0.86 0.86a8 8 0 0 0 0 13.74l-0.86 0.86a9 9 0 0 1 0-15.46z" />
         </svg>
     );
 }

@@ -234,7 +234,7 @@ mod tests {
                 failure_keywords: vec![],
                 ocr_termination_pattern: None,
                 ocr_region_ids: vec![],
-                ocr_mode: crate::domain::OcrMode::default(),
+                ocr_mode: crate::domain::OcrMode::Vision,
             },
         );
         let r = Region {
@@ -329,7 +329,7 @@ mod tests {
                 failure_keywords: vec![],
                 ocr_termination_pattern: None,
                 ocr_region_ids: vec![],
-                ocr_mode: crate::domain::OcrMode::default(),
+                ocr_mode: crate::domain::OcrMode::Vision,
             }),
         };
 
@@ -430,7 +430,7 @@ mod tests {
                 failure_keywords: vec![],
                 ocr_termination_pattern: None,
                 ocr_region_ids: vec![],
-                ocr_mode: crate::domain::OcrMode::default(),
+                ocr_mode: crate::domain::OcrMode::Vision,
             },
         );
         let r = Region {
@@ -502,7 +502,7 @@ mod tests {
                 failure_keywords: vec![],
                 ocr_termination_pattern: None,
                 ocr_region_ids: vec![],
-                ocr_mode: crate::domain::OcrMode::default(),
+                ocr_mode: crate::domain::OcrMode::Vision,
             },
         );
         let r = Region {
@@ -585,7 +585,7 @@ mod tests {
                 failure_keywords: vec![],
                 ocr_termination_pattern: None,
                 ocr_region_ids: vec![],
-                ocr_mode: crate::domain::OcrMode::default(),
+                ocr_mode: crate::domain::OcrMode::Vision,
             },
         );
         let r = Region {
@@ -705,7 +705,7 @@ mod tests {
                 failure_keywords: vec![],
                 ocr_termination_pattern: None,
                 ocr_region_ids: vec![],
-                ocr_mode: crate::domain::OcrMode::default(),
+                ocr_mode: crate::domain::OcrMode::Vision,
             }),
         };
 
@@ -814,7 +814,7 @@ mod tests {
                 failure_keywords: vec![],
                 ocr_termination_pattern: None,
                 ocr_region_ids: vec![],
-                ocr_mode: crate::domain::OcrMode::default(),
+                ocr_mode: crate::domain::OcrMode::Vision,
             },
         );
         let r = Region {
@@ -894,7 +894,7 @@ mod tests {
                 failure_keywords: vec![],
                 ocr_termination_pattern: None,
                 ocr_region_ids: vec![],
-                ocr_mode: crate::domain::OcrMode::default(),
+                ocr_mode: crate::domain::OcrMode::Vision,
             },
         );
         let mut evs = vec![];
@@ -1035,7 +1035,7 @@ mod tests {
                 failure_keywords: vec![],
                 ocr_termination_pattern: None,
                 ocr_region_ids: vec![],
-                ocr_mode: crate::domain::OcrMode::default(),
+                ocr_mode: crate::domain::OcrMode::Vision,
             },
         );
         let r = Region {
@@ -1274,7 +1274,7 @@ mod tests {
                 risk_threshold: 0.5,
                 system_prompt: None,
                 variable_name: "prompt".to_string(),
-                ocr_mode: crate::domain::OcrMode::default(),
+                ocr_mode: crate::domain::OcrMode::Vision,
                 all_regions: regions,
                 capture: make_test_capture(),
                 llm_client: make_test_llm_client(),
@@ -1310,7 +1310,7 @@ mod tests {
                 risk_threshold: 0.5,
                 system_prompt: None,
                 variable_name: "prompt".to_string(),
-                ocr_mode: crate::domain::OcrMode::default(),
+                ocr_mode: crate::domain::OcrMode::Vision,
                 all_regions: regions,
                 capture: make_test_capture(),
                 llm_client: make_test_llm_client(),
@@ -1348,7 +1348,7 @@ mod tests {
                 risk_threshold: 0.5, // Lower than response's 0.8
                 system_prompt: None,
                 variable_name: "prompt".to_string(),
-                ocr_mode: crate::domain::OcrMode::default(),
+                ocr_mode: crate::domain::OcrMode::Vision, // Explicitly set to Vision for LLM tests
                 all_regions: regions,
                 capture: make_test_capture(),
                 llm_client: high_risk_client,
@@ -1433,7 +1433,7 @@ mod tests {
                 risk_threshold: 0.5,
                 system_prompt: None,
                 variable_name: "prompt".to_string(),
-                ocr_mode: crate::domain::OcrMode::default(),
+                ocr_mode: crate::domain::OcrMode::Vision,
                 all_regions: regions,
                 capture: make_test_capture(),
                 llm_client: completion_client,
@@ -1470,7 +1470,7 @@ mod tests {
                 risk_threshold: 0.5,
                 system_prompt: None,
                 variable_name: "prompt".to_string(),
-                ocr_mode: crate::domain::OcrMode::default(),
+                ocr_mode: crate::domain::OcrMode::Vision,
                 all_regions: regions,
                 capture: make_test_capture(),
                 llm_client: make_test_llm_client(),
@@ -1529,7 +1529,7 @@ mod tests {
                 all_regions: regions,
                 capture: make_test_capture(),
                 llm_client: make_test_llm_client(),
-                ocr_mode: crate::domain::OcrMode::default(),
+                ocr_mode: crate::domain::OcrMode::Vision,
             };
 
             let mut context = ActionContext::new();
@@ -1594,7 +1594,7 @@ mod tests {
                         risk_threshold: 0.5,
                         system_prompt: Some("Generate a safe prompt".to_string()),
                         variable_name: Some("prompt".to_string()),
-                        ocr_mode: crate::domain::OcrMode::default(),
+                        ocr_mode: crate::domain::OcrMode::Vision,
                     },
                     ActionConfig::Type {
                         text: "$prompt".to_string(),
@@ -1612,7 +1612,7 @@ mod tests {
                     failure_keywords: vec![],
                     ocr_termination_pattern: None,
                     ocr_region_ids: vec![],
-                    ocr_mode: crate::domain::OcrMode::default(),
+                    ocr_mode: crate::domain::OcrMode::Vision,
                 }),
             };
 
@@ -1687,7 +1687,7 @@ mod tests {
                 system_prompt: None,
                 variable_name: "prompt".to_string(),
                 all_regions: regions.clone(),
-                ocr_mode: crate::domain::OcrMode::default(),
+                ocr_mode: crate::domain::OcrMode::Vision,
                 capture: capture as Arc<dyn ScreenCapture + Send + Sync>,
                 llm_client: completion_client as Arc<dyn crate::llm::LLMClient + Send + Sync>,
             };
@@ -1738,7 +1738,7 @@ mod tests {
                 system_prompt: None,
                 variable_name: "prompt".to_string(),
                 all_regions: regions.clone(),
-                ocr_mode: crate::domain::OcrMode::default(),
+                ocr_mode: crate::domain::OcrMode::Vision,
                 capture: capture as Arc<dyn ScreenCapture + Send + Sync>,
                 llm_client: continue_client as Arc<dyn crate::llm::LLMClient + Send + Sync>,
             };
@@ -1808,10 +1808,10 @@ mod tests {
         }
         
         #[test]
-        fn ocr_mode_defaults_to_vision() {
-            // Verify default is Vision (doesn't require Tesseract)
+        fn ocr_mode_defaults_to_none() {
+            // Verify default is None (OCR disabled unless explicitly enabled)
             let mode = OcrMode::default();
-            assert!(matches!(mode, OcrMode::Vision));
+            assert!(matches!(mode, OcrMode::None));
         }
         
         #[test]
@@ -1822,6 +1822,9 @@ mod tests {
             
             let vision_json = serde_json::to_string(&OcrMode::Vision).unwrap();
             assert_eq!(vision_json, "\"vision\"");
+            
+            let none_json = serde_json::to_string(&OcrMode::None).unwrap();
+            assert_eq!(none_json, "\"none\"");
             
             // Test deserialization
             let local: OcrMode = serde_json::from_str("\"local\"").unwrap();
@@ -1870,7 +1873,7 @@ mod tests {
             assert!(guardrails.failure_keywords.is_empty());
             assert!(guardrails.ocr_termination_pattern.is_none());
             assert!(guardrails.ocr_region_ids.is_empty());
-            assert!(matches!(guardrails.ocr_mode, OcrMode::Vision));
+            assert!(matches!(guardrails.ocr_mode, OcrMode::None));
         }
         
         #[test]
@@ -2121,7 +2124,7 @@ mod tests {
                 max_runtime: None,
                 max_activations_per_hour: None,
                 heartbeat_timeout: Some(Duration::from_millis(100)),
-                ocr_mode: crate::domain::OcrMode::default(),
+                ocr_mode: crate::domain::OcrMode::Vision,
                 success_keywords: vec![],
                 failure_keywords: vec![],
                 ocr_termination_pattern: None,
@@ -2294,7 +2297,7 @@ mod tests {
         
         #[test]
         fn ocr_mode_default() {
-            assert_eq!(OcrMode::default(), OcrMode::Vision);
+            assert_eq!(OcrMode::default(), OcrMode::None);
         }
         
         #[test]
@@ -2304,7 +2307,7 @@ mod tests {
             assert_eq!(g.max_runtime, None);
             assert_eq!(g.max_activations_per_hour, None);
             assert_eq!(g.heartbeat_timeout, None);
-            assert_eq!(g.ocr_mode, OcrMode::Vision);
+            assert_eq!(g.ocr_mode, OcrMode::None);
             assert!(g.success_keywords.is_empty());
             assert!(g.failure_keywords.is_empty());
             assert_eq!(g.ocr_termination_pattern, None);

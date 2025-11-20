@@ -6,6 +6,8 @@ use std::time::{Duration, Instant};
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum OcrMode {
+    /// OCR disabled - no text extraction
+    None,
     /// Local OCR (Tesseract) - extract text locally, send only text to LLM
     Local,
     /// Vision mode - send screenshots directly to LLM vision API
@@ -14,7 +16,7 @@ pub enum OcrMode {
 
 impl Default for OcrMode {
     fn default() -> Self {
-        Self::Vision  // Default to vision mode (no Tesseract required)
+        Self::None  // Default to none (OCR disabled unless explicitly enabled)
     }
 }
 

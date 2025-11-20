@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import { captureRegionThumbnail, regionPickerShow } from "../tauriBridge";
 import { Rect, Region } from "../types";
 import { subscribeEvent } from "../eventBridge";
@@ -34,7 +34,8 @@ export function RegionAuthoringPanel({ regions, disabled, onRegionAdd, onRegionR
   const [error, setError] = useState<string | null>(null);
   const [thumbnails, setThumbnails] = useState<Record<string, string | null>>({});
   const [thumbLoading, setThumbLoading] = useState<string | null>(null);
-  const [redefiningRegionId, setRedefiningRegionId] = useState<string | null>(null);
+  // Use ref to avoid re-subscribing when redefining ID changes
+  const redefiningRegionIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     let dispose: (() => void) | undefined;
@@ -43,12 +44,13 @@ export function RegionAuthoringPanel({ regions, disabled, onRegionAdd, onRegionR
       setOverlayActive(false);
 
       // Check if we're redefining an existing region
-      if (redefiningRegionId && onRegionUpdate) {
-        onRegionUpdate(redefiningRegionId, payload.rect);
+      const redefiningId = redefiningRegionIdRef.current;
+      if (redefiningId && onRegionUpdate) {
+        onRegionUpdate(redefiningId, payload.rect);
         if (payload.thumbnail_png_base64) {
-          setThumbnails((prev) => ({ ...prev, [redefiningRegionId]: payload.thumbnail_png_base64 ?? null }));
+          setThumbnails((prev) => ({ ...prev, [redefiningId]: payload.thumbnail_png_base64 ?? null }));
         }
-        setRedefiningRegionId(null);
+        redefiningRegionIdRef.current = null;
         setStatus("Region redefined successfully.");
         setError(null);
         return;
@@ -71,7 +73,7 @@ export function RegionAuthoringPanel({ regions, disabled, onRegionAdd, onRegionR
         // ignore
       }
     };
-  }, [regionCount, redefiningRegionId, onRegionUpdate]);
+  }, [regionCount, onRegionUpdate]);
 
   const launchOverlay = useCallback(async () => {
     if (disabled) {
@@ -167,7 +169,7 @@ export function RegionAuthoringPanel({ regions, disabled, onRegionAdd, onRegionR
   }, []);
 
   const redefineRegion = useCallback(async (regionId: string) => {
-    setRedefiningRegionId(regionId);
+    redefiningRegionIdRef.current = regionId;
     setError(null);
     setStatus("Opening overlay to redefine region…");
     try {
@@ -179,7 +181,7 @@ export function RegionAuthoringPanel({ regions, disabled, onRegionAdd, onRegionR
       setError(msg || "Unable to open overlay");
       setStatus(null);
       setOverlayActive(false);
-      setRedefiningRegionId(null);
+      redefiningRegionIdRef.current = null;
     }
   }, []);
 
