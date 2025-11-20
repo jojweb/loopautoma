@@ -33,6 +33,7 @@ ahash = { version = "0.8", optional = true }
 screenshots = { version = "0.8.10", optional = true }
 image = { version = "0.24", default-features = false, features = ["png"] }
 base64 = "0.21"
+dirs = "5"
 reqwest = { version = "0.12", features = ["json"], optional = true }
 tokio = { version = "1", features = ["rt", "rt-multi-thread"], optional = true }
 uni-ocr = { version = "0.1.5", optional = true }

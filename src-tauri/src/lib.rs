@@ -133,9 +133,52 @@ fn greet(name: &str) -> String {
     format!("Hello, {}! You've been greeted from Rust!", name)
 }
 
+// Get the path to the profiles.json config file
+fn get_profiles_path() -> Result<std::path::PathBuf, String> {
+    let config_dir = dirs::config_dir()
+        .ok_or_else(|| "Failed to get config directory".to_string())?;
+    let app_dir = config_dir.join("loopautoma");
+    std::fs::create_dir_all(&app_dir)
+        .map_err(|e| format!("Failed to create app config directory: {}", e))?;
+    Ok(app_dir.join("profiles.json"))
+}
+
+// Load profiles from disk, or return default if file doesn't exist
+fn load_profiles_from_disk() -> ProfilesConfig {
+    match get_profiles_path() {
+        Ok(path) => {
+            if path.exists() {
+                match std::fs::read_to_string(&path) {
+                    Ok(contents) => match serde_json::from_str(&contents) {
+                        Ok(config) => {
+                            println!("[Config] Loaded profiles from {:?}", path);
+                            return config;
+                        }
+                        Err(e) => eprintln!("[Config] Failed to parse profiles.json: {}", e),
+                    },
+                    Err(e) => eprintln!("[Config] Failed to read profiles.json: {}", e),
+                }
+            }
+        }
+        Err(e) => eprintln!("[Config] Failed to get profiles path: {}", e),
+    }
+    ProfilesConfig::default()
+}
+
+// Save profiles to disk
+fn save_profiles_to_disk(config: &ProfilesConfig) -> Result<(), String> {
+    let path = get_profiles_path()?;
+    let json = serde_json::to_string_pretty(config)
+        .map_err(|e| format!("Failed to serialize profiles: {}", e))?;
+    std::fs::write(&path, json)
+        .map_err(|e| format!("Failed to write profiles.json: {}", e))?;
+    println!("[Config] Saved profiles to {:?}", path);
+    Ok(())
+}
+
 #[derive(Default)]
 struct AppState<R: tauri::Runtime = tauri::Wry> {
-    profiles: Mutex<ProfilesConfig>,      // in-memory MVP
+    profiles: Mutex<ProfilesConfig>,      // in-memory cache, persisted to disk
     runner: Mutex<Option<MonitorRunner>>, // current monitor runner
     secure_storage: Option<secure_storage::SecureStorage<R>>, // OS keyring access
 }
@@ -322,12 +365,20 @@ fn make_automation() -> Box<dyn Automation + Send + Sync> {
 
 #[tauri::command]
 fn profiles_load(state: tauri::State<AppState>) -> Result<ProfilesConfig, String> {
+    // Return in-memory cache (already loaded from disk on startup)
     Ok(state.profiles.lock().unwrap().clone())
 }
 
 #[tauri::command]
 fn profiles_save(config: ProfilesConfig, state: tauri::State<AppState>) -> Result<(), String> {
-    *state.profiles.lock().unwrap() = config.normalize();
+    let normalized = config.normalize();
+    
+    // Update in-memory cache
+    *state.profiles.lock().unwrap() = normalized.clone();
+    
+    // Persist to disk
+    save_profiles_to_disk(&normalized)?;
+    
     Ok(())
 }
 
@@ -438,8 +489,12 @@ pub fn run() {
         .setup(|app| {
             let secure_storage = secure_storage::SecureStorage::new(app.handle())
                 .ok(); // Gracefully handle init failure
+            
+            // Load profiles from disk on startup
+            let profiles = load_profiles_from_disk();
+            
             app.manage(AppState {
-                profiles: Mutex::new(ProfilesConfig::default()),
+                profiles: Mutex::new(profiles),
                 runner: Mutex::new(None),
                 secure_storage,
             });

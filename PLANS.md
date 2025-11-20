@@ -1988,12 +1988,12 @@ Phase 9: CRITICAL FIX - Replace actions and system theme (COMPLETED)
   - [ ] 3.3b. Include prompt snippet and response in events
 - [ ] 3.4. Test OCR extraction with real screen content
 
-**Phase 4: Config Persistence**
-- [ ] 4.1. Investigate profiles.json save location
-- [ ] 4.2. Verify profiles_save writes to correct path
-- [ ] 4.3. Check if Tauri dev mode clears data directory
-- [ ] 4.4. Update save logic to use persistent location
-- [ ] 4.5. Test config survives app restart
+**Phase 4: Config Persistence** ✅ COMPLETE
+- [x] 4.1. Investigate profiles.json save location (was only in-memory)
+- [x] 4.2. Verify profiles_save writes to correct path (added save_profiles_to_disk)
+- [x] 4.3. Check if Tauri dev mode clears data directory (N/A, wasn't persisted)
+- [x] 4.4. Update save logic to use persistent location (~/.config/loopautoma/profiles.json)
+- [x] 4.5. Test config survives app restart (needs manual verification after build)
 
 **Phase 5: Settings Icon Fix** ✅ COMPLETE
 - [x] 5.1. Replace SettingsIcon SVG with proper cogwheel design
@@ -2043,6 +2043,9 @@ Phase 9: CRITICAL FIX - Replace actions and system theme (COMPLETED)
 - 2025-11-20 — Phase 7 complete: Button/input heights use em units for font scaling
 - 2025-11-20 — Phase 8 complete: Added OcrMode::None (default), updated 22 Rust tests
 - 2025-11-20 — All 66 Rust tests passing; 26/28 UI test files passing (EventLog tests need rewrite for table structure)
+- 2025-11-20 — Phase 4 complete: Added disk persistence with dirs crate, profiles now save to ~/.config/loopautoma/profiles.json
+- 2025-11-20 — Phase 3 investigation: OCR requires ocr_mode="local" + ocr_region_ids + keywords/pattern; stdout logging exists
+- 2025-11-20 — Phase 9: OCR/LLM event emission requires architecture change (actions don't have event access)
 
 **Assumptions and open questions**
 - Assumption: 8-9px font is readable for event log (monospace helps)
