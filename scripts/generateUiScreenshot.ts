@@ -89,7 +89,7 @@ async function maybeReplaceScreenshot() {
             diff.data,
             img1.width,
             img1.height,
-            { threshold: 0.1 } // 10% threshold for visual differences
+            { threshold: 0.1 } // 0.1 color difference threshold (pixelmatch sensitivity, 0.0–1.0 scale)
         );
 
         const totalPixels = img1.width * img1.height;
