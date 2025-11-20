@@ -756,6 +756,10 @@ button {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  /* Vertically center button text */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 button:hover {
