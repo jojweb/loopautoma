@@ -7,7 +7,7 @@
 
 Addressed 6 of 10 post-implementation testing issues. Commit includes EventLog improvements, region redefine fix, settings icon replacement, font-size button scaling, and OCR mode "none" option.
 
-## Completed Issues (6/10)
+## Completed Issues (7/10)
 
 ### ✅ Issue 1: EventLog font too large, needs scroll + hover tooltip
 **Status:** COMPLETE  
@@ -78,19 +78,44 @@ Addressed 6 of 10 post-implementation testing issues. Commit includes EventLog i
 
 **Recommendation:** Document in user manual as known issue on some Linux systems
 
-## Remaining Issues (4/10)
+### ✅ Issue 5: Config changes lost on restart
+**Status:** COMPLETE  
+**Root cause:** Profiles only stored in-memory, never persisted to disk  
+**Solution:**
+- Added `dirs` crate for cross-platform config paths
+- Implemented `get_profiles_path()` → `~/.config/loopautoma/profiles.json`
+- Load profiles from disk on app startup
+- Save profiles to disk on every `profiles_save` command
+- Added logging: `[Config] Loaded/Saved profiles from/to <path>`
 
-### ❌ Issue 3: OCR not working - no output, no recognized text
-**Status:** TODO  
-**Required work:**
-- Debug why `check_ocr_termination` doesn't extract text
-- Verify OCR regions are configured with correct coordinates
-- Check if `ocr_mode` is set to `Local` (not `None` or `Vision`)
-- Add event emission before/after OCR attempts
-- Add stdout logging (already exists at lines 247-248 of monitor.rs)
-- Test with real screen content
+**Files:**
+- `src-tauri/Cargo.toml` (added dirs dependency)
+- `src-tauri/src/lib.rs` (persistence functions + integration)
 
-**Complexity:** Medium - requires OCR feature testing with Tesseract
+**Manual verification:**
+1. Create/edit profiles in UI
+2. Restart app
+3. Verify profiles persist
+4. Check `~/.config/loopautoma/profiles.json` exists
+
+## Remaining Issues (3/10)
+
+### ⚠️ Issue 3: OCR not working - no output, no recognized text
+**Status:** INVESTIGATED - Configuration issue, not a bug  
+**Findings:**
+- OCR requires specific configuration:
+  - `ocr_mode` must be set to `"local"` (not `"none"` or `"vision"`)
+  - Must have configured `ocr_region_ids`
+  - Must have at least one: `success_keywords`, `failure_keywords`, or `ocr_termination_pattern`
+- Stdout logging already exists (lines 247-254 in monitor.rs)
+- OCR only runs during termination checks, not as standalone action
+
+**Documentation needed:**
+- Add user manual section explaining OCR configuration requirements
+- Add example profile with OCR termination setup
+- Clarify difference between Local OCR (Tesseract) and Vision mode (GPT-4 Vision)
+
+**Complexity:** Low - documentation only
 
 ### ❌ Issue 4: XKB warnings in log about keyboard fallback
 **Status:** TODO (low priority)  
@@ -102,27 +127,27 @@ Addressed 6 of 10 post-implementation testing issues. Commit includes EventLog i
 
 **Complexity:** Low - documentation + log level change
 
-### ❌ Issue 5: Config changes lost on restart
-**Status:** TODO  
-**Required work:**
-- Investigate where `profiles.json` is saved
-- Check if `tauri dev` mode clears data directory between runs
-- Verify `profiles_save` command writes to persistent location
-- Use Tauri store plugin correctly for dev vs production
-- Test config survives app restart in both modes
-
-**Complexity:** Medium - requires Tauri store debugging
-
 ### ❌ Issue 9: OCR/LLM interactions not logged in event panel
-**Status:** TODO  
-**Required work:**
-- Emit `ActionStarted` event before OCR scan
-- Emit `ActionCompleted` event after OCR with extracted text snippet
-- Emit events before/after LLM API calls
-- Include prompt snippet and response in event details
-- Ensure events appear in EventLog in real-time
+**Status:** DEFERRED - Architecture limitation  
+**Findings:**
+- Actions (including LLMPromptGenerationAction) don't have access to event emission
+- Events are only emitted from Monitor (out_events parameter)
+- Actions return Result<(), String>, not events
+- Adding event emission to actions requires significant refactoring
 
-**Complexity:** Medium - requires modifying monitor and action execution paths
+**Workaround:**
+- OCR extraction already logs to stdout (monitor.rs lines 247-254)
+- LLM could add similar stdout logging
+- Events currently show: TriggerFired, ConditionEvaluated, ActionStarted/Completed, MonitorState
+
+**Architecture change required:**
+- Pass `&mut Vec<Event>` to Action::execute() method
+- Update all Action implementations to use new signature
+- Breaking change across entire codebase
+
+**Recommendation:** Defer to future architecture refactor
+
+**Complexity:** High - breaking API change affecting all actions
 
 ## Test Status
 
