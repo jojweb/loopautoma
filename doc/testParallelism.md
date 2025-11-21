@@ -7,12 +7,14 @@ Both Vitest (unit tests) and Playwright (E2E tests) now support configurable par
 ## Default Behavior
 
 ### Local Development
-- **Vitest:** Uses 50% of available CPU cores (e.g., 4 workers on 8-core machine)
-- **Playwright:** Uses 50% of available CPU cores for web tests, sequential for Tauri tests
+
+- **Vitest:** Uses 75% of available CPU cores, max cores-1 (e.g., 6 workers on 8-core machine)
+- **Playwright:** Uses 75% of available CPU cores for web tests, sequential for Tauri tests
 
 ### CI Environment
-- **Vitest:** Uses 50% of available CPU cores
-- **Playwright:** Single worker for deterministic builds
+
+- **Vitest:** Uses 75% of available CPU cores
+- **Playwright:** 2 workers for stability (web tests parallel, Tauri sequential)
 
 ## Configuration
 
@@ -26,6 +28,9 @@ Both Vitest (unit tests) and Playwright (E2E tests) now support configurable par
 ### Examples
 
 ```bash
+# Run with default intelligent parallelism (75% of CPU cores)
+bun test:all
+
 # Run with maximum parallelism (all CPU cores)
 VITEST_MAX_WORKERS=8 PLAYWRIGHT_WORKERS=8 bun test:all
 
@@ -34,21 +39,17 @@ VITEST_MAX_WORKERS=2 PLAYWRIGHT_WORKERS=2 bun test:all
 
 # Run with single worker (sequential, for debugging)
 VITEST_MAX_WORKERS=1 PLAYWRIGHT_WORKERS=1 bun test:all
-
-# Use the fast preset (optimized for 8-core machines)
-bun run test:all:fast
 ```
 
 ## NPM Scripts
 
 | Script | Description | Parallelism |
 |--------|-------------|-------------|
-| `bun test:ui` | Run Vitest unit tests | Default (50% cores) |
-| `bun test:ui:cov` | Run with coverage | Default (50% cores) |
-| `bun test:ui:watch` | Watch mode | Default (50% cores) |
-| `bun test:e2e` | Run Playwright E2E tests | Default (50% cores local, 1 CI) |
-| `bun test:all` | Run all tests sequentially | Default for both |
-| `bun test:all:fast` | Run with aggressive parallelism | 8 Vitest workers, 4 Playwright workers |
+| `bun test:ui` | Run Vitest unit tests | Default (75% cores) |
+| `bun test:ui:cov` | Run with coverage | Default (75% cores) |
+| `bun test:ui:watch` | Watch mode | Default (75% cores) |
+| `bun test:e2e` | Run Playwright E2E tests | Default (75% cores local, 2 CI) |
+| `bun test:all` | Run all tests (UI then E2E) | Default for both |
 
 ## Playwright Project-Level Parallelism
 
@@ -64,26 +65,27 @@ bun run test:all:fast
 
 ## Performance Impact
 
-### Baseline (Sequential)
-```
+### Baseline (Sequential - Historical)
+
+```text
 Unit Tests:    ~18s (1 worker)
 E2E Tests:     ~48s (1 worker)
 Total:         ~66s
 ```
 
-### Optimized (4 workers)
-```
-Unit Tests:    ~6-8s (4 workers, estimated 60-70% speedup)
-E2E Tests:     ~20-25s (web tests parallel, Tauri sequential)
-Total:         ~26-33s (~50% faster)
+### Optimized (Default - 6 workers on 8-core machine)
+
+```text
+Unit Tests:    ~11-13s (6 workers, 35-40% faster)
+E2E Tests:     ~36-46s (web tests parallel, Tauri sequential)
+Total:         ~47-59s (28-35% faster)
 ```
 
-### Aggressive (8 workers)
-```
-Unit Tests:    ~4-6s (8 workers, estimated 70-80% speedup)
-E2E Tests:     ~15-20s (more web test parallelism)
-Total:         ~19-26s (~60-70% faster)
-```
+**Measured across 3 consecutive runs:**
+
+- Run 1: 11.12s unit + 36.3s E2E = 47.4s total
+- Run 2: 10.78s unit + 41.1s E2E = 51.9s total
+- Run 3: 12.90s unit + 45.7s E2E = 58.6s total
 
 **Note:** Actual speedup depends on:
 - CPU core count and speed
@@ -108,9 +110,10 @@ Use `VITEST_MAX_WORKERS=1 PLAYWRIGHT_WORKERS=1` when:
 // vitest.config.ts
 import { availableParallelism } from "os";
 
+const cpuCount = availableParallelism();
 const maxWorkers = process.env.VITEST_MAX_WORKERS
   ? parseInt(process.env.VITEST_MAX_WORKERS, 10)
-  : Math.max(1, Math.floor(availableParallelism() / 2));
+  : Math.max(1, Math.min(cpuCount - 1, Math.floor(cpuCount * 0.75)));
 
 export default defineConfig({
   test: {
@@ -131,7 +134,8 @@ export default defineConfig({
 // playwright.config.ts
 import { availableParallelism } from 'os';
 
-const defaultWorkers = process.env.CI ? 1 : Math.max(1, Math.floor(availableParallelism() / 2));
+const cpuCount = availableParallelism();
+const defaultWorkers = process.env.CI ? 2 : Math.max(1, Math.min(cpuCount - 1, Math.floor(cpuCount * 0.75)));
 const maxWorkers = process.env.PLAYWRIGHT_WORKERS
   ? parseInt(process.env.PLAYWRIGHT_WORKERS, 10)
   : defaultWorkers;
