@@ -15,6 +15,9 @@ const defaultWorkers = process.env.CI ? 1 : Math.max(1, Math.min(cpuCount - 1, M
 const maxWorkers = process.env.PLAYWRIGHT_WORKERS
   ? parseInt(process.env.PLAYWRIGHT_WORKERS, 10)
   : defaultWorkers;
+const webServerCommand = process.env.CI
+  ? "node ./node_modules/vite/bin/vite.js"
+  : "bun run dev:web";
 
 export default defineConfig({
   testDir: './tests/e2e',
@@ -64,7 +67,7 @@ export default defineConfig({
 
   webServer: [
     {
-      command: 'bun run dev:web',
+      command: webServerCommand,
       url: 'http://127.0.0.1:1420',
       reuseExistingServer: !process.env.CI,
       timeout: 120000,
