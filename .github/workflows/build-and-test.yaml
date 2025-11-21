@@ -98,9 +98,12 @@ jobs:
 
       - name: Rust tests
         run: |
-          if [ -d src-tauri ]; then (cd src-tauri && cargo test --all --locked); else echo "No src-tauri/; skipping"; fi
+          if [ -d src-tauri ]; then (cd src-tauri && CARGO_BUILD_JOBS=2 RUSTFLAGS="-Ccodegen-units=1" cargo test --all --locked); else echo "No src-tauri/; skipping"; fi
 
       - name: Rust coverage (llvm-cov)
+        env:
+          CARGO_BUILD_JOBS: 2
+          RUSTFLAGS: "-Ccodegen-units=1"
         run: |
           if [ -f src-tauri/Cargo.toml ]; then (
             cd src-tauri && \
