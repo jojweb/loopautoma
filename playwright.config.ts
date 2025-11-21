@@ -65,9 +65,11 @@ export default defineConfig({
       url: 'http://127.0.0.1:1420',
       reuseExistingServer: !process.env.CI,
       timeout: 120000,
-      env: {
-        VITE_E2E_COVERAGE: process.env.VITE_E2E_COVERAGE || '',
-      },
+      ...(process.env.VITE_E2E_COVERAGE && {
+        env: {
+          VITE_E2E_COVERAGE: process.env.VITE_E2E_COVERAGE,
+        },
+      }),
     },
   ],
 });
