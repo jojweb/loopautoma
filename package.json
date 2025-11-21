@@ -14,6 +14,7 @@
     "test": "bun test tests/hello.bun.test.ts",
     "test:ui": "vitest run",
     "test:ui:cov": "vitest run --coverage",
+    "test:ui:watch": "vitest",
     "test:all": "vitest run && playwright test",
     "pre-release-check": "bun ./scripts/preReleaseCheck.ts",
     "generate:ui-screenshot": "bun ./scripts/generateUiScreenshot.ts",
