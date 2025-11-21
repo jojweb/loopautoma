@@ -68,12 +68,14 @@ jobs:
           if [ -f package.json ]; then bunx playwright install --with-deps; else echo "No package.json"; fi
 
       - name: UI tests (Vitest with coverage)
+        timeout-minutes: 5
         run: |
-          if [ -f package.json ]; then bun run test:ui:cov || true; else echo "No UI; skipping"; fi
+          if [ -f package.json ]; then timeout 300 bun run test:ui:cov || true; else echo "No UI; skipping"; fi
 
       - name: E2E tests (Playwright with coverage)
+        timeout-minutes: 10
         run: |
-          if [ -f package.json ]; then bun run test:e2e:cov || true; else echo "No UI; skipping"; fi
+          if [ -f package.json ]; then timeout 600 bun run test:e2e:cov || true; else echo "No UI; skipping"; fi
 
       - name: Rust tests
         run: |
