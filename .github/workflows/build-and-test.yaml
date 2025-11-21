@@ -65,7 +65,7 @@ jobs:
 
       - name: Install Playwright browsers
         run: |
-          if [ -f package.json ]; then npx playwright install --with-deps; else echo "No package.json"; fi
+          if [ -f package.json ]; then bunx playwright install --with-deps; else echo "No package.json"; fi
 
       - name: UI tests (Vitest with coverage)
         run: |
