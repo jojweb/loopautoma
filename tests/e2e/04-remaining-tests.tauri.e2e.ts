@@ -80,7 +80,7 @@ test.describe('Remaining E2E Tests - Desktop Mode', () => {
     await page.waitForTimeout(300);
 
     // 2. Record some actions (skipped - Action Recorder workflow tested separately)
-    // Action Recorder is tested in 03-input-recording.tauri.e2e.ts
+    // Action Recorder is covered by web E2E + unit tests; desktop multi-window flow isn't automated in Playwright
     // For this integration test, we'll add actions manually
 
     // 3. Start monitor

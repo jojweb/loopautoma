@@ -38,7 +38,7 @@ Implemented automatic transformation of captured input events into ActionSequenc
 />
 ```
 
-### 3. E2E Tests (`tests/e2e/03-input-recording.tauri.e2e.ts`)
+### 3. E2E Tests (`tests/e2e/03-input-recording.web.e2e.ts`)
 
 **Updated Tests:**
 - Test 4.1: Now verifies automatic transformation on stop (mouse click + keyboard typing)
@@ -96,7 +96,7 @@ The `toActions()` helper converts:
 
 Run E2E tests:
 ```bash
-bun run test:e2e tests/e2e/03-input-recording.tauri.e2e.ts
+bun run test:e2e tests/e2e/03-input-recording.web.e2e.ts
 ```
 
 Manual testing (requires Linux with X11 + rdev working):

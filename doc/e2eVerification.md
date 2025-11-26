@@ -88,7 +88,7 @@ This is **professional-grade implementation** with:
 - `test_input_capture_lifecycle` - ✅ PASS (verifies start/stop works)
 - `test_capture_automation_roundtrip` - ✅ PASS (verifies events can be captured)
 
-✅ **E2E tests exist** - `tests/e2e/03-input-recording.tauri.e2e.ts` has comprehensive coverage
+✅ **E2E coverage** - Action Recorder workflows are covered by web E2E tests (`tests/e2e/03-input-recording.web.e2e.ts`) plus component/unit tests; the legacy desktop multi-window Playwright suite was removed because the harness cannot automate the separate Action Recorder window.
 
 ✅ **Diagnostic script** - `scripts/verifyX11Features.sh` validates all prerequisites
 

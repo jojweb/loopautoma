@@ -206,6 +206,7 @@ To prevent uncontrolled growth of this file:
 **Progress log**
 - 2025-11-26 — Recorded CI failure details and cleanup requirement; plan drafted.
 - 2025-11-26 — Fixed EventLog TypeScript exhaustiveness errors, restored missing `vite-plugin-istanbul` dependency, `bun run build:web` + `bun run test:all` now pass, and archived old tasks to `doc/plans/archive/nov26PlansArchive.md`.
+- 2025-11-26 — Removed the skipped desktop Action Recorder Playwright suite (unautomatable multi-window flow) and documented coverage via web E2E + unit tests; all suites now run without skips.
 
 **Assumptions and open questions**
 - No additional CI failures beyond the reported EventLog TypeScript issues are known.

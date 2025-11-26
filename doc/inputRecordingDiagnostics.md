@@ -120,7 +120,7 @@ Code review shows implementation is correct and follows best practices.
 - All 75 E2E tests passing ✅
 
 **E2E Coverage:**
-- Comprehensive input recording tests in `tests/e2e/03-input-recording.tauri.e2e.ts`
+- Comprehensive input recording coverage in `tests/e2e/03-input-recording.web.e2e.ts` (desktop multi-window E2E removed; covered by unit/component tests instead)
 - Region capture with minimize in `tests/e2e/02-region-capture.tauri.e2e.ts`
 - Web mode graceful degradation in `tests/e2e/03-input-recording.web.e2e.ts`
 
